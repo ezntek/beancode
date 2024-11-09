@@ -168,6 +168,7 @@ pub const Lexer = struct {
         keywords.put("TO", Keyword.kw_to) catch |err| util.panic(err);
         keywords.put("NEXT", Keyword.kw_next) catch |err| util.panic(err);
         keywords.put("PROCEDURE", Keyword.kw_procedure) catch |err| util.panic(err);
+        keywords.put("CALL", Keyword.kw_call) catch |err| util.panic(err);
         keywords.put("ENDPROCEDURE", Keyword.kw_endprocedure) catch |err| util.panic(err);
         keywords.put("CASE", Keyword.kw_case) catch |err| util.panic(err);
         keywords.put("FUNCTION", Keyword.kw_function) catch |err| util.panic(err);
