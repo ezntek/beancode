@@ -11,6 +11,8 @@ pub const Separator = enum {
     left_curly,
     right_curly,
     colon,
+    comma,
+    dot,
 };
 
 // all prefixed with kw_ to avoid clashes
@@ -93,6 +95,22 @@ pub const Token = union(TokenKind) {
     separator: Separator,
     // undescore to avoid clash with zig compiler
     _type: Type,
+
+    pub fn printToken(self: Token) void {
+        switch (self) {
+            .identifier => |ident| std.debug.print("token(ident): {s}\n", .{ident}),
+            .keyword => |kw| std.debug.print("token(keyword): {any}\n", .{kw}),
+            .literal => |lit| switch (lit) {
+                .string => |str| std.debug.print("token(literal): \"{s}\"\n", .{str}),
+                .number => |num| std.debug.print("token(literal): {s}\n", .{num}),
+                .char => |thing| std.debug.print("token(literal): {c}\n", .{thing}),
+                .boolean => |thing| std.debug.print("token(literal): {}\n", .{thing}),
+            },
+            .operator => |op| std.debug.print("token(operator): {any}\n", .{op}),
+            .separator => |sep| std.debug.print("token(separator): {any}\n", .{sep}),
+            ._type => |typ| std.debug.print("token(type): {any}\n", .{typ}),
+        }
+    }
 };
 
 pub const Tokens = struct {
@@ -176,7 +194,7 @@ pub const Lexer = struct {
             .file = file,
             .cur = 0,
             .bol = 0,
-            .row = 0,
+            .row = 1,
             .keywords = keywords,
             .types = types,
         };
@@ -190,7 +208,7 @@ pub const Lexer = struct {
     const isWhitespace = std.ascii.isWhitespace;
 
     fn isSeparator(ch: u8) bool {
-        return std.mem.count(u8, "{}[]():", &[_]u8{ch}) > 0;
+        return std.mem.count(u8, "{}[]():,.", &[_]u8{ch}) > 0;
     }
 
     fn isOperatorStart(ch: u8) bool {
@@ -310,6 +328,8 @@ pub const Lexer = struct {
             '(' => Separator.left_paren,
             ')' => Separator.right_paren,
             ':' => Separator.colon,
+            ',' => Separator.comma,
+            '.' => Separator.dot,
             else => {
                 return null;
             },
@@ -322,18 +342,41 @@ pub const Lexer = struct {
         const begin = self.cur;
         var currChar = self.file[self.cur];
         var end = self.cur;
+        const stringOrCharLiteral = (currChar == '\'' or currChar == '"');
+        const beginChar = currChar; // for the literal stuff
 
-        // we increment cur by 1 in the loop so account for that (see last component of condition)
-        while (!isSeparator(currChar) and !isOperatorStart(currChar) and !isWhitespace(currChar) and self.cur + 1 < self.file.len) {
+        // TODO: cleaner stuff with comptime?
+        if (!stringOrCharLiteral) {
+            // we increment cur by 1 in the loop so account for that (see last component of condition)
+            while (!isWhitespace(currChar) and !isSeparator(currChar) and !isOperatorStart(currChar)) {
+                self.cur += 1;
+                end += 1;
+
+                // post condition this shit cos its fucking sorcery
+                if (self.cur >= self.file.len) {
+                    break;
+                }
+
+                currChar = self.file[self.cur];
+            }
+        } else {
+            // skip past the initial "
             self.cur += 1;
             end += 1;
             currChar = self.file[self.cur];
-        }
-        // jump past
-        // self.cur += 1;
+            // we increment cur by 1 in the loop so account for that (see last component of condition)
+            while (currChar != beginChar and !isSeparator(currChar) and !isOperatorStart(currChar)) {
+                self.cur += 1;
+                end += 1;
 
-        // the loop magically refuses to include the last character of the file, so respect it
-        if (self.cur + 1 == self.file.len) {
+                // post condition this shit cos its fucking sorcery
+                if (self.cur >= self.file.len) {
+                    break;
+                }
+
+                currChar = self.file[self.cur];
+            }
+            // account for ending quote
             self.cur += 1;
             end += 1;
         }
@@ -421,6 +464,7 @@ pub const Lexer = struct {
         while (self.cur < self.file.len) {
             if (self.nextToken()) |tok| {
                 try res.append(tok);
+                tok.printToken();
             } else break;
         }
 

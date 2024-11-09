@@ -1,1 +1,30 @@
-DECLARE Age:INTEGER
+/*
+ * Class Totalling Program
+ *
+ * Pulled from the CSRGv2
+ */
+
+DECLARE StudentNames: ARRAY[1:5] OF STRING
+DECLARE StudentAttendance: ARRAY[1:5] OF BOOLEAN
+DECLARE CurrentAttendance: STRING
+
+FOR Counter <- 1 TO LENGTH(StudentNames)
+    OUTPUT "Is ", StudentNames[Counter], "Here?"
+    INPUT CurrentAttendance
+
+    IF CurrentAttendance = "Here"
+        THEN
+            StudentAttendance[Counter] <- TRUE
+    ELSE
+        StudentAttendance[Counter] <- FALSE
+    ENDIF
+NEXT Counter
+
+FOR Counter <- 1 TO LENGTH(StudentNames)
+    IF CurrentAttendance = TRUE
+        THEN
+            OUTPUT StudentNames[Counter], " is Here"
+    ELSE
+        OUTPUT StudentNames[Counter], " is not Here"
+    ENDIF
+NEXT Counter

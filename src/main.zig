@@ -16,6 +16,4 @@ pub fn main() !void {
     defer lx.deinit();
     const tokens = try lx.tokenize();
     defer tokens.deinit();
-
-    std.debug.print("{any}\n", .{tokens.items});
 }
