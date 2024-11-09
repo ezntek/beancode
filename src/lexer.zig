@@ -366,7 +366,7 @@ pub const Lexer = struct {
             end += 1;
             currChar = self.file[self.cur];
             // we increment cur by 1 in the loop so account for that (see last component of condition)
-            while (currChar != beginChar and !isSeparator(currChar) and !isOperatorStart(currChar)) {
+            while (currChar != beginChar) {
                 self.cur += 1;
                 end += 1;
 
