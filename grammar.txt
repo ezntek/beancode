@@ -1,0 +1,104 @@
+<letter> = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+         | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+         | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+         | "V" | "W" | "X" | "Y" | "Z" | "a" | "b"
+         | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+         | "j" | "k" | "l" | "m" | "n" | "o" | "p"
+         | "q" | "r" | "s" | "t" | "u" | "v" | "w"
+         | "x" | "y" | "z" ;
+
+<digit>  = "0" | "1" | "2" | "3" | "4" | "5" | "6"
+         | "7" | "8" | "9" ;
+
+<symbol> = <letter> | <digit> | "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">"
+         | "'" | "=" | "|" | "." | "," | ";" | "-"  | "+" | "*" | "?" | "!" | 
+         "@" | "#" | "$" | "%" | "^" | "&";
+
+<separator> = "[" | "]" | "(" | ")" | "," | ":";
+
+<binary_arithmetic_operator> = "+" | "-" | "*" | "/";
+
+<binary_comparison_operator> = "<" | ">" | "=" | "<>" | ">=" | "<=";
+
+<binary_logical_operator> = "AND" | "OR";
+
+<unary_logical_operator> = "NOT";
+
+<binary_operator> = <binary_arithmetic_operator> | <binary_comparison_operator> | <binary_logical_operator>;
+
+<unary_operator> = <unary_logical_operator>;
+
+<newline> = "\n";
+
+(* actually important stuff *)
+
+<primitive_type> = "STRING" | "INTEGER" | "BOOLEAN" | "REAL" | "CHAR";
+
+<array_range> = (<digit>, ",", <digit>)
+              | (<digit>, ",", <digit>, ":", <digit>, ",", <digit>);
+
+<array_type>  = "ARRAY", [ "[", <array_range>, "]"], "OF", <primitive_type>;
+
+<type>    = <primitive_type> | <array_type>;
+
+<ident>   =  ( letter | "_" ) , { letter | digit | "_" };
+
+<string_literal> = '"', { <symbol> }, '"';
+
+<literal> = <string_literal> | "TRUE" | "FALSE" | { digit | "." };
+
+<binary_op_expr>    = <expr> <binary_operator> <expr>;
+
+<unary_op_expr>     = <unary_operator> <expr>;
+
+<expr> = ["("] (<binary_op_expr> | <unary_op_expr> | <ident> | <literal> | <expr>) [")"] ;
+
+<code_block>   = { <stmt> }, <newline>;
+
+<declare_stmt> = "DECLARE", <ident>, ":", <type>;
+
+<assign_stmt>  = <ident>, "<-", <expr>;
+
+<function_call_stmt> = <ident>, "(", expr, { ",", <expr> }, ")";
+
+<procedure_call_stmt> = "CALL", <function_call_stmt>;
+
+<file_mode> = ("READ" | "WRITE"), [ "AND", ( "READ" | "WRITE" ) ];
+
+<openfile_stmt> = "OPENFILE", <string_literal>, "FOR", <file_mode>;
+
+<closefile_stmt> = "CLOSEFILE", <string_literal>;
+
+<readfile_stmt> = "READFILE", <string_literal>, ",", <ident>;
+
+<readfile_stmt> = "WRITEFILE", <string_literal>, ",", <ident>;
+
+<constant_stmt> = "CONSTANT", <ident>, "<-", <expr>;
+
+<if_block> = "IF" <condition> "THEN" <code_block> "ENDIF"
+           | "IF" <condition> "THEN" <code_block> "ELSE" <code_block> "ENDIF";
+
+<caseof_branch_default> = "OTHERWISE" <stmt>;
+
+<caseof_branch> = (<expr>, ":", <stmt>) | <caseof_branch_default>;
+
+<caseof_block> = "CASE OF", <expr>, <newline>, { <caseof_branch>, <newline> }, "ENDCASE";
+
+<while_block> = "WHILE", <expr>, "DO", <code_block>, "ENDWHILE";
+
+<repeatuntil_block> = "REPEAT", <newline>, <code_block>, "UNTIL", <expr>;
+
+<for_block> = "FOR", <ident>, "<-", <expr>, "TO", <expr>, [ "STEP" <expr> ], <newline>, <code_block>, "NEXT", <ident>;
+
+<arg> = <ident>, ":", <type>
+
+<arglist> = "(", <arg>, { ",", <arg> }, ")"
+
+<procedure_block> = "PROCEDURE", <ident>, [ <arglist> ], <newline>, <code_block>, "ENDPROCEDURE"
+
+<function_block> = "FUNCTION", <ident>, [ <arglist> ], "RETURNS", <type>, <newline>, <code_block>, "ENDFUNCTION"
+
+<stmt> = <stmt>;
+
+
+
