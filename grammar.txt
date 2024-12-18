@@ -51,7 +51,9 @@
 
 <unary_op_expr>     = <unary_operator> <expr>;
 
-<expr> = ["("] (<binary_op_expr> | <unary_op_expr> | <ident> | <literal> | <expr>) [")"] ;
+<expr> = <binary_op_expr> | <unary_op_expr> | <ident> | <literal> | <function_call_expr> | <expr>;
+
+<grouping> = "(", <expr>, ")";
 
 <code_block>   = { <stmt> }, <newline>;
 
@@ -59,7 +61,7 @@
 
 <assign_stmt>  = <ident>, "<-", <expr>;
 
-<function_call_stmt> = <ident>, "(", expr, { ",", <expr> }, ")";
+<function_call_expr> = <ident>, "(", expr, { ",", <expr> }, ")";
 
 <procedure_call_stmt> = "CALL", <function_call_stmt>;
 
@@ -75,16 +77,16 @@
 
 <constant_stmt> = "CONSTANT", <ident>, "<-", <expr>;
 
-<if_block> = "IF" <condition> "THEN" <code_block> "ENDIF"
-           | "IF" <condition> "THEN" <code_block> "ELSE" <code_block> "ENDIF";
+<if_block> = "IF", <condition>, "THEN", <newline>, <code_block>, "ENDIF"
+           | "IF", <condition> "THEN", <newline>, <code_block>, "ELSE", <newline>, <code_block> "ENDIF";
 
 <caseof_branch_default> = "OTHERWISE" <stmt>;
 
-<caseof_branch> = (<expr>, ":", <stmt>) | <caseof_branch_default>;
+<caseof_branch> = <expr>, ":", <stmt>;
 
-<caseof_block> = "CASE OF", <expr>, <newline>, { <caseof_branch>, <newline> }, "ENDCASE";
+<caseof_block> = "CASE OF", <expr>, <newline>, { <caseof_branch>, <newline> }, <caseof_branch_default>, "ENDCASE";
 
-<while_block> = "WHILE", <expr>, "DO", <code_block>, "ENDWHILE";
+<while_block> = "WHILE", <expr>, "DO", <newline>, <code_block>, "ENDWHILE";
 
 <repeatuntil_block> = "REPEAT", <newline>, <code_block>, "UNTIL", <expr>;
 
