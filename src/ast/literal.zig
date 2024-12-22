@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const LiteralKind = enum {
+pub const LiteralKind = enum {
     string,
     boolean,
     integer,
@@ -8,7 +8,7 @@ const LiteralKind = enum {
     char,
 };
 
-const Literal = union(LiteralKind) {
+pub const Literal = union(LiteralKind) {
     string: []const u8, // ideallly heap-allocated
     boolean: bool,
     integer: i32, // allow stupid overflows and such

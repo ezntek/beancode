@@ -1,3 +1,3 @@
 const std = @import("std");
 
-const Identifier = []const u8;
+pub const Identifier = []const u8;

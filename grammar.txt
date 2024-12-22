@@ -22,6 +22,7 @@
 
 <binary_logical_operator> = "AND" | "OR";
 
+
 <unary_logical_operator> = "NOT";
 
 <binary_operator> = <binary_arithmetic_operator> | <binary_comparison_operator> | <binary_logical_operator>;

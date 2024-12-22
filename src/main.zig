@@ -1,6 +1,7 @@
 const std = @import("std");
 const util = @import("./util.zig");
 const lexer = @import("./lexer.zig");
+const parser = @import("./parser.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -22,4 +23,9 @@ pub fn main() !void {
     defer lx.deinit();
     const tokens = try lx.tokenize();
     defer tokens.deinit();
+
+    var ps = parser.Parser.init(alloc, tokens);
+    const expr = ps.parse();
+
+    std.debug.print("{any}\n", .{expr});
 }

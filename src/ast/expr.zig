@@ -7,14 +7,14 @@ const Literal = literal.Literal;
 const Identifier = ident.Identifier;
 const FnCall = fncall.FnCall;
 
-const ArithmeticOperator = enum {
+pub const ArithmeticOperator = enum {
     op_add,
     op_sub,
     op_mul,
     op_div,
 };
 
-const ComparisonOperator = enum {
+pub const ComparisonOperator = enum {
     op_gt,
     op_lt,
     op_eq,
@@ -23,36 +23,38 @@ const ComparisonOperator = enum {
     op_neq,
 };
 
-const LogicalOperator = enum {
+pub const LogicalOperator = enum {
     op_not,
     op_and,
     op_or,
 };
 
-const OperatorKind = enum {
+pub const OperatorKind = enum {
     arithmetic,
     comparison,
     logical,
 };
 
-const Operator = union(OperatorKind) {
+pub const Operator = union(OperatorKind) {
     arithmetic: ArithmeticOperator,
     comparison: ComparisonOperator,
     logical: LogicalOperator,
 };
 
-const BinaryExpr = struct {
-    lhs: Expr,
-    rhs: Expr,
+// TODO: lhs and rhs should be Expr
+pub const BinaryExpr = struct {
+    lhs: Literal,
+    rhs: Literal,
     op: Operator,
 };
 
-const UnaryExpr = struct {
-    rhs: Expr,
+// TODO: lhs and rhs should be Expr
+pub const UnaryExpr = struct {
+    rhs: Literal,
     op: Operator,
 };
 
-const ExprKind = enum {
+pub const ExprKind = enum {
     binary,
     unary,
     literal,
@@ -60,7 +62,7 @@ const ExprKind = enum {
     fncall,
 };
 
-const Expr = union(ExprKind) {
+pub const Expr = union(ExprKind) {
     binary: BinaryExpr,
     unary: UnaryExpr,
     literal: Literal,
@@ -68,6 +70,6 @@ const Expr = union(ExprKind) {
     fncall: FnCall,
 };
 
-const Grouping = struct {
+pub const Grouping = struct {
     inner: Expr,
 };
