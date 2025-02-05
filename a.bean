@@ -1,3 +1,6 @@
+// wee woo this is a comment
+
 DECLARE Num:INTEGER
 Num <- 3 + 5
 OUTPUT "three plus five is ", Num
+

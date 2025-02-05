@@ -3,7 +3,7 @@ from interpreter import Intepreter
 from lexer import *
 from parser import Parser
 
-PRINT = True
+PRINT = False
 INTERPRET = True
 
 def main():
@@ -15,7 +15,7 @@ def main():
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
 
-        if False:
+        if PRINT:
             for tok in toks:
                 print(tok)
 

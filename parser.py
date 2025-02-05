@@ -685,6 +685,7 @@ class Parser:
         stmts = []
 
         while self.cur < len(self.tokens):
+            self.clean_newlines()
             stmts.append(self.scan_one_statement())
 
         return Program(stmts=stmts)
