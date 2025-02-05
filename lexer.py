@@ -39,7 +39,10 @@ Keyword = t.Literal[
     "mod",
 ]
 
-Type = t.Literal["number", "boolean", "string", "char", "array"]
+# lexer types
+LType = t.Literal["number", "boolean", "string", "char", "array"]
+
+Type = t.Literal["integer", "real", "boolean", "string", "char", "array"]
 
 Operator = t.Literal[
     "assign",
@@ -70,7 +73,7 @@ Separator = t.Literal[
 
 @dataclass
 class Literal:
-    kind: Type
+    kind: LType
     value: str
 
 TokenType = t.Literal["keyword", "ident", "literal", "operator", "separator", "type"]
@@ -262,7 +265,7 @@ class Lexer:
 
         if res is not None:
             self.cur += 1
-            return Token("operator", operator=res)  # type: ignore
+            return Token("separator", separator=res)  # type: ignore
 
     def next_word(self) -> str:
         # do not question why this works. its sorcery from the old zig shit
@@ -310,7 +313,7 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if self.is_keyword(word.lower()):
-            return Token("keyword", keyword=word)  # type: ignore
+            return Token("keyword", keyword=word.lower())  # type: ignore
         else:
             return None
 

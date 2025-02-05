@@ -13,7 +13,7 @@ def main():
             print(tok)
 
         p = Parser(toks)
-        e = p.expression()
+        e = p.program()
         print(e)
 
 if __name__ == "__main__":
