@@ -234,9 +234,9 @@ class Lexer:
             "<": "less_than",
             "=": "equal",
             "*": "mul",
-            "+": "div",
-            "-": "add",
-            "/": "sub",
+            "+": "add",
+            "-": "sub",
+            "/": "div",
         }
 
         res = hm.get(self.file[self.cur])

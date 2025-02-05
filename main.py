@@ -3,7 +3,7 @@ from lexer import *
 from parser import Parser
 
 def main():
-    fn = argv[1]
+    fn = "a.bean"
     with open(fn, "r+") as f:
         s = f.read()
 
