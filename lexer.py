@@ -390,6 +390,7 @@ class Lexer:
             else:
                 break
 
+        res.append(Token("newline"))
         return res
 
 

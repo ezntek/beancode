@@ -45,12 +45,12 @@ class Literal(Expr):
     # array not implemented
 
 
-StatementKind = t.Literal["declare", "output"]
+StatementKind = t.Literal["declare", "output", "constant", "assign"]
 
 
 @dataclass
 class DeclareStatement:
-    name: str
+    ident: str
     typ: Type
 
 
@@ -58,12 +58,23 @@ class DeclareStatement:
 class OutputStatement:
     items: list[Expr]
 
+@dataclass
+class ConstantStatement:
+    ident: str
+    value: Literal
+
+@dataclass
+class AssignStatement:
+    ident: str
+    value: Expr
 
 @dataclass
 class Statement:
     kind: StatementKind
     declare: DeclareStatement | None = None
     output: OutputStatement | None = None
+    constant: ConstantStatement | None = None
+    assign: AssignStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -71,6 +82,10 @@ class Statement:
                 return self.declare.__repr__()
             case "output":
                 return self.output.__repr__()
+            case "constant":
+                return self.constant.__repr__()
+            case "assign":
+                return self.assign.__repr__()
 
 
 @dataclass
@@ -110,11 +125,20 @@ class Parser:
 
         return False
 
-    def consume(self) -> l.Token:
+    def advance(self) -> l.Token:
         if self.cur < len(self.tokens):
             self.cur += 1
 
         return self.prev()
+
+    def consume_newlines(self):
+        while self.peek().kind == "newline":
+            self.advance()
+
+    def check_newline(self, s: str):
+        nl = self.advance()
+        if nl.kind != "newline":
+            panic(f"expected newline after {s}, but found `{self.prev()}`")
 
     def prev(self) -> l.Token:
         return self.tokens[self.cur - 1]
@@ -122,10 +146,13 @@ class Parser:
     def peek(self) -> l.Token:
         return self.tokens[self.cur]
 
+    def peek_next(self) -> l.Token:
+        return self.tokens[self.cur + 1]
+
     def match(self, typs: list[l.Token]) -> bool:
         for typ in typs:
             if self.check(typ):
-                self.consume()
+                self.advance()
                 return True
         return False
 
@@ -149,11 +176,11 @@ class Parser:
 
         return found_decimal
 
-    def literal(self) -> Expr:
-        c = self.consume()
+    def literal(self) -> Expr | None:
+        c = self.advance()
 
         if c.kind != "literal":
-            panic("passed nonliteral to literal function")
+            return None
 
         lit: l.Literal
         lit = c.literal  # type: ignore
@@ -198,12 +225,12 @@ class Parser:
                     panic(f"invalid number literal `{val}`")
 
     def ident(self) -> Expr:
-        c = self.consume()
+        c = self.advance()
 
         return Identifier(c.ident)  # type: ignore
 
     def operator(self) -> l.Operator | None:
-        o = self.consume()
+        o = self.advance()
         return o.operator
 
     def unary(self) -> Expr | None:
@@ -213,12 +240,12 @@ class Parser:
         elif p.kind == "ident":
             return self.ident()
         elif p.kind == "separator" and p.separator == "left_paren":
-            self.consume()
+            self.advance()
             e = self.expression()
-            if e == None:
+            if e is None:
                 panic("invalid expression inside grouping")
 
-            end = self.consume()
+            end = self.advance()
 
             if end != l.Token("separator", separator="right_paren"):
                 panic("expected ending ) delimiter after (")
@@ -229,7 +256,7 @@ class Parser:
 
     def factor(self) -> Expr | None:
         expr = self.unary()
-        if expr == None:
+        if expr is None:
             return None
 
         while self.match(
@@ -237,12 +264,12 @@ class Parser:
         ):
             op = self.prev().operator
 
-            if op == None:
+            if op is None:
                 print("factor: op is None")
 
             right = self.unary()
 
-            if right == None:
+            if right is None:
                 return None
 
             expr = BinaryExpr(expr, op, right)  # type: ignore
@@ -252,7 +279,7 @@ class Parser:
     def term(self) -> Expr | None:
         expr = self.factor()
 
-        if expr == None:
+        if expr is None:
             return None
 
         while self.match(
@@ -260,11 +287,11 @@ class Parser:
         ):
             op = self.prev().operator
 
-            if op == None:
+            if op is None:
                 print("term: op is is None")
 
             right = self.factor()
-            if right == None:
+            if right is None:
                 return None
 
             expr = BinaryExpr(expr, op, right)  # type: ignore
@@ -274,7 +301,7 @@ class Parser:
     def comparison(self) -> Expr | None:
         # > < >= <=
         expr = self.term()
-        if expr == None:
+        if expr is None:
             return None
 
         while self.match(
@@ -286,11 +313,11 @@ class Parser:
             ]
         ):
             op = self.prev().operator
-            if op == None:
+            if op is None:
                 print("comparison: op is None")
 
             right = self.term()
-            if right == None:
+            if right is None:
                 return None
 
             expr = BinaryExpr(expr, op, right)  # type: ignore
@@ -300,7 +327,7 @@ class Parser:
     def equality(self) -> Expr | None:
         expr = self.comparison()
 
-        if expr == None:
+        if expr is None:
             return None
 
         while self.match(
@@ -310,11 +337,11 @@ class Parser:
             ]
         ):
             op = self.prev().operator
-            if op == None:
+            if op is None:
                 panic("equality: op is None")
 
             right = self.comparison()
-            if right == None:
+            if right is None:
                 return None
 
             expr = BinaryExpr(expr, op, right)
@@ -334,9 +361,9 @@ class Parser:
         if begin.keyword != "output":
             return None
 
-        self.consume()
+        self.advance()
         initial = self.expression()
-        if initial == None:
+        if initial is None:
             panic("found OUTPUT but no expression that follows")
 
         exprs.append(initial)
@@ -344,10 +371,13 @@ class Parser:
         comma = l.Token(kind="separator", separator="comma")
         while self.match([comma]):
             new = self.expression()
-            if new == None:
+            if new is None:
                 break
 
             exprs.append(new)
+
+        print(self.peek())
+        self.check_newline("OUTPUT")
 
         res = OutputStatement(items=exprs)
         return Statement("output", output=res)
@@ -355,6 +385,7 @@ class Parser:
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
 
+        # combining the conditions does NOT WORK.
         if begin.kind != "keyword":
             return None
 
@@ -362,44 +393,110 @@ class Parser:
             return None
 
         # consume the keyword
-        self.consume()
+        self.advance()
 
-        ident = self.consume()
-        if ident.ident == None:
+        ident = self.advance()
+        if ident.ident is None:
             panic("expected ident after declare stmt")
 
-        colon = self.consume()
-
+        colon = self.advance()
         if colon.kind != "separator" and colon.separator != "colon":
             panic("expected colon `:` after ident in declare")
 
-        typ = self.consume()
+        typ = self.advance()
 
         if typ.kind != "type":
             panic("expected type after `:` in declare")
 
-        res = DeclareStatement(name=Identifier(ident.ident), typ=typ.typ)  # type: ignore
+        self.check_newline("variable declaration (DECLARE)")
+
+        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ.typ)  # type: ignore
         return Statement("declare", declare=res)
 
+    def constant_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.kind != "keyword":
+            return None
+            
+        if begin.keyword != "constant":
+            return None
+
+        # consume the kw
+        self.advance()
+
+        ident: Identifier | None = self.ident() # type: ignore
+        if ident.ident is None or not isinstance(ident, Identifier): # type: ignore
+            panic("expected ident after constant stmt")
+
+        arrow = self.advance()
+        if arrow.kind != "operator" and arrow.operator != "assign":
+            panic("expected `<-` after variable name in constant declaration")
+
+        literal: Literal | None = self.literal() # type: ignore
+        if literal is None:
+            panic("expected literal after `<-` in constant declaration")
+
+        self.check_newline("constant declaration (CONSTANT)")
+
+        res = ConstantStatement(ident.ident, literal)
+        return Statement("constant", constant=res) 
+
+    def assign_stmt(self) -> Statement | None:
+        p = self.peek_next()
+
+        if p.kind != "operator" and p.operator != "assign":
+            return None
+
+        ident: Identifier | None = self.ident() # type: ignore
+        if ident.ident is None or not isinstance(ident, Identifier): # type: ignore
+            panic("expected ident before `<-` in assignment")
+
+        self.advance() # go past the arrow
+
+        expr: Expr | None = self.expression()
+        if expr is None:
+            panic("expected expression after `<-` in assignment")
+
+        self.check_newline("assignment")
+
+        res = AssignStatement(ident.ident, expr)
+        return Statement("assign", assign=res)
+
+    def clean_newlines(self):
+        while self.cur < len(self.tokens) and self.peek().kind == "newline":
+            self.advance()
+
     def stmt(self) -> Statement | None:
+        assign = self.assign_stmt()
+        if assign is not None:
+            return assign
+
+        constant = self.constant_stmt()
+        if constant is not None:
+            return constant
+
         output = self.output_stmt()
-        if output != None:
+        if output is not None:
             return output
 
         declare = self.declare_stmt()
-        if declare != None:
+        if declare is not None:
             return declare
+
 
     def program(self) -> Program:
         stmts = []
 
         while self.cur < len(self.tokens):
+            print(f"begin {self.peek()}")
             s = self.stmt()
 
-            if s == None:
+            if s is not None:
+                self.clean_newlines()
+                stmts.append(s)
+            else:
                 print(f"found invalid statement at `{self.peek()}`")
-                continue
-
-            stmts.append(s)
+                break
 
         return Program(stmts=stmts)

@@ -12,9 +12,9 @@ def main():
         for tok in toks:
             print(tok)
 
-        #p = Parser(toks)
-        #e = p.program()
-        #print(e)
+        p = Parser(toks)
+        e = p.program()
+        print(e)
 
 if __name__ == "__main__":
     main()

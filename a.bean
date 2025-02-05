@@ -1,2 +1,2 @@
 DECLARE Name:INTEGER
-OUTPUT Name
+Name <- "John"
