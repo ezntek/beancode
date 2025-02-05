@@ -11,6 +11,7 @@ class Intepreter:
 
     def __init__(self, ast: Program) -> None:
         self.ast = ast
+        self.variables = dict()
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue: # type: ignore
         match expr.op:
@@ -167,11 +168,32 @@ class Intepreter:
             case "output":
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "assign":
-                raise NotImplementedError("assign not implemented")
+                s: AssignStatement = stmt.assign # type: ignore
+                key = s.ident.ident
+
+                if key not in self.variables:
+                    panic(f"attempted to use variable {key} without declaring it")
+
+                if self.variables[key].const:
+                    panic(f"attemped to write to constant {key}")
+
+                self.variables[key].val = self.visit_expr(s.value)
             case "constant":
-                raise NotImplementedError("constant not implemented")
+                c: ConstantStatement = stmt.constant # type: ignore
+                key = c.ident.ident
+
+                if key in self.variables:
+                    panic(f"variable {key} declared!")
+
+                self.variables[key] = Variable(c.value.to_bcvalue(), True)
             case "declare":
-                raise NotImplementedError("declare not implemented")
+                d: DeclareStatement = stmt.declare # type: ignore
+                key = d.ident.ident
+                
+                if key in self.variables:
+                    panic(f"variable {key} declared!")
+
+                self.variables[key] = Variable(BCValue(kind=d.typ), False)
 
     def visit_program(self):
         for stmt in self.ast.stmts:
