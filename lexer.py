@@ -76,7 +76,7 @@ class Literal:
     kind: LType
     value: str
 
-TokenType = t.Literal["keyword", "ident", "literal", "operator", "separator", "type"]
+TokenType = t.Literal["newline", "keyword", "ident", "literal", "operator", "separator", "type"]
 
 @dataclass
 class Token:
@@ -101,8 +101,10 @@ class Token:
             return f"token(separator): {self.separator}"
         elif self.typ != None:
             return f"token(type): {self.typ}"
+        elif self.kind == "newline":
+            return "token(newline)"
         else:
-            return ""
+            return "INVALID TOKEN"
 
 
 class Lexer:
@@ -179,11 +181,7 @@ class Lexer:
         if self.cur >= len(self.file):
             return
 
-        while self.cur < len(self.file) and self.file[self.cur].isspace():
-            if self.file[self.cur] == "\n":
-                self.row += 1
-                self.bol = self.cur + 1
-
+        while self.cur < len(self.file) and (self.file[self.cur].isspace() and self.file[self.cur] != '\n'): 
             self.cur += 1
 
         return self.trim_comment()
@@ -342,13 +340,21 @@ class Lexer:
     def next_boolean(self, word: str) -> bool | None:
         return {"TRUE": True, "FALSE": False}.get(word)
 
-    def next_token(self):
+    def next_token(self) -> Token | None:
         self.trim_left()
 
         if self.cur >= len(self.file):
             return None
 
         t: Token | None
+
+        cur = self.file[self.cur]
+        if cur == "\n":
+            self.row += 1
+            self.bol = self.cur + 1
+            self.cur += 1
+            return Token("newline")
+
 
         if (t := self.next_operator()) is not None:
             return t

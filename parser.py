@@ -108,6 +108,8 @@ class Parser:
             case "separator":
                 return tok.separator == peek.separator
 
+        return False
+
     def consume(self) -> l.Token:
         if self.cur < len(self.tokens):
             self.cur += 1
