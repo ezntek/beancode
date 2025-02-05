@@ -45,12 +45,12 @@ class Literal(Expr):
     # array not implemented
 
 
-StatementKind = t.Literal["declare", "output", "constant", "assign"]
+StatementKind = t.Literal["declare", "output", "constant", "assign", "if", "while", "for"]
 
 
 @dataclass
 class DeclareStatement:
-    ident: str
+    ident: Identifier
     typ: Type
 
 
@@ -58,15 +58,36 @@ class DeclareStatement:
 class OutputStatement:
     items: list[Expr]
 
+
 @dataclass
 class ConstantStatement:
-    ident: str
+    ident: Identifier
     value: Literal
+
 
 @dataclass
 class AssignStatement:
-    ident: str
+    ident: Identifier
     value: Expr
+
+@dataclass
+class IfStatement:
+    cond: Expr
+    if_block: list['Statement']
+    else_block: list['Statement']
+
+@dataclass
+class WhileStatement:
+    cond: Expr
+    block: list['Statement']
+
+@dataclass
+class ForStatement:
+    counter: Identifier  
+    block: list['Statement']
+    begin: int
+    end: int
+    step: int | None = None
 
 @dataclass
 class Statement:
@@ -75,6 +96,9 @@ class Statement:
     output: OutputStatement | None = None
     constant: ConstantStatement | None = None
     assign: AssignStatement | None = None
+    if_s: IfStatement | None = None
+    while_s: WhileStatement | None = None
+    for_s: ForStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -86,6 +110,12 @@ class Statement:
                 return self.constant.__repr__()
             case "assign":
                 return self.assign.__repr__()
+            case "if":
+                return self.if_s.__repr__()
+            case "while":
+                return self.while_s.__repr__()
+            case "for":
+                return self.for_s.__repr__()
 
 
 @dataclass
@@ -203,7 +233,7 @@ class Parser:
                 elif val == "FALSE":
                     return Literal("boolean", boolean=False)
                 else:
-                    panic(f"invalid boolean literal `{val}`")
+                    panic(f"invalid boolean literal `{lit.value}`")
             case "number":
                 val = lit.value
 
@@ -418,29 +448,29 @@ class Parser:
 
         if begin.kind != "keyword":
             return None
-            
+
         if begin.keyword != "constant":
             return None
 
         # consume the kw
         self.advance()
 
-        ident: Identifier | None = self.ident() # type: ignore
-        if ident.ident is None or not isinstance(ident, Identifier): # type: ignore
+        ident: Identifier | None = self.ident()  # type: ignore
+        if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
             panic("expected ident after constant stmt")
 
         arrow = self.advance()
         if arrow.kind != "operator" and arrow.operator != "assign":
             panic("expected `<-` after variable name in constant declaration")
 
-        literal: Literal | None = self.literal() # type: ignore
+        literal: Literal | None = self.literal()  # type: ignore
         if literal is None:
             panic("expected literal after `<-` in constant declaration")
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(ident.ident, literal)
-        return Statement("constant", constant=res) 
+        res = ConstantStatement(ident, literal)
+        return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
@@ -448,11 +478,11 @@ class Parser:
         if p.kind != "operator" and p.operator != "assign":
             return None
 
-        ident: Identifier | None = self.ident() # type: ignore
-        if ident.ident is None or not isinstance(ident, Identifier): # type: ignore
+        ident: Identifier | None = self.ident()  # type: ignore
+        if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
             panic("expected ident before `<-` in assignment")
 
-        self.advance() # go past the arrow
+        self.advance()  # go past the arrow
 
         expr: Expr | None = self.expression()
         if expr is None:
@@ -460,12 +490,156 @@ class Parser:
 
         self.check_newline("assignment")
 
-        res = AssignStatement(ident.ident, expr)
+        res = AssignStatement(ident, expr)
         return Statement("assign", assign=res)
+
+    # multiline statements go here
+    def if_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "if":
+            return
+
+        self.advance() # byebye `IF`
+
+        cond = self.expression()
+        if cond is None:
+            panic("found invalid expression for if condition")
+
+        # allow stupid igcse shit
+        if self.peek().kind == "newline":
+            self.clean_newlines()
+
+        then = self.advance()
+        if then.keyword != "then":
+            panic("expected `THEN` after if condition")
+
+        # dont enforce newline after then
+        if self.peek().kind == "newline":
+            self.clean_newlines()
+
+        if_stmts = []
+        else_stmts = []
+
+        while self.peek().keyword not in ["else", "endif"]:
+            if_stmts.append(self.scan_one_statement()) 
+
+        if self.peek().keyword == "else":
+            self.advance() # byebye else
+    
+            # dont enforce newlines after else
+            if self.peek().kind == "newline":
+                self.clean_newlines()
+
+            while self.peek().keyword != "endif":
+                else_stmts.append(self.scan_one_statement())
+    
+        self.advance() # byebye endif
+        self.check_newline("ENDIF")
+
+        res = IfStatement(cond=cond, if_block=if_stmts, else_block=else_stmts)
+        return Statement("if", if_s=res)
+
+    def while_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "while":
+            return
+
+        # byebye `WHILE`
+        self.advance()
+    
+        expr = self.expression()
+        if expr is None:
+            panic("found invalid expression for while loop condition")
+
+        do = self.advance()
+        if do.keyword != "do":
+            panic("expected `DO` after while loop condition")
+
+        # oh dear
+        self.check_newline("while loop declaration")
+
+        if self.peek().kind == "newline":
+            self.clean_newlines()
+
+        stmts = []
+        while self.peek().keyword != "endwhile":
+            stmts.append(self.scan_one_statement())
+
+        self.advance() # byebye `ENDWHILE`
+
+        self.check_newline("after while loop declaration")
+
+        res = WhileStatement(expr, stmts)
+        return Statement("while", while_s=res)
+
+    def for_stmt(self):
+        # FOR <counter> <assign> <lit> TO <lit> [STEP <lit>]
+        initial = self.peek()
+
+        if initial.keyword != "for":
+            return
+
+        self.advance()
+        
+        counter: Identifier | None = self.ident()  # type: ignore
+        if counter.ident is None or not isinstance(counter, Identifier):  # type: ignore
+            panic("expected ident before `<-` in a for loop")
+
+        assign = self.advance()
+        if assign.operator != "assign":
+            panic("expected assignment operator `<-` after counter in a for loop")
+
+        begin: Literal | None = self.literal() # type: ignore
+        if begin is None or not isinstance(begin, Literal) or begin.kind != "integer":
+            panic("invalid literal as beginning value in for loop")
+
+        to = self.advance()
+        if to.keyword != "to":
+            panic("expected TO after beginning value in for loop")
+
+        end: Literal | None = self.literal() # type: ignore
+        if end is None or not isinstance(end, Literal) or end.kind != "integer":
+            panic("invalid literal as ending value in for loop")
+
+        step: Literal | None = None
+        if self.peek_next().keyword == "step":
+            self.advance()
+            step = self.literal() # type: ignore
+            if step is None or not isinstance(step, Literal) or step.kind != "integer":
+                panic("invalid literal as step value in for loop")
+            
+        self.check_newline("after for loop declaration")
+
+        stmts = []
+        while self.peek().keyword != "next":
+            stmts.append(self.scan_one_statement())      
+   
+        self.advance() # byebye NEXT
+
+        next_counter: Identifier | None = self.ident() # type: ignore
+        if next_counter is None or not isinstance(counter, Identifier):
+            panic("expected identifier after NEXT in a for loop")
+        elif counter.ident != next_counter.ident:
+            panic(f"initialized counter as {counter.ident} but used {next_counter.ident} after loop")
+
+        # thanks python for not having proper null handling
+        res = ForStatement(counter=counter, block=stmts, begin=begin.integer, end=end.integer, step=step) # type: ignore
+        return Statement("for", for_s=res)
 
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.advance()
+
+    def scan_one_statement(self) -> Statement:
+        s = self.stmt()
+
+        if s is not None:
+            self.clean_newlines()
+            return s
+        else:
+            panic(f"found invalid statement at `{self.peek()}`")
 
     def stmt(self) -> Statement | None:
         assign = self.assign_stmt()
@@ -484,19 +658,23 @@ class Parser:
         if declare is not None:
             return declare
 
+        if_s = self.if_stmt()
+        if if_s is not None:
+            return if_s
+
+        while_s = self.while_stmt()
+        if while_s is not None:
+            return while_s
+        
+        for_s = self.for_stmt()
+        if for_s is not None:
+            return for_s
 
     def program(self) -> Program:
         stmts = []
 
         while self.cur < len(self.tokens):
             print(f"begin {self.peek()}")
-            s = self.stmt()
-
-            if s is not None:
-                self.clean_newlines()
-                stmts.append(s)
-            else:
-                print(f"found invalid statement at `{self.peek()}`")
-                break
+            stmts.append(self.scan_one_statement())
 
         return Program(stmts=stmts)

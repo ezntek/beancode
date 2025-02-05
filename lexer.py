@@ -337,8 +337,8 @@ class Lexer:
 
         return None
 
-    def next_boolean(self, word: str) -> bool | None:
-        return {"TRUE": True, "FALSE": False}.get(word)
+    def next_boolean(self, word: str) -> str | None:
+        return word if word in ["TRUE", "FALSE"] else None
 
     def next_token(self) -> Token | None:
         self.trim_left()
@@ -374,7 +374,7 @@ class Lexer:
         if t := self.next_string_or_char_literal(word):
             return t
 
-        b: bool | None
+        b: str | None
         if (b := self.next_boolean(word)) is not None:
             return Token("literal", literal=Literal("boolean", b))  # type: ignore
 
