@@ -1,1 +1,2 @@
-
+OUTPUT "hello, world", " good morning"
+OUTPUT "three plus five is ", 3 + 5
