@@ -73,9 +73,11 @@ class Literal:
     kind: Type
     value: str
 
+TokenType = t.Literal["keyword", "ident", "literal", "operator", "separator", "type"]
 
 @dataclass
 class Token:
+    kind: TokenType
     keyword: Keyword | None = None
     ident: str | None = None
     literal: Literal | None = None
@@ -225,7 +227,7 @@ class Lexer:
 
             if res is not None:
                 self.cur += 2
-                return Token(operator=res)  # type: ignore
+                return Token("operator", operator=res)  # type: ignore
 
         hm = {
             ">": "greater_than",
@@ -241,7 +243,7 @@ class Lexer:
 
         if res is not None:
             self.cur += 1
-            return Token(operator=res)  # type: ignore
+            return Token("operator", operator=res)  # type: ignore
 
     def next_separator(self) -> Token | None:
         hm = {
@@ -260,7 +262,7 @@ class Lexer:
 
         if res is not None:
             self.cur += 1
-            return Token(operator=res)  # type: ignore
+            return Token("operator", operator=res)  # type: ignore
 
     def next_word(self) -> str:
         # do not question why this works. its sorcery from the old zig shit
@@ -308,20 +310,20 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if self.is_keyword(word.lower()):
-            return Token(keyword=word)  # type: ignore
+            return Token("keyword", keyword=word)  # type: ignore
         else:
             return None
 
     def next_type(self, typ: str) -> Token | None:
         if typ.lower() in ["integer", "string", "boolean", "real", "array", "char"]:
-            return Token(typ=typ)  # type: ignore
+            return Token("type", typ=typ)  # type: ignore
         else:
             return None
 
     def next_string_or_char_literal(self, word: str) -> Token | None:
         if word[0] == '"' and word[len(word) - 1] == '"':
             slc = word[1 : len(word) - 1]
-            return Token(literal=Literal("string", slc))
+            return Token("literal", literal=Literal("string", slc))
 
         if word[0] == "'" and word[len(word) - 1] == "'":
             if len(word) > 3:
@@ -330,7 +332,7 @@ class Lexer:
                 print(f"char literal at {row},{col} cannot contain more than 1 char")
                 exit(1)
 
-            return Token(literal=Literal("char", word[1]))
+            return Token("literal", literal=Literal("char", word[1]))
 
         return None
 
@@ -354,7 +356,7 @@ class Lexer:
         word = self.next_word()
 
         if self.is_numeral(word):
-            return Token(literal=Literal("number", word))
+            return Token("literal", literal=Literal("number", word))
 
         if t := self.next_keyword(word):
             return t
@@ -365,9 +367,9 @@ class Lexer:
 
         b: bool | None
         if (b := self.next_boolean(word)) is not None:
-            return Token(literal=Literal("boolean", b))  # type: ignore
+            return Token("literal", literal=Literal("boolean", b))  # type: ignore
 
-        return Token(ident=word)
+        return Token("ident", ident=word)
 
     def tokenize(self) -> list[Token]:
         res = []
@@ -382,16 +384,4 @@ class Lexer:
         return res
 
 
-def main():
-    fn = input("filename: ")
-    with open(fn, "r+") as f:
-        s = f.read()
 
-        l = Lexer(s)
-        toks = l.tokenize()
-        for tok in toks:
-            print(tok)
-
-
-if __name__ == "__main__":
-    main()
