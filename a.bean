@@ -1,3 +1,6 @@
-declare var: char
-input var
-output "you entered ", var
+declare i: integer
+i <- 0
+repeat
+    output i
+    i <- i + 1
+until i >= 5

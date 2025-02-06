@@ -227,8 +227,8 @@ class Lexer:
 
             hm = {
                 "<-": "assign",
-                "<=": "less_than_or_equal_to",
-                ">=": "greater_than_or_equal_to",
+                "<=": "less_than_or_equal",
+                ">=": "greater_than_or_equal",
                 "<>": "not_equal",
             }
 
@@ -406,6 +406,3 @@ class Lexer:
 
         res.append(Token("newline"))
         return res
-
-
-

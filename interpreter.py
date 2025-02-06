@@ -368,6 +368,16 @@ class Intepreter:
                 block.visit_block(None)
                 counter.integer = counter.integer + step # type: ignore
 
+    def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
+        cond: Expr = stmt.cond # type: ignore
+        loop_intp = self.new(stmt.block)
+        loop_intp.variables = self.variables
+        
+        while True:
+            loop_intp.visit_block(None)
+            if self.visit_expr(cond).boolean:
+                break
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
@@ -376,6 +386,8 @@ class Intepreter:
                 self.visit_for_stmt(stmt.for_s) # type: ignore
             case "while":
                 self.visit_while_stmt(stmt.while_s) # type: ignore
+            case "repeatuntil":
+                self.visit_repeatuntil_stmt(stmt.repeatuntil) # type: ignore
             case "output":
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "input":

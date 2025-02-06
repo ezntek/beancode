@@ -50,15 +50,13 @@ class Literal(Expr):
 
 
 StatementKind = t.Literal[
-    "declare", "output", "input", "constant", "assign", "if", "while", "for"
+    "declare", "output", "input", "constant", "assign", "if", "while", "for", "repeatuntil"
 ]
-
 
 @dataclass
 class DeclareStatement:
     ident: Identifier
     typ: BCType
-
 
 @dataclass
 class OutputStatement:
@@ -73,12 +71,10 @@ class ConstantStatement:
     ident: Identifier
     value: Literal
 
-
 @dataclass
 class AssignStatement:
     ident: Identifier
     value: Expr
-
 
 @dataclass
 class IfStatement:
@@ -86,12 +82,10 @@ class IfStatement:
     if_block: list["Statement"]
     else_block: list["Statement"]
 
-
 @dataclass
 class WhileStatement:
     cond: Expr
     block: list["Statement"]
-
 
 @dataclass
 class ForStatement:
@@ -101,6 +95,10 @@ class ForStatement:
     end: int
     step: int = 1
 
+@dataclass
+class RepeatUntilStatement:
+    cond: Expr
+    block: list["Statement"]
 
 @dataclass
 class Statement:
@@ -113,6 +111,7 @@ class Statement:
     if_s: IfStatement | None = None
     while_s: WhileStatement | None = None
     for_s: ForStatement | None = None
+    repeatuntil : RepeatUntilStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -132,7 +131,8 @@ class Statement:
                 return self.while_s.__repr__()
             case "for":
                 return self.for_s.__repr__()
-
+            case "repeatuntil":
+                return self.repeatuntil.__repr__()
 
 @dataclass
 class Program:
@@ -674,6 +674,34 @@ class Parser:
 
         return Statement("for", for_s=res)
 
+    def repeatuntil_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "repeat":
+            return
+
+        # byebye `REPEAT`
+        self.advance()
+
+        self.check_newline("repeat-until loop declaration")
+
+        self.clean_newlines()
+
+        stmts = []
+        while self.peek().keyword != "until":
+            stmts.append(self.scan_one_statement())
+
+        self.advance()  # byebye `UNTIL`
+
+        expr = self.expression()
+        if expr is None:
+            panic("found invalid expression for repeat-until loop condition")
+
+        self.check_newline("after repeat-until loop declaration")
+
+        res = RepeatUntilStatement(expr, stmts)
+        return Statement("repeatuntil", repeatuntil=res)
+
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.advance()
@@ -710,6 +738,10 @@ class Parser:
         for_s = self.for_stmt()
         if for_s is not None:
             return for_s
+
+        repeatuntil_s = self.repeatuntil_stmt()
+        if repeatuntil_s is not None:
+            return repeatuntil_s
 
     def scan_one_statement(self) -> Statement:
         s = self.stmt()
