@@ -1,6 +1,5 @@
-// wee woo this is a comment
+declare i: integer
 
-DECLARE Num:INTEGER
-Num <- 3 + 5
-OUTPUT "three plus five is ", Num
-
+while true do
+    oUtPuT "peepoo"
+endwhile

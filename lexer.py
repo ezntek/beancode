@@ -339,7 +339,7 @@ class Lexer:
         return None
 
     def next_boolean(self, word: str) -> str | None:
-        return word if word in ["TRUE", "FALSE"] else None
+        return word if word.lower() in ["true", "false"] else None
 
     def next_token(self) -> Token | None:
         self.trim_left()

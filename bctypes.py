@@ -14,6 +14,15 @@ class BCValue:
     string: str | None = None
     boolean: bool | None = None
 
+    def is_uninitialized(self) -> bool:
+        return (
+            self.integer is None
+            and self.real is None
+            and self.char is None
+            and self.string is None
+            and self.boolean is None
+        )
+
     def get_integer(self) -> int:
         if self.kind != "integer":
             panic("incorrect type")

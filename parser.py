@@ -237,10 +237,10 @@ class Parser:
                 val = lit.value
                 return Literal("string", string=val)
             case "boolean":
-                val = lit.value
-                if val == "TRUE":
+                val = lit.value.lower()
+                if val == "true":
                     return Literal("boolean", boolean=True)
-                elif val == "FALSE":
+                elif val == "false":
                     return Literal("boolean", boolean=False)
                 else:
                     panic(f"invalid boolean literal `{lit.value}`")
