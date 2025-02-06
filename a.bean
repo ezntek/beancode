@@ -1,6 +1,4 @@
 declare i: integer
-i <- 0
-repeat
-    output i
-    i <- i + 1
-until i >= 5
+i <- 4
+output "orig is ", i
+output "negated is ", -i

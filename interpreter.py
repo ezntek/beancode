@@ -247,6 +247,15 @@ class Intepreter:
     def visit_expr(self, expr: Expr) -> BCValue: #type: ignore
         if isinstance(expr, Grouping):
             return self.visit_expr(expr.inner)
+        elif isinstance(expr, Negation):
+            inner = self.visit_expr(expr.inner)
+            if inner.kind not in ["integer", "real"]:
+                panic(f"attemped to negate a value of type {inner.kind}")
+
+            if inner.kind == "integer":
+                return BCValue("integer", integer=-inner.integer) # type: ignore
+            elif inner.kind == "real":
+                return BCValue("real", real=-inner.real) # type: ignore
         elif isinstance(expr, Identifier):
             var = self.variables[expr.ident]
             if var.val == None or var.is_uninitialized():

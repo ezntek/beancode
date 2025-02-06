@@ -10,6 +10,9 @@ from util import *
 class Expr:
     pass
 
+@dataclass
+class Negation(Expr):
+    inner: Expr
 
 @dataclass
 class Grouping(Expr):
@@ -300,6 +303,12 @@ class Parser:
                 panic("expected ending ) delimiter after (")
 
             return Grouping(inner=e)
+        elif p.kind == "operator" and p.operator == "sub":
+            self.advance()
+            e = self.expression()
+            if e is None:
+                panic("invalid expression for negation")
+            return Negation(e) 
         else:
             return None
 
