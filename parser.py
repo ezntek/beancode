@@ -96,7 +96,7 @@ class ForStatement:
     block: list["Statement"]
     begin: int
     end: int
-    step: int | None = None
+    step: int = 1
 
 
 @dataclass
@@ -197,6 +197,9 @@ class Parser:
         return False
 
     def is_integer(self, val: str) -> bool:
+        if val[0] == '-' and val[1].isdigit():
+            val = val[1:]
+
         for ch in val:
             if not ch.isdigit() and ch != "_":
                 return False
@@ -613,7 +616,7 @@ class Parser:
             panic("invalid literal as ending value in for loop")
 
         step: Literal | None = None
-        if self.peek_next().keyword == "step":
+        if self.peek().keyword == "step":
             self.advance()
             step = self.literal()  # type: ignore
             if step is None or not isinstance(step, Literal) or step.kind != "integer":
@@ -636,7 +639,12 @@ class Parser:
             )
 
         # thanks python for not having proper null handling
-        res = ForStatement(counter=counter, block=stmts, begin=begin.integer, end=end.integer, step=step)  # type: ignore
+        res = ForStatement(counter=counter, block=stmts, begin=begin.integer, end=end.integer)  # type: ignore
+        if step is not None:
+            if step == 0:
+                panic("for loop step cannot be negative")
+            res.step = step.integer # type: ignore
+
         return Statement("for", for_s=res)
 
     def clean_newlines(self):

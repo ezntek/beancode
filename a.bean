@@ -1,5 +1,6 @@
-declare i: integer
+output "good morning"
 
-while true do
-    oUtPuT "peepoo"
-endwhile
+for i <- 35 to 1 step -3
+    output "counter is ", i
+next i
+

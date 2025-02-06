@@ -24,6 +24,7 @@ Keyword = t.Literal[
     "until",
     "for",
     "to",
+    "step",
     "next",
     "procedure",
     "endprocedure",
@@ -143,6 +144,7 @@ class Lexer:
             "until",
             "for",
             "to",
+            "step",
             "next",
             "procedure",
             "endprocedure",
@@ -166,6 +168,11 @@ class Lexer:
         return ch in "+-*/=<>"
 
     def is_numeral(self, potential_num: str) -> bool:
+        if potential_num[0] == '-' and not potential_num[1].isdigit():
+            return False
+        elif potential_num[0] == '-' and potential_num[1].isdigit():
+            potential_num = potential_num[1:]
+
         for ch in potential_num:
             if not ch.isdigit() and ch != "_" and ch != ".":
                 return False
@@ -244,6 +251,9 @@ class Lexer:
         res = hm.get(self.file[self.cur])
 
         if res is not None:
+            if res == "sub" and self.file[self.cur + 1].isdigit():
+                return None
+
             self.cur += 1
             return Token("operator", operator=res)  # type: ignore
 
@@ -279,7 +289,7 @@ class Lexer:
             while (
                 not curr_ch.isspace()
                 and not self.is_separator(curr_ch)
-                and not self.is_operator_start(curr_ch)
+                and (not self.is_operator_start(curr_ch) or curr_ch == '-')
             ):
                 self.cur += 1
                 end += 1
@@ -357,7 +367,7 @@ class Lexer:
             return Token("newline")
 
 
-        if (t := self.next_operator()) is not None:
+        if (t := self.next_operator()) is not None: 
             return t
 
         if (t := self.next_separator()) is not None:
@@ -367,6 +377,9 @@ class Lexer:
 
         if self.is_numeral(word):
             return Token("literal", literal=Literal("number", word))
+        elif word[0] == '-' and not word[1].isdigit(): # scuffed
+            self.cur += 1
+            return Token("operator", operator="sub")
 
         if t := self.next_keyword(word):
             return t

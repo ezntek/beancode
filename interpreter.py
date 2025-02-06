@@ -266,23 +266,57 @@ class Intepreter:
             res += str(evaled) # TODO: proper displaying
         print(res)
 
+    def visit_if_stmt(self, stmt: IfStatement):
+        cond: BCValue = self.visit_expr(stmt.cond)
+
+        if cond.boolean:
+            blk = self.new(stmt.if_block)
+        else:
+            blk = self.new(stmt.else_block)
+        
+        blk.variables = self.variables
+        blk.visit_block(None)
+            
+
+    def visit_while_stmt(self, stmt: WhileStatement):
+        cond: Expr = stmt.cond # type: ignore
+
+        block: list[Statement] = stmt.while_s.block # type: ignore
+
+        loop_intp = self.new(block)
+        loop_intp.variables = self.variables # scope
+
+        while self.visit_expr(cond).boolean:
+            loop_intp.visit_block(block)
+
+    def visit_for_stmt(self, stmt: ForStatement):
+        begin = stmt.begin
+        end = stmt.end
+        step = stmt.step if stmt.step is not None else 1
+       
+        block = self.new(stmt.block)
+        block.variables = self.variables
+
+        counter = BCValue("integer", integer=begin)
+        block.variables[stmt.counter.ident] = Variable(counter, const=False)
+
+        if step > 0:
+            while counter.get_integer() <= end:
+                block.visit_block(None)
+                counter.integer = counter.integer + step # type: ignore
+        elif step < 0:
+            while counter.get_integer() >= end:
+                block.visit_block(None)
+                counter.integer = counter.integer + step # type: ignore
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
-                pass
+                self.visit_if_stmt(stmt.if_s) # type: ignore
             case "for":
-                raise NotImplementedError("for not implemented")
+                self.visit_for_stmt(stmt.for_s) # type: ignore
             case "while":
-                while_s: WhileStatement = stmt.while_s # type: ignore
-                cond: Expr = while_s.cond # type: ignore
-
-                block: list[Statement] = stmt.while_s.block # type: ignore
-
-                loop_intp = self.new(block)
-                loop_intp.variables = self.variables # scope
-
-                while self.visit_expr(cond).boolean:
-                    loop_intp.visit_block(block)
+                self.visit_while_stmt(stmt.while_s) # type: ignore
             case "output":
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "assign":
