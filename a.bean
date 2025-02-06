@@ -1,6 +1,3 @@
-output "good morning"
-
-for i <- 35 to 1 step -3
-    output "counter is ", i
-next i
-
+declare var: char
+input var
+output "you entered ", var

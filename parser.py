@@ -50,7 +50,7 @@ class Literal(Expr):
 
 
 StatementKind = t.Literal[
-    "declare", "output", "constant", "assign", "if", "while", "for"
+    "declare", "output", "input", "constant", "assign", "if", "while", "for"
 ]
 
 
@@ -64,6 +64,9 @@ class DeclareStatement:
 class OutputStatement:
     items: list[Expr]
 
+@dataclass
+class InputStatement:
+    ident: Identifier
 
 @dataclass
 class ConstantStatement:
@@ -104,6 +107,7 @@ class Statement:
     kind: StatementKind
     declare: DeclareStatement | None = None
     output: OutputStatement | None = None
+    input: InputStatement | None = None
     constant: ConstantStatement | None = None
     assign: AssignStatement | None = None
     if_s: IfStatement | None = None
@@ -116,6 +120,8 @@ class Statement:
                 return self.declare.__repr__()
             case "output":
                 return self.output.__repr__()
+            case "input":
+                return self.input.__repr__()
             case "constant":
                 return self.constant.__repr__()
             case "assign":
@@ -297,7 +303,7 @@ class Parser:
         else:
             return None
 
-    def factor(self) -> Expr | None:
+    def factor(self)-> Expr | None:
         expr = self.unary()
         if expr is None:
             return None
@@ -423,6 +429,27 @@ class Parser:
 
         res = OutputStatement(items=exprs)
         return Statement("output", output=res)
+
+    def input_stmt(self) -> Statement | None:
+        begin = self.peek()
+        
+        if begin.kind != "keyword":
+            return None
+
+        if begin.keyword != "input":
+            return None
+
+        self.advance()
+
+        ident = self.ident()
+        if not isinstance(ident, Identifier) or Identifier is None:
+            panic(f"expected identifier after `INPUT` but found {ident}")
+
+        self.check_newline("INPUT")
+
+        res = InputStatement(ident)
+        return Statement("input", input=res)
+
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -651,15 +678,6 @@ class Parser:
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.advance()
 
-    def scan_one_statement(self) -> Statement:
-        s = self.stmt()
-
-        if s is not None:
-            self.clean_newlines()
-            return s
-        else:
-            panic(f"found invalid statement at `{self.peek()}`")
-
     def stmt(self) -> Statement | None:
         assign = self.assign_stmt()
         if assign is not None:
@@ -672,6 +690,10 @@ class Parser:
         output = self.output_stmt()
         if output is not None:
             return output
+
+        inp = self.input_stmt()
+        if inp is not None:
+            return inp
 
         declare = self.declare_stmt()
         if declare is not None:
@@ -688,6 +710,15 @@ class Parser:
         for_s = self.for_stmt()
         if for_s is not None:
             return for_s
+
+    def scan_one_statement(self) -> Statement:
+        s = self.stmt()
+
+        if s is not None:
+            self.clean_newlines()
+            return s
+        else:
+            panic(f"found invalid statement at `{self.peek()}`")
 
     def program(self) -> Program:
         stmts = []

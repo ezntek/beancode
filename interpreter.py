@@ -266,6 +266,65 @@ class Intepreter:
             res += str(evaled) # TODO: proper displaying
         print(res)
 
+    def visit_input_stmt(self, stmt: InputStatement):
+        inp = input()
+        id = stmt.ident.ident
+
+        data: Variable | None = self.variables.get(id)
+
+        if data is None:
+            panic(f"attempted to call `INPUT` into nonexistent variable {id}")
+
+        if data.const:
+            panic(f"attempted to call `INPUT` into constant {id}")
+
+        match data.val.kind:
+            case "string":
+                self.variables[id].val.kind = "string"
+                self.variables[id].val.string = inp
+            case "char":
+                if len(inp) > 1:
+                    panic(f"expected single character but got `{inp}` for CHAR")
+
+                self.variables[id].val.kind = "char"
+                self.variables[id].val.char = inp
+            case "boolean":
+                if inp.lower() not in ["true", "false", "yes", "no"]:
+                    panic(f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got `{inp}`")
+
+                inp = inp.lower()
+                if inp in ["true", "yes"]:
+                    self.variables[id].val.kind = "boolean"
+                    self.variables[id].val.boolean = True
+                elif inp in ["false", "no"]:
+                    self.variables[id].val.kind = "boolean"
+                    self.variables[id].val.boolean = False
+            case "integer":
+                inp = inp.lower().strip()
+                p = Parser([])
+                if p.is_integer(inp):
+                    try:
+                        res = int(inp)
+                        self.variables[id].val.kind = "integer"
+                        self.variables[id].val.integer = res
+                    except ValueError:
+                        panic("expected INTEGER for INPUT")
+                else:
+                    panic("expected INTEGER for INPUT")
+            case "real":
+                inp = inp.lower().strip()
+                p = Parser([])
+                if p.is_real(inp) or p.is_integer(inp):
+                    try:
+                        res = float(inp)
+                        self.variables[id].val.kind = "real"
+                        self.variables[id].val.real = res
+                    except ValueError:
+                        panic("expected REAL for INPUT")
+                else:
+                    panic("expected REAL for INPUT")
+                    
+
     def visit_if_stmt(self, stmt: IfStatement):
         cond: BCValue = self.visit_expr(stmt.cond)
 
@@ -319,6 +378,8 @@ class Intepreter:
                 self.visit_while_stmt(stmt.while_s) # type: ignore
             case "output":
                 self.visit_output_stmt(stmt.output) # type: ignore
+            case "input":
+                self.visit_input_stmt(stmt.input) # type: ignore
             case "assign":
                 s: AssignStatement = stmt.assign # type: ignore
                 key = s.ident.ident
