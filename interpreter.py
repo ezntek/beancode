@@ -247,6 +247,15 @@ class Intepreter:
     def visit_expr(self, expr: Expr) -> BCValue: #type: ignore
         if isinstance(expr, Grouping):
             return self.visit_expr(expr.inner)
+        elif isinstance(expr, Negation):
+            inner = self.visit_expr(expr.inner)
+            if inner.kind not in ["integer", "real"]:
+                panic(f"attemped to negate a value of type {inner.kind}")
+
+            if inner.kind == "integer":
+                return BCValue("integer", integer=-inner.integer) # type: ignore
+            elif inner.kind == "real":
+                return BCValue("real", real=-inner.real) # type: ignore
         elif isinstance(expr, Identifier):
             var = self.variables[expr.ident]
             if var.val == None or var.is_uninitialized():
@@ -379,6 +388,16 @@ class Intepreter:
                 block.visit_block(None)
                 counter.integer = counter.integer + step # type: ignore
 
+    def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
+        cond: Expr = stmt.cond # type: ignore
+        loop_intp = self.new(stmt.block)
+        loop_intp.variables = self.variables
+        
+        while True:
+            loop_intp.visit_block(None)
+            if self.visit_expr(cond).boolean:
+                break
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
@@ -387,6 +406,8 @@ class Intepreter:
                 self.visit_for_stmt(stmt.for_s) # type: ignore
             case "while":
                 self.visit_while_stmt(stmt.while_s) # type: ignore
+            case "repeatuntil":
+                self.visit_repeatuntil_stmt(stmt.repeatuntil) # type: ignore
             case "output":
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "input":

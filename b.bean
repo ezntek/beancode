@@ -1,0 +1,14 @@
+<<<<<<< HEAD
+constant b <- 2
+constant e <- 10
+constant s <- 2
+
+for counter <- b to e step s
+    output counter
+next counter
+=======
+declare i: integer
+i <- 4
+output "orig is ", i
+output "negated is ", -i
+>>>>>>> f96487abe78199fa6dcecda5f9bc6290303a9417
