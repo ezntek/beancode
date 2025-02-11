@@ -349,22 +349,33 @@ class Intepreter:
             loop_intp.visit_block(block)
 
     def visit_for_stmt(self, stmt: ForStatement):
-        begin = stmt.begin
-        end = stmt.end
-        step = stmt.step if stmt.step is not None else 1
+        begin = self.visit_expr(stmt.begin)
+
+        if begin.kind != "integer":
+            panic("non-integer expression used for for loop begin")
+
+        end = self.visit_expr(stmt.end)
+
+        if end.kind != "integer":
+            panic("non-integer expression used for for loop end")
+        
+        if stmt.step is None:
+            step = 1
+        else:
+            step = self.visit_expr(stmt.step).get_integer()
        
         block = self.new(stmt.block)
         block.variables = self.variables
 
-        counter = BCValue("integer", integer=begin)
+        counter = begin
         block.variables[stmt.counter.ident] = Variable(counter, const=False)
 
         if step > 0:
-            while counter.get_integer() <= end:
+            while counter.get_integer() <= end.get_integer():
                 block.visit_block(None)
                 counter.integer = counter.integer + step # type: ignore
         elif step < 0:
-            while counter.get_integer() >= end:
+            while counter.get_integer() >= end.get_integer():
                 block.visit_block(None)
                 counter.integer = counter.integer + step # type: ignore
 

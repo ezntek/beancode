@@ -97,9 +97,9 @@ class WhileStatement:
 class ForStatement:
     counter: Identifier
     block: list["Statement"]
-    begin: int
-    end: int
-    step: int = 1
+    begin: Expr
+    end: Expr
+    step: Expr | None
 
 
 @dataclass
@@ -630,24 +630,24 @@ class Parser:
         if assign.operator != "assign":
             panic("expected assignment operator `<-` after counter in a for loop")
 
-        begin: Literal | None = self.literal()  # type: ignore
-        if begin is None or not isinstance(begin, Literal) or begin.kind != "integer":
-            panic("invalid literal as beginning value in for loop")
+        begin = self.expression()
+        if begin is None:
+            panic("invalid expression as begin in for loop")
 
         to = self.advance()
         if to.keyword != "to":
             panic("expected TO after beginning value in for loop")
 
-        end: Literal | None = self.literal()  # type: ignore
-        if end is None or not isinstance(end, Literal) or end.kind != "integer":
-            panic("invalid literal as ending value in for loop")
+        end = self.expression()     
+        if end is None:
+            panic("invalid expression as end in for loop")
 
-        step: Literal | None = None
+        step: Expr | None = None
         if self.peek().keyword == "step":
             self.advance()
-            step = self.literal()  # type: ignore
-            if step is None or not isinstance(step, Literal) or step.kind != "integer":
-                panic("invalid literal as step value in for loop")
+            step = self.expression()     
+            if step is None:
+                panic("invalid expression as step in for loop")
 
         self.check_newline("after for loop declaration")
 
@@ -666,12 +666,7 @@ class Parser:
             )
 
         # thanks python for not having proper null handling
-        res = ForStatement(counter=counter, block=stmts, begin=begin.integer, end=end.integer)  # type: ignore
-        if step is not None:
-            if step == 0:
-                panic("for loop step cannot be negative")
-            res.step = step.integer # type: ignore
-
+        res = ForStatement(counter=counter, block=stmts, begin=begin, end=end, step=step)  # type: ignore
         return Statement("for", for_s=res)
 
     def clean_newlines(self):

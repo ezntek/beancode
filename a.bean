@@ -1,3 +1,7 @@
-declare var: char
-input var
-output "you entered ", var
+constant b <- 2
+constant e <- 10
+constant s <- 2
+
+for counter <- b to e step s
+    output counter
+next counter
