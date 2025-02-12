@@ -244,6 +244,56 @@ class Intepreter:
                 elif isinstance(res, float):
                     return BCValue("real", real=res)
 
+    def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
+        index = self.visit_expr(ind.idx_outer).integer
+
+        if index is None:
+            panic("found None for array index")
+        
+        v = self.variables[ind.ident.ident].val
+        
+        if isinstance(v.kind, BCArrayType):
+            a: BCArray = v.array # type: ignore
+            
+            if a.typ.is_matrix:
+                if ind.idx_inner is None:
+                    panic("expected 2 indices for matrix indexing")
+                
+                inner_index = self.visit_expr(ind.idx_inner).integer
+                if inner_index is None:
+                    panic("found None for inner array index")
+
+                return (index, inner_index)
+            else:
+                return (index, None)
+        else:
+            panic(f"attemped to index {v.kind}")
+
+
+    def visit_array_index(self, ind: ArrayIndex) -> BCValue: # type: ignore
+        index = self.visit_expr(ind.idx_outer).integer
+
+        if index is None:
+            panic("found None for array index")
+        
+        v = self.variables[ind.ident.ident].val
+         
+        if isinstance(v.kind, BCArrayType):
+            a: BCArray = v.array # type: ignore
+            
+            tup = self._get_array_index(ind)
+            if a.typ.is_matrix:
+                inner = tup[1]
+                if inner is None:
+                    panic("second index not present for matrix index")
+                res = a.matrix[tup[0]-1][inner-1] # type: ignore
+                return res
+            else:
+                res = a.flat[tup[0]-1] # type: ignore
+                return res
+        else:
+            panic(f"attempted to index {v.kind}")
+
     def visit_expr(self, expr: Expr) -> BCValue: #type: ignore
         if isinstance(expr, Grouping):
             return self.visit_expr(expr.inner)
@@ -265,14 +315,50 @@ class Intepreter:
             return expr.to_bcvalue()
         elif isinstance(expr, BinaryExpr):
             return self.visit_binaryexpr(expr)
+        elif isinstance(expr, ArrayIndex):
+            return self.visit_array_index(expr)
         else:
             raise ValueError("expr is very corrupted whoops")
+
+    def _display_array(self, arr: BCArray) -> str:
+        if not arr.typ.is_matrix:
+            res = "["
+            flat: list[BCValue] = arr.flat # type: ignore
+            for idx, item in enumerate(flat):
+                res += str(item)
+
+                if idx != len(flat) - 1:
+                    res += ", "
+            res += ']'
+
+            return res
+        else:
+            matrix: list[list[BCValue]] = arr.matrix # type: ignore
+            outer_res = "["
+            for oidx, a in enumerate(matrix):
+                res = "["
+                for iidx, item in enumerate(a):
+                    res += str(item)
+
+                    if iidx != len(a) - 1:
+                        res += ", "
+                res += "]"
+
+                outer_res += res
+                if oidx != len(matrix) - 1:
+                    outer_res += ", "
+            outer_res += "]"
+
+            return outer_res 
 
     def visit_output_stmt(self, stmt: OutputStatement):
         res = ""
         for item in stmt.items:
             evaled = self.visit_expr(item)
-            res += str(evaled) # TODO: proper displaying
+            if isinstance(evaled.kind, BCArrayType):
+                res += self._display_array(evaled.array) # type: ignore
+            else:
+                res += str(evaled)
         print(res)
 
     def visit_input_stmt(self, stmt: InputStatement):
@@ -414,15 +500,31 @@ class Intepreter:
                 self.visit_input_stmt(stmt.input) # type: ignore
             case "assign":
                 s: AssignStatement = stmt.assign # type: ignore
-                key = s.ident.ident
 
-                if key not in self.variables:
-                    panic(f"attempted to use variable {key} without declaring it")
+                if isinstance(s.ident, ArrayIndex):
+                    key = s.ident.ident.ident
 
-                if self.variables[key].const:
-                    panic(f"attemped to write to constant {key}")
+                    if self.variables[key].val.array is None:
+                        panic(f"tried to index a variable of type {self.variables[key].val.kind} like an array")
 
-                self.variables[key].val = self.visit_expr(s.value)
+                    tup = self._get_array_index(s.ident)
+                    if tup[1] is None and self.variables[key].val.array.typ.is_matrix: # type: ignore
+                        panic(f"not enough indices for matrix")
+                    
+                    val = self.visit_expr(s.value)
+                    if self.variables[key].val.array.typ.is_matrix: # type: ignore
+                        self.variables[key].val.array.matrix[tup[0]-1][tup[1]-1] = val # type: ignore
+                    else:
+                        self.variables[key].val.array.flat[tup[0]-1] = val # type: ignore
+                else:
+                    key = s.ident.ident
+
+                    if key not in self.variables:
+                        panic(f"attempted to use variable {key} without declaring it")
+
+                    if self.variables[key].const:
+                        panic(f"attemped to write to constant {key}")
+                    self.variables[key].val = self.visit_expr(s.value)
             case "constant":
                 c: ConstantStatement = stmt.constant # type: ignore
                 key = c.ident.ident
@@ -436,9 +538,56 @@ class Intepreter:
                 key = d.ident.ident
                 
                 if key in self.variables:
-                    panic(f"variable {key} declared!")
+                    panic(f"variable {key} declared!") 
+    
 
-                self.variables[key] = Variable(BCValue(kind=d.typ), False)
+                if isinstance(d.typ, BCArrayType):
+                    atype = d.typ
+                    inner_type = atype.inner
+                    if atype.is_matrix:
+                        inner_end = self.visit_expr(atype.matrix_bounds[3]) # type: ignore
+                        if inner_end.kind != "integer":
+                            panic(f"cannot use type of {inner_end.kind} as array bound!")
+                        
+                        # directly setting the result of the comprehension results in multiple pionters pointing to the same list
+                        get_inner_arr = lambda: [BCValue.empty(inner_type) for _ in range(inner_end.integer)] # type: ignore
+
+                        outer_end = self.visit_expr(atype.matrix_bounds[1]) # type: ignore
+                        if outer_end.kind != "integer":
+                            panic(f"cannot use type of {outer_end.kind} as array bound!")
+
+                        outer_arr: BCValue = [get_inner_arr() for _ in range(outer_end.integer)] # type: ignore
+                        
+                        outer_begin = self.visit_expr(atype.matrix_bounds[0]) # type: ignore
+                        if outer_begin.kind != "integer":
+                            panic(f"cannot use type of {outer_begin.kind} as array bound!")
+ 
+                        inner_begin = self.visit_expr(atype.matrix_bounds[2]) # type: ignore
+                        if inner_begin.kind != "integer":
+                            panic(f"cannot use type of {inner_begin.kind} as array bound!")
+
+                        bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer) # type: ignore
+
+                        res = BCArray(typ=atype, matrix=outer_arr, matrix_bounds=bounds) # type: ignore
+                    else:
+                        begin = self.visit_expr(atype.flat_bounds[0]) # type: ignore
+                        if begin.kind != "integer":
+                            panic(f"cannot use type of {begin.kind} as array bound!")
+
+                        end = self.visit_expr(atype.flat_bounds[1]) # type: ignore
+                        if end.kind != "integer":
+                            panic(f"cannot use type of {end.kind} as array bound!")
+
+                        arr: BCValue = [BCValue.empty(atype) for _ in range(end.integer)] # type: ignore
+
+                        bounds = (begin.integer, end.integer) # type: ignore
+
+                        res = BCArray(typ=atype, flat=arr, flat_bounds=bounds) # type: ignore
+
+
+                    self.variables[key] = Variable(BCValue(kind=d.typ, array=res), False)
+                else:
+                    self.variables[key] = Variable(BCValue(kind=d.typ), False)
 
     def visit_block(self, block: list[Statement] | None):
         if block is not None:

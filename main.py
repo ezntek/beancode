@@ -3,7 +3,7 @@ from interpreter import Intepreter
 from lexer import *
 from parser import Parser
 
-PRINT = False
+PRINT = True
 INTERPRET = True
 
 def main():
@@ -23,8 +23,9 @@ def main():
         program = parser.program()
 
         if PRINT:
-            print(program)
-        
+            for stmt in program.stmts:
+                print(stmt)
+                print()
         print("\033[0m")
         if INTERPRET:
             print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")

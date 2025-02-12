@@ -2,17 +2,136 @@ from abc import abstractmethod
 import typing as t
 import lexer as l
 from dataclasses import dataclass
-from bctypes import *
 from util import *
+import typing
 
+BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean"]
+
+@dataclass
+class BCArrayType:
+    inner: BCPrimitiveType
+    is_matrix: bool  # true: 2d array
+    flat_bounds: tuple["Expr", "Expr"] | None = None  # begin:end
+    matrix_bounds: tuple["Expr", "Expr", "Expr", "Expr"] | None = None # begin:end,begin:end
+
+    def has_bounds(self) -> bool:
+        return self.flat_bounds is not None or self.matrix_bounds is not None
+
+    def get_flat_bounds(self) -> tuple["Expr", "Expr"]:
+        if self.flat_bounds is None:
+            panic("tried to access flat bounds on array without flat bounds")
+        return self.flat_bounds
+
+    def get_matrix_bounds(self) -> tuple["Expr", "Expr", "Expr", "Expr"]:
+        if self.matrix_bounds is None:
+            panic("tried to access matrixbounds on array without matrix bounds")
+        return self.matrix_bounds
+
+
+@dataclass
+class BCArray:
+    typ: BCArrayType
+    flat: list["BCValue"] | None = None # must be the BCPrimitiveType
+    matrix: list[list["BCValue"]] | None = None  # must be the BCPrimitiveType
+    flat_bounds: tuple[int, int] | None = None
+    matrix_bounds: tuple[int, int, int, int] | None = None
+
+    def __repr__(self) -> str:
+        if not self.typ.is_matrix:
+            return str(self.flat)
+        else:
+            return str(self.matrix)
+
+
+BCType = BCArrayType | BCPrimitiveType
+
+
+@dataclass
+class BCValue:
+    kind: BCType
+    integer: int | None = None
+    real: float | None = None
+    char: str | None = None
+    string: str | None = None
+    boolean: bool | None = None
+    array: BCArray | None = None
+
+    def is_uninitialized(self) -> bool:
+        return (
+            self.integer is None
+            and self.real is None
+            and self.char is None
+            and self.string is None
+            and self.boolean is None
+            and self.array is None
+        )
+
+    @classmethod
+    def empty(cls, kind: BCType) -> 'BCValue':
+        return cls(kind, integer=None, real=None, char=None, string=None, boolean=None, array=None)
+
+    def get_integer(self) -> int:
+        if self.kind != "integer":
+            panic(f"tried to access integer value from BCValue of {self.kind}")
+
+        return self.integer  # type: ignore
+
+    def get_real(self) -> float:
+        if self.kind != "real":
+            panic(f"tried to access real value from BCValue of {self.kind}")
+
+        return self.real  # type: ignore
+
+    def get_char(self) -> str:
+        if self.kind != "char":
+            panic(f"tried to access char value from BCValue of {self.kind}")
+
+        return self.char  # type: ignore
+
+    def get_string(self) -> str:
+        if self.kind != "string":
+            panic(f"tried to access string value from BCValue of {self.kind}")
+
+        return self.string  # type: ignore
+
+    def get_boolean(self) -> bool:
+        if self.kind != "boolean":
+            panic(f"tried to access boolean value from BCValue of {self.kind}")
+
+        return self.boolean  # type: ignore
+
+    def get_array(self) -> BCArray:
+        if self.kind != "array":
+            panic(f"tried to access array value from BCValue of {self.kind}")
+
+        return self.array  # type: ignore
+
+    def __repr__(self) -> str: # type: ignore
+        if isinstance(self.kind, BCArray):
+            panic("BCValue of array can only be represented at runtime")
+
+        match self.kind:
+            case "string":
+                return self.get_string()
+            case "real":
+                return str(self.get_real())
+            case "integer":
+                return str(self.get_integer())
+            case "char":
+                return str(self.get_char())
+            case "boolean":
+                return str(self.get_boolean())
+    
 
 @dataclass
 class Expr:
     pass
 
+
 @dataclass
 class Negation(Expr):
     inner: Expr
+
 
 @dataclass
 class Grouping(Expr):
@@ -32,14 +151,20 @@ class BinaryExpr(Expr):
 
 
 @dataclass
+class ArrayIndex(Expr):
+    ident: Identifier
+    idx_outer: Expr
+    idx_inner: Expr | None = None
+
+
+@dataclass
 class Literal(Expr):
-    kind: BCType
+    kind: BCPrimitiveType
     integer: int | None = None
     real: float | None = None
     char: str | None = None
     string: str | None = None
     boolean: bool | None = None
-    # array not implemented
 
     def to_bcvalue(self) -> BCValue:
         return BCValue(
@@ -49,35 +174,50 @@ class Literal(Expr):
             char=self.char,
             string=self.string,
             boolean=self.boolean,
+            array=None,
         )
 
 
 StatementKind = t.Literal[
-    "declare", "output", "input", "constant", "assign", "if", "while", "for", "repeatuntil"
+    "declare",
+    "output",
+    "input",
+    "constant",
+    "assign",
+    "if",
+    "while",
+    "for",
+    "repeatuntil",
 ]
+
 
 @dataclass
 class DeclareStatement:
     ident: Identifier
     typ: BCType
 
+
 @dataclass
 class OutputStatement:
     items: list[Expr]
 
+
 @dataclass
 class InputStatement:
     ident: Identifier
+
 
 @dataclass
 class ConstantStatement:
     ident: Identifier
     value: Literal
 
+
 @dataclass
 class AssignStatement:
-    ident: Identifier
+    ident: Identifier | ArrayIndex
     value: Expr
+
 
 @dataclass
 class IfStatement:
@@ -85,10 +225,12 @@ class IfStatement:
     if_block: list["Statement"]
     else_block: list["Statement"]
 
+
 @dataclass
 class WhileStatement:
     cond: Expr
     block: list["Statement"]
+
 
 @dataclass
 class ForStatement:
@@ -98,10 +240,12 @@ class ForStatement:
     end: Expr
     step: Expr | None
 
+
 @dataclass
 class RepeatUntilStatement:
     cond: Expr
     block: list["Statement"]
+
 
 @dataclass
 class Statement:
@@ -114,7 +258,7 @@ class Statement:
     if_s: IfStatement | None = None
     while_s: WhileStatement | None = None
     for_s: ForStatement | None = None
-    repeatuntil : RepeatUntilStatement | None = None
+    repeatuntil: RepeatUntilStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -136,6 +280,7 @@ class Statement:
                 return self.for_s.__repr__()
             case "repeatuntil":
                 return self.repeatuntil.__repr__()
+
 
 @dataclass
 class Program:
@@ -206,7 +351,7 @@ class Parser:
         return False
 
     def is_integer(self, val: str) -> bool:
-        if val[0] == '-' and val[1].isdigit():
+        if val[0] == "-" and val[1].isdigit():
             val = val[1:]
 
         for ch in val:
@@ -238,8 +383,6 @@ class Parser:
         lit = c.literal  # type: ignore
 
         match lit.kind:
-            case "array":
-                panic("not implemented")
             case "char":
                 val = lit.value
                 if len(val) > 1:
@@ -276,10 +419,144 @@ class Parser:
                 else:
                     panic(f"invalid number literal `{val}`")
 
+    def type(self) -> BCType | None:
+        PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
+
+        adv = self.advance()
+
+        if adv.kind == "type" and adv.typ != "array":
+            if adv.typ not in PRIM_TYPES:
+                return None
+
+            t: BCPrimitiveType = adv.typ  # type: ignore
+            return t
+        elif adv.kind == "type" and adv.typ == "array":
+            flat_bounds = None
+            matrix_bounds = None
+            is_matrix = False
+            inner: BCPrimitiveType
+
+            left_bracket = self.advance()
+            if left_bracket.separator == "left_bracket":
+                begin = self.expression()
+                if begin is None:
+                    panic("invalid expression as beginning value of array declaration")
+
+                colon = self.advance()
+                if colon.kind != "separator" and colon.separator != "colon":
+                    panic("expected colon after beginning value of array declaration")
+
+                end = self.expression()
+                if end is None:
+                    panic("invalid expression as ending value of array declaration")
+
+                flat_bounds = (begin, end)
+
+                right_bracket = self.advance()
+                if right_bracket.separator == "right_bracket":
+                    pass
+                elif (
+                    right_bracket.kind == "separator"
+                    and right_bracket.separator == "comma"
+                ):
+                    inner_begin = self.expression()
+                    if inner_begin is None:
+                        panic(
+                            "invalid expression as beginning value of array declaration"
+                        )
+
+                    inner_colon = self.advance()
+                    if (
+                        inner_colon.kind != "separator"
+                        and inner_colon.separator != "colon"
+                    ):
+                        panic(
+                            "expected colon after beginning value of array declaration"
+                        )
+
+                    inner_end = self.expression()
+                    if inner_end is None:
+                        panic("invalid expression as ending value of array declaration")
+
+                    matrix_bounds = (
+                        flat_bounds[0],
+                        flat_bounds[1],
+                        inner_begin,
+                        inner_end,
+                    )
+
+                    flat_bounds = None
+
+                    right_bracket = self.advance()
+                    if right_bracket.separator != "right_bracket":
+                        panic("expected ending right bracket after matrix length declaration")
+                    
+                    is_matrix = True
+                else:
+                    panic(
+                        "expected right bracket or comma after array bounds declaration"
+                    )
+
+            of = self.advance()
+            if of.kind != "keyword" and of.keyword != "of":
+                panic("expected `OF` after `ARRAY` and/or size declaration")
+
+            # TODO: refactor
+            arrtyp = self.advance()
+
+            if arrtyp.typ == "array":
+                panic(
+                    "cannot have array as array element type, please use the matrix syntax instead"
+                )
+
+            if arrtyp.typ not in PRIM_TYPES:
+                panic("invalid type used as array element type")
+
+            inner = arrtyp.typ  # type: ignore
+
+            return BCArrayType(
+                is_matrix=is_matrix,
+                flat_bounds=flat_bounds,
+                matrix_bounds=matrix_bounds,
+                inner=inner,
+            )
+
     def ident(self) -> Expr:
         c = self.advance()
 
         return Identifier(c.ident)  # type: ignore
+
+    def array_index(self) -> Expr | None:
+        pn = self.peek_next()
+        if pn.kind != "separator" and pn.separator != "left_bracket":
+            return None
+
+        ident = self.ident()
+
+        leftb = self.advance()
+        if leftb.separator != "left_bracket":
+            panic("expected left_bracket after ident in array index")
+
+        exp = self.expression()
+        if exp is None:
+            panic("expected expression as array index")
+
+        rightb = self.advance()
+        exp_inner = None
+        if rightb.separator == "right_bracket":
+            pass
+        elif rightb.separator == "comma":
+            exp_inner = self.expression()
+            if exp_inner is None:
+                panic("expected expression as array index")
+
+            rightb = self.advance()
+            if rightb.separator != "right_bracket":
+                panic("expected right_bracket after expression in array index")
+        else:
+            panic("expected right_bracket after expression in array index")
+
+        return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner) 
 
     def operator(self) -> l.Operator | None:
         o = self.advance()
@@ -290,6 +567,10 @@ class Parser:
         if p.kind == "literal":
             return self.literal()
         elif p.kind == "ident":
+            pn = self.peek_next()
+            if pn.kind == "separator" and pn.separator == "left_bracket":
+                return self.array_index()
+
             return self.ident()
         elif p.kind == "separator" and p.separator == "left_paren":
             self.advance()
@@ -308,11 +589,11 @@ class Parser:
             e = self.expression()
             if e is None:
                 panic("invalid expression for negation")
-            return Negation(e) 
+            return Negation(e)
         else:
             return None
 
-    def factor(self)-> Expr | None:
+    def factor(self) -> Expr | None:
         expr = self.unary()
         if expr is None:
             return None
@@ -441,7 +722,7 @@ class Parser:
 
     def input_stmt(self) -> Statement | None:
         begin = self.peek()
-        
+
         if begin.kind != "keyword":
             return None
 
@@ -458,7 +739,6 @@ class Parser:
 
         res = InputStatement(ident)
         return Statement("input", input=res)
-
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -481,14 +761,13 @@ class Parser:
         if colon.kind != "separator" and colon.separator != "colon":
             panic("expected colon `:` after ident in declare")
 
-        typ = self.advance()
-
-        if typ.kind != "type":
-            panic("expected type after `:` in declare")
+        typ = self.type()
+        if typ is None:
+            panic("invalid type after DECLARE")
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ.typ)  # type: ignore
+        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ)  # type: ignore
         return Statement("declare", declare=res)
 
     def constant_stmt(self) -> Statement | None:
@@ -523,12 +802,21 @@ class Parser:
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
 
-        if p.kind != "operator" and p.operator != "assign":
+        if p.kind == "separator" and p.separator == "left_bracket":
+            temp_idx = self.cur
+            while self.tokens[temp_idx].separator != "right_bracket":
+                temp_idx += 1
+
+            p = self.tokens[temp_idx + 1]
+
+            if p.kind != "operator" and p.operator != "assign":
+                return None
+        elif p.kind != "operator" and p.operator != "assign":
             return None
 
-        ident: Identifier | None = self.ident()  # type: ignore
-        if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
-            panic("expected ident before `<-` in assignment")
+        ident = self.array_index()
+        if ident is None:
+            ident = self.ident()
 
         self.advance()  # go past the arrow
 
@@ -538,7 +826,7 @@ class Parser:
 
         self.check_newline("assignment")
 
-        res = AssignStatement(ident, expr)
+        res = AssignStatement(ident, expr)  # type: ignore
         return Statement("assign", assign=res)
 
     # multiline statements go here
@@ -587,6 +875,12 @@ class Parser:
 
         res = IfStatement(cond=cond, if_block=if_stmts, else_block=else_stmts)
         return Statement("if", if_s=res)
+
+    def caseof_stmt(self) -> None:
+        case = self.peek()
+
+        if case.kind == "keyword" and case.keyword == "case":
+            panic("case of not implemented")
 
     def while_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -647,14 +941,14 @@ class Parser:
         if to.keyword != "to":
             panic("expected TO after beginning value in for loop")
 
-        end = self.expression()     
+        end = self.expression()
         if end is None:
             panic("invalid expression as end in for loop")
 
         step: Expr | None = None
         if self.peek().keyword == "step":
             self.advance()
-            step = self.expression()     
+            step = self.expression()
             if step is None:
                 panic("invalid expression as step in for loop")
 
@@ -734,6 +1028,8 @@ class Parser:
         if_s = self.if_stmt()
         if if_s is not None:
             return if_s
+
+        self.caseof_stmt()
 
         while_s = self.while_stmt()
         if while_s is not None:

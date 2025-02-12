@@ -1,7 +1,15 @@
-constant b <- 2
-constant e <- 10
-constant s <- 2
+declare myarr: array[1:3] of integer
 
-for counter <- b to e step s
-    output counter
-next counter
+declare mymatrix: array[1:2,1:2] of char
+
+myarr[1] <- 1
+myarr[2] <- 2
+myarr[3] <- 3
+
+mymatrix[1,1] <- 'a'
+mymatrix[1,2] <- 'b'
+mymatrix[2,1] <- 'c'
+mymatrix[2,2] <- 'd'
+
+output myarr
+output mymatrix
