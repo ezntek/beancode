@@ -1,9 +1,1 @@
-declare myarr: array[1:7] of integer
-
-declare mymatrix: array[1:2,1:2] of char
-
-myarr[5] <- 1
-myarr[6] <- 2
-myarr[7] <- 3
-
-output myarr
+output true and not false

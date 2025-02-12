@@ -134,6 +134,9 @@ class Expr:
 class Negation(Expr):
     inner: Expr
 
+@dataclass
+class Not(Expr):
+    inner: Expr
 
 @dataclass
 class Grouping(Expr):
@@ -144,11 +147,26 @@ class Grouping(Expr):
 class Identifier(Expr):
     ident: str
 
-
+Operator = t.Literal[
+    "assign",
+    "equal",
+    "less_than",
+    "greater_than",
+    "less_than_or_equal",
+    "greater_than_or_equal",
+    "not_equal",
+    "mul",
+    "div",
+    "add",
+    "sub",
+    "and",
+    "or",
+    "not",
+]
 @dataclass
 class BinaryExpr(Expr):
     lhs: Expr
-    op: l.Operator
+    op: Operator
     rhs: Expr
 
 
@@ -558,7 +576,7 @@ class Parser:
         else:
             panic("expected right_bracket after expression in array index")
 
-        return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner) 
+        return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner) # type: ignore 
 
     def operator(self) -> l.Operator | None:
         o = self.advance()
@@ -592,11 +610,41 @@ class Parser:
             if e is None:
                 panic("invalid expression for negation")
             return Negation(e)
+        elif p.kind == "keyword" and p.keyword == "not":
+            self.advance()
+            e = self.expression()
+            if e is None:
+                panic("invalid expression for logical NOT")
+            return Not(e)
         else:
             return None
 
-    def factor(self) -> Expr | None:
+    def logical_comparison(self) -> Expr | None:
         expr = self.unary()
+        if expr is None: return None
+
+        while self.match([l.Token("keyword", keyword="and"), l.Token("keyword", keyword="or")]):
+            kw = self.prev().keyword
+            if kw is None:
+                panic("logical_comparison: kw is None")
+
+            right = self.unary()
+
+            if right is None:
+                return None
+
+            op: Operator = "" # type: ignore
+            if kw == "and":
+                op = "and"
+            elif kw == "or":
+                op = "or"
+
+            expr = BinaryExpr(expr, op, right) # kw must be and or or
+
+        return expr
+
+    def factor(self) -> Expr | None:
+        expr = self.logical_comparison()
         if expr is None:
             return None
 
@@ -608,7 +656,7 @@ class Parser:
             if op is None:
                 panic("factor: op is None")
 
-            right = self.unary()
+            right = self.logical_comparison()
 
             if right is None:
                 return None

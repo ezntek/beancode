@@ -243,6 +243,39 @@ class Intepreter:
                     return BCValue("integer", integer=res)
                 elif isinstance(res, float):
                     return BCValue("real", real=res)
+            case "and":
+                lhs = self.visit_expr(expr.lhs)
+                rhs = self.visit_expr(expr.rhs)
+                
+                if lhs.kind != "boolean":
+                    panic(f"cannot perform logical AND on value with type {lhs.kind}")
+            
+                if rhs.kind != "boolean":
+                    panic(f"cannot perform logical AND on value with type {lhs.kind}")
+                
+                lhs_b = lhs.get_boolean()
+                rhs_b = rhs.get_boolean()
+               
+                res = lhs_b and rhs_b
+                return BCValue("boolean", boolean=res)
+            case "or":
+                lhs = self.visit_expr(expr.lhs)
+                rhs = self.visit_expr(expr.rhs)
+                
+                if lhs.kind != "boolean":
+                    panic(f"cannot perform logical OR on value with type {lhs.kind}")
+            
+                if rhs.kind != "boolean":
+                    panic(f"cannot perform logical OR on value with type {lhs.kind}")
+                
+                lhs_b = lhs.get_boolean()
+                rhs_b = rhs.get_boolean()
+               
+                # python does: False or True = False....fuck you
+    
+                res = lhs_b or rhs_b
+
+                return BCValue("boolean", boolean=res)
 
     def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
         index = self.visit_expr(ind.idx_outer).integer
@@ -326,6 +359,12 @@ class Intepreter:
                 return BCValue("integer", integer=-inner.integer) # type: ignore
             elif inner.kind == "real":
                 return BCValue("real", real=-inner.real) # type: ignore
+        elif isinstance(expr, Not):
+            inner = self.visit_expr(expr.inner)
+            if inner.kind != "boolean":
+                panic(f"attempted to perform logical NOT on value of type {inner.kind}")
+
+            return BCValue("boolean", boolean=not inner.get_boolean())
         elif isinstance(expr, Identifier):
             var = self.variables[expr.ident]
             if var.val == None or var.is_uninitialized():
