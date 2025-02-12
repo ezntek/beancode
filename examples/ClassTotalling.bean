@@ -8,11 +8,17 @@ DECLARE StudentNames: ARRAY[1:5] OF STRING
 DECLARE StudentAttendance: ARRAY[1:5] OF BOOLEAN
 DECLARE CurrentAttendance: STRING
 
-FOR Counter <- 1 TO LENGTH(StudentNames)
-    OUTPUT "Is ", StudentNames[Counter], "Here?"
+StudentNames[1] <- "John"
+StudentNames[2] <- "James"
+StudentNames[3] <- "Jimmy"
+StudentNames[4] <- "Jack"
+StudentNames[5] <- "Joseph"
+
+FOR Counter <- 1 TO 5
+    OUTPUT "Is ", StudentNames[Counter], " Here?"
     INPUT CurrentAttendance
 
-    IF CurrentAttendance = "Here"
+    IF CurrentAttendance = "yes" 
         THEN
             StudentAttendance[Counter] <- TRUE
     ELSE
@@ -20,8 +26,8 @@ FOR Counter <- 1 TO LENGTH(StudentNames)
     ENDIF
 NEXT Counter
 
-FOR Counter <- 1 TO LENGTH(StudentNames)
-    IF CurrentAttendance = TRUE
+FOR Counter <- 1 TO 5
+    IF StudentAttendance[Counter]
         THEN
             OUTPUT StudentNames[Counter], " is Here"
     ELSE

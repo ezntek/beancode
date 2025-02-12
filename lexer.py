@@ -179,10 +179,10 @@ class Lexer:
         return True
 
     def is_keyword(self, s: str) -> bool:
-        return s in self.keywords
+        return s.lower() in self.keywords
 
     def is_type(self, s: str) -> bool:
-        return s in self.types
+        return s.lower() in self.types
 
     def trim_left(self):
         if self.cur >= len(self.file):
@@ -328,7 +328,7 @@ class Lexer:
 
     def next_type(self, typ: str) -> Token | None:
         if typ.lower() in ["integer", "string", "boolean", "real", "array", "char"]:
-            return Token("type", typ=typ)  # type: ignore
+            return Token("type", typ=typ.lower())  # type: ignore
         else:
             return None
 
