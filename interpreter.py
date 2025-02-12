@@ -279,6 +279,9 @@ class Intepreter:
         v = self.variables[ind.ident.ident].val
          
         if isinstance(v.kind, BCArrayType):
+            if v.array is None:
+                return BCValue.empty("null")
+
             a: BCArray = v.array # type: ignore
             
             tup = self._get_array_index(ind)
@@ -286,11 +289,28 @@ class Intepreter:
                 inner = tup[1]
                 if inner is None:
                     panic("second index not present for matrix index")
+                
+                if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1]+1): # type: ignore
+                    panic("attempted to access out of bounds array element")
+                
+                if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3]+1): # type: ignore
+                    panic("attempted to access out of bounds array element")
+
                 res = a.matrix[tup[0]-1][inner-1] # type: ignore
-                return res
+                
+                if res.is_uninitialized():
+                    return BCValue.empty("null")
+                else:
+                    return res
             else:
+                if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1]+1): # type: ignore
+                    panic("attempted to access out of bounds array element")
+                
                 res = a.flat[tup[0]-1] # type: ignore
-                return res
+                if res.is_uninitialized():
+                    return BCValue.empty("null")
+                else:
+                    return res
         else:
             panic(f"attempted to index {v.kind}")
 
@@ -325,7 +345,10 @@ class Intepreter:
             res = "["
             flat: list[BCValue] = arr.flat # type: ignore
             for idx, item in enumerate(flat):
-                res += str(item)
+                if item.is_uninitialized():
+                    res += "(uninitialized)"
+                else:
+                    res += str(item)
 
                 if idx != len(flat) - 1:
                     res += ", "
@@ -338,7 +361,10 @@ class Intepreter:
             for oidx, a in enumerate(matrix):
                 res = "["
                 for iidx, item in enumerate(a):
-                    res += str(item)
+                    if item.is_uninitialized():
+                        res += "(uninitialized)"
+                    else:
+                        res += str(item)
 
                     if iidx != len(a) - 1:
                         res += ", "
@@ -512,10 +538,21 @@ class Intepreter:
                         panic(f"not enough indices for matrix")
                     
                     val = self.visit_expr(s.value)
-                    if self.variables[key].val.array.typ.is_matrix: # type: ignore
-                        self.variables[key].val.array.matrix[tup[0]-1][tup[1]-1] = val # type: ignore
+                    a: BCArray = self.variables[key].val.array # type: ignore
+                    
+    
+                    if a.typ.is_matrix: # type: ignore
+                        if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1]+1): # type: ignore
+                            panic(f"tried to access out of bounds array index {tup[0]}")   
+                        
+                        if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3]+1): # type: ignore
+                            panic(f"tried to access out of bounds array index {tup[1]}")
+
+                        a.matrix[tup[0]-1][tup[1]-1] = val # type: ignore
                     else:
-                        self.variables[key].val.array.flat[tup[0]-1] = val # type: ignore
+                        if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1]+1): # type: ignore
+                            panic(f"tried to access out of bounds array index {tup[0]}")
+                        a.flat[tup[0]-1] = val # type: ignore
                 else:
                     key = s.ident.ident
 
@@ -539,7 +576,6 @@ class Intepreter:
                 
                 if key in self.variables:
                     panic(f"variable {key} declared!") 
-    
 
                 if isinstance(d.typ, BCArrayType):
                     atype = d.typ
@@ -567,7 +603,7 @@ class Intepreter:
                             panic(f"cannot use type of {inner_begin.kind} as array bound!")
 
                         bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer) # type: ignore
-
+                        atype.is_matrix = True
                         res = BCArray(typ=atype, matrix=outer_arr, matrix_bounds=bounds) # type: ignore
                     else:
                         begin = self.visit_expr(atype.flat_bounds[0]) # type: ignore
@@ -581,7 +617,7 @@ class Intepreter:
                         arr: BCValue = [BCValue.empty(atype) for _ in range(end.integer)] # type: ignore
 
                         bounds = (begin.integer, end.integer) # type: ignore
-
+                        atype.is_matrix = False
                         res = BCArray(typ=atype, flat=arr, flat_bounds=bounds) # type: ignore
 
 
@@ -595,7 +631,7 @@ class Intepreter:
                 self.visit_stmt(stmt)
         elif self.block is not None:
             for stmt in self.block:
-                self.visit_stmt(stmt)
+                self.visit_stmt(stmt) 
 
     def visit_program(self, program: Program):
         if program is not None:

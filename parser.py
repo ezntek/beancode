@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from util import *
 import typing
 
-BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean"]
+BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
 
 @dataclass
 class BCArrayType:
@@ -107,7 +107,7 @@ class BCValue:
         return self.array  # type: ignore
 
     def __repr__(self) -> str: # type: ignore
-        if isinstance(self.kind, BCArray):
+        if isinstance(self.kind, BCArrayType):
             panic("BCValue of array can only be represented at runtime")
 
         match self.kind:
@@ -121,6 +121,8 @@ class BCValue:
                 return str(self.get_char())
             case "boolean":
                 return str(self.get_boolean())
+            case "null":
+                return "(uninitialized)"
     
 
 @dataclass
@@ -604,7 +606,7 @@ class Parser:
             op = self.prev().operator
 
             if op is None:
-                print("factor: op is None")
+                panic("factor: op is None")
 
             right = self.unary()
 
@@ -627,7 +629,7 @@ class Parser:
             op = self.prev().operator
 
             if op is None:
-                print("term: op is is None")
+                panic("term: op is is None")
 
             right = self.factor()
             if right is None:
@@ -653,7 +655,7 @@ class Parser:
         ):
             op = self.prev().operator
             if op is None:
-                print("comparison: op is None")
+                panic("comparison: op is None")
 
             right = self.term()
             if right is None:
