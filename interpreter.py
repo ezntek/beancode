@@ -353,6 +353,10 @@ class Intepreter:
         proc = self.functions[stmt.ident]
         intp = self.new(proc.block)
         vars = self.variables
+        
+        if len(proc.args) != len(stmt.args):
+            panic(f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call")
+
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
             vars[argdef.name] = Variable(val=val, const=False)

@@ -1,5 +1,5 @@
 procedure sayhello(number: integer)
-    output "hey!", number
+    output "hey! number is ", number
 endprocedure
 
 call sayhello(5)

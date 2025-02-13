@@ -1090,14 +1090,13 @@ class Parser:
 
     def function_arg(self) -> FunctionArgument | None:
         # ident : type
-
         ident = self.ident()
         if not isinstance(ident, Identifier):
             panic("invalid identifier for function arg")
 
         colon = self.advance()
         if colon.kind != "separator" and colon.separator != "colon":
-            panic("expected colon after ident in function ragument")
+            panic("expected colon after ident in function argument")
 
         typ = self.type()
         if typ is None:
@@ -1121,15 +1120,21 @@ class Parser:
         leftb = self.advance()
         args = []
         if leftb.kind == "separator" and leftb.separator == "left_paren":
-            while self.match([l.Token("separator", separator="comma")]):
+            while self.peek().separator != "right_paren":
                 expr = self.expression()
                 if expr is None:
                     panic("invalid expression as procedure argument")
 
                 args.append(expr)
 
+                comma = self.peek()
+                if comma.separator != "comma" and comma.separator != "right_paren":
+                    panic("expected comma after argument in procedure call argument list")
+                elif comma.separator == "comma":
+                    self.advance()
+
             rightb = self.advance()
-            if rightb.kind != "separator" and rightb.separator != "right_paren":
+            if rightb.separator != "right_paren":
                 panic("expected right paren after arg list in procedure call")
 
         self.check_newline("procedure call")
@@ -1154,17 +1159,23 @@ class Parser:
         if leftb.kind == "separator" and leftb.separator == "left_paren":
             # there is an arg list
             self.advance()
-            while self.match([l.Token("separator", separator="colon")]):
+            while self.peek().separator != "right_paren":
                 arg = self.function_arg()
                 if arg is None:
                     panic("invalid function argument")
                 
                 args.append(arg)
+
+                comma = self.peek()
+                if comma.separator != "comma" and comma.separator != "right_paren":
+                    panic("expected comma after procedure argument in list")
+                
+                if comma.separator == "comma":
+                    self.advance()
             
             rightb = self.advance()
-            print(f"aa {rightb}")
             if rightb.kind != "separator" and rightb.separator != "right_paren":
-                panic("expected right paren after arg list in procedure declaration")
+                panic(f"expected right paren after arg list in procedure declaration, found {rightb}")
 
         self.check_newline("PROCEDURE")
  
@@ -1202,7 +1213,6 @@ class Parser:
                 args.append(arg)
             
             rightb = self.advance()
-            print(f"aa {rightb}")
             if rightb.kind != "separator" and rightb.separator != "right_paren":
                 panic("expected right paren after arg list")
 
