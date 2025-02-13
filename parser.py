@@ -208,8 +208,19 @@ StatementKind = t.Literal[
     "while",
     "for",
     "repeatuntil",
+    "function",
+    "procedure",
 ]
 
+@dataclass
+class ProcedureCall(Expr):
+    ident: Identifier
+    args: list[Expr]
+
+@dataclass
+class FunctionCall(Expr):
+    ident: Identifier
+    args: list[Expr]
 
 @dataclass
 class DeclareStatement:
@@ -266,6 +277,24 @@ class RepeatUntilStatement:
     cond: Expr
     block: list["Statement"]
 
+@dataclass
+class FunctionArgument:
+    name: str
+    typ: BCType
+
+@dataclass
+class ProcedureStatement:
+    name: str
+    args: list[FunctionArgument]
+    block: list["Statement"]
+
+@dataclass
+class FunctionStatement:
+    name: str
+    args: list[FunctionArgument]
+    returns: BCType
+    block: list["Statement"]
+
 
 @dataclass
 class Statement:
@@ -279,6 +308,8 @@ class Statement:
     while_s: WhileStatement | None = None
     for_s: ForStatement | None = None
     repeatuntil: RepeatUntilStatement | None = None
+    function: FunctionStatement | None = None
+    procedure: ProcedureStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -300,7 +331,10 @@ class Statement:
                 return self.for_s.__repr__()
             case "repeatuntil":
                 return self.repeatuntil.__repr__()
-
+            case "function":
+                return self.function.__repr__()
+            case "procedure":
+                return self.procedure.__repr__()
 
 @dataclass
 class Program:
@@ -619,32 +653,8 @@ class Parser:
         else:
             return None
 
-    def logical_comparison(self) -> Expr | None:
-        expr = self.unary()
-        if expr is None: return None
-
-        while self.match([l.Token("keyword", keyword="and"), l.Token("keyword", keyword="or")]):
-            kw = self.prev().keyword
-            if kw is None:
-                panic("logical_comparison: kw is None")
-
-            right = self.unary()
-
-            if right is None:
-                return None
-
-            op: Operator = "" # type: ignore
-            if kw == "and":
-                op = "and"
-            elif kw == "or":
-                op = "or"
-
-            expr = BinaryExpr(expr, op, right) # kw must be and or or
-
-        return expr
-
     def factor(self) -> Expr | None:
-        expr = self.logical_comparison()
+        expr = self.unary()
         if expr is None:
             return None
 
@@ -656,7 +666,7 @@ class Parser:
             if op is None:
                 panic("factor: op is None")
 
-            right = self.logical_comparison()
+            right = self.unary()
 
             if right is None:
                 return None
@@ -737,8 +747,32 @@ class Parser:
 
         return expr
 
+    def logical_comparison(self) -> Expr | None:
+        expr = self.equality()
+        if expr is None: return None
+
+        while self.match([l.Token("keyword", keyword="and"), l.Token("keyword", keyword="or")]):
+            kw = self.prev().keyword
+            if kw is None:
+                panic("logical_comparison: kw is None")
+
+            right = self.equality()
+
+            if right is None:
+                return None
+
+            op: Operator = "" # type: ignore
+            if kw == "and":
+                op = "and"
+            elif kw == "or":
+                op = "or"
+
+            expr = BinaryExpr(expr, op, right) # kw must be and or or
+
+        return expr
+
     def expression(self) -> Expr | None:
-        return self.equality()
+        return self.logical_comparison()
 
     def output_stmt(self) -> Statement | None:
         exprs = []
@@ -1049,6 +1083,107 @@ class Parser:
 
         res = RepeatUntilStatement(expr, stmts)
         return Statement("repeatuntil", repeatuntil=res)
+
+    def function_arg(self) -> FunctionArgument | None:
+        # ident : type
+
+        ident = self.ident()
+        if not isinstance(ident, Identifier):
+            panic("invalid identifier for function arg")
+
+        colon = self.advance()
+        if colon.kind != "separator" and colon.separator != "colon":
+            panic("expected colon after ident in function ragument")
+
+        typ = self.type()
+        if typ is None:
+            panic("invalid type after colon in function argument")
+
+        return FunctionArgument(name=ident.ident, typ=typ)
+
+    def procedure_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "procedure":
+            return
+
+        self.advance() # byebye PROCEDURE
+        
+        ident = self.ident()
+        if not isinstance(ident, Identifier):
+            panic("invalid identifier after PROCEDURE declaration")
+
+        args = []
+        leftb = self.advance()
+        if leftb.kind == "separator" and leftb.separator == "left_paren":
+            # there is an arg list
+            while self.match([l.Token("separator", separator="comma")]):
+                arg = self.function_arg()
+                if arg is None:
+                    panic("invalid function argument")
+                
+                args.append(arg)
+            
+            rightb = self.advance()
+            if rightb.kind != "separator" and rightb.separator != "right_paren":
+                panic("expected right paren after arg list")
+
+        self.check_newline("PROCEDURE")
+ 
+        stmts = []
+        while self.peek().keyword != "endprocedure":
+            stmts.append(self.scan_one_statement())
+
+        self.advance() # bye bye ENDPROCEDURE
+
+        res = ProcedureStatement(name=ident.ident, args=args, block=stmts)
+        return Statement("procedure", procedure=res)
+
+    def function_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "function":
+            return
+
+        self.advance() # byebye PROCEDURE
+        
+        ident = self.ident()
+        if not isinstance(ident, Identifier):
+            panic("invalid identifier after FUNCTION declaration")
+
+        args = []
+        leftb = self.advance()
+        if leftb.kind == "separator" and leftb.separator == "left_paren":
+            # there is an arg list
+            while self.match([l.Token("separator", separator="comma")]):
+                arg = self.function_arg()
+                if arg is None:
+                    panic("invalid function argument")
+                
+                args.append(arg)
+            
+            rightb = self.advance()
+            if rightb.kind != "separator" and rightb.separator != "right_paren":
+                panic("expected right paren after arg list")
+
+        returns = self.advance()
+        if returns.kind != "keyword" and returns.keyword != "returns":
+            panic("expected RETURNS for FUNCTION, if you do not need to return a value, please use a PROCEDURE")
+
+        returntyp = self.type()
+        if returntyp is None:
+            panic("expected return type for function declaration")
+
+        self.check_newline("FUNCTION")
+ 
+        stmts = []
+        while self.peek().keyword != "endfunction":
+            stmts.append(self.scan_one_statement())
+
+        self.advance() # bye bye ENDPROCEDURE
+    
+        res = FunctionStatement(name=ident.ident, args=args, returns=returntyp, block=stmts)
+        return Statement("function", function=res)
 
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":

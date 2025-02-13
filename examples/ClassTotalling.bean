@@ -18,7 +18,7 @@ FOR Counter <- 1 TO 5
     OUTPUT "Is ", StudentNames[Counter], " Here?"
     INPUT CurrentAttendance
 
-    IF CurrentAttendance = "yes" 
+    IF CurrentAttendance = "yes" OR CurrentAttendance = "here"
         THEN
             StudentAttendance[Counter] <- TRUE
     ELSE
