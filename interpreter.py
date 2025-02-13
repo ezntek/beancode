@@ -11,10 +11,12 @@ class Variable:
 class Intepreter:
     block: list[Statement]
     variables: dict[str, Variable]
+    functions: dict[str, ProcedureStatement|FunctionStatement]
 
     def __init__(self, block: list[Statement]) -> None:
         self.block = block
         self.variables = dict()
+        self.functions = dict()
 
     @classmethod
     def new(cls, block: list[Statement]) -> "Interpreter": # type: ignore
@@ -346,6 +348,19 @@ class Intepreter:
                     return res
         else:
             panic(f"attempted to index {v.kind}")
+ 
+    def visit_procedure_call(self, stmt: ProcedureCall):
+        proc = self.functions[stmt.ident]
+        intp = self.new(proc.block)
+        vars = self.variables
+        for argdef, argval in zip(proc.args, stmt.args):
+            val = self.visit_expr(argval)
+            vars[argdef.name] = Variable(val=val, const=False)
+
+        intp.variables = vars
+        intp.functions = self.functions
+
+        intp.visit_block(proc.block)
 
     def visit_expr(self, expr: Expr) -> BCValue: #type: ignore
         if isinstance(expr, Grouping):
@@ -375,7 +390,7 @@ class Intepreter:
         elif isinstance(expr, BinaryExpr):
             return self.visit_binaryexpr(expr)
         elif isinstance(expr, ArrayIndex):
-            return self.visit_array_index(expr)
+            return self.visit_array_index(expr) 
         else:
             raise ValueError("expr is very corrupted whoops")
 
@@ -549,6 +564,9 @@ class Intepreter:
             if self.visit_expr(cond).boolean:
                 break
 
+    def visit_procedure(self, stmt: ProcedureStatement):
+        self.functions[stmt.name] = stmt
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
@@ -563,6 +581,10 @@ class Intepreter:
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "input":
                 self.visit_input_stmt(stmt.input) # type: ignore
+            case "procedure":
+                self.visit_procedure(stmt.procedure) # type: ignore
+            case "procedure_call":
+                self.visit_procedure_call(stmt.procedure_call) # type: ignore
             case "assign":
                 s: AssignStatement = stmt.assign # type: ignore
 

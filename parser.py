@@ -210,16 +210,17 @@ StatementKind = t.Literal[
     "repeatuntil",
     "function",
     "procedure",
+    "procedure_call",
 ]
 
 @dataclass
-class ProcedureCall(Expr):
-    ident: Identifier
+class ProcedureCall:
+    ident: str
     args: list[Expr]
 
 @dataclass
 class FunctionCall(Expr):
-    ident: Identifier
+    ident: str
     args: list[Expr]
 
 @dataclass
@@ -310,6 +311,7 @@ class Statement:
     repeatuntil: RepeatUntilStatement | None = None
     function: FunctionStatement | None = None
     procedure: ProcedureStatement | None = None
+    procedure_call: ProcedureCall | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -335,6 +337,8 @@ class Statement:
                 return self.function.__repr__()
             case "procedure":
                 return self.procedure.__repr__()
+            case "procedure_call":
+                return self.procedure_call.__repr__()
 
 @dataclass
 class Program:
@@ -1101,6 +1105,38 @@ class Parser:
 
         return FunctionArgument(name=ident.ident, typ=typ)
 
+    def procedure_call_stmt(self) -> Statement | None:
+        begin = self.peek()
+
+        if begin.keyword != "call":
+            return
+
+        self.advance()
+
+        # CALL <ident>(<expr>, <expr>)
+        ident = self.ident()
+        if not isinstance(ident, Identifier):
+            panic("invalid ident after procedure call")
+
+        leftb = self.advance()
+        args = []
+        if leftb.kind == "separator" and leftb.separator == "left_paren":
+            while self.match([l.Token("separator", separator="comma")]):
+                expr = self.expression()
+                if expr is None:
+                    panic("invalid expression as procedure argument")
+
+                args.append(expr)
+
+            rightb = self.advance()
+            if rightb.kind != "separator" and rightb.separator != "right_paren":
+                panic("expected right paren after arg list in procedure call")
+
+        self.check_newline("procedure call")
+
+        res = ProcedureCall(ident=ident.ident, args=args)
+        return Statement("procedure_call", procedure_call=res)
+
     def procedure_stmt(self) -> Statement | None:
         begin = self.peek()
 
@@ -1114,10 +1150,11 @@ class Parser:
             panic("invalid identifier after PROCEDURE declaration")
 
         args = []
-        leftb = self.advance()
+        leftb = self.peek()
         if leftb.kind == "separator" and leftb.separator == "left_paren":
             # there is an arg list
-            while self.match([l.Token("separator", separator="comma")]):
+            self.advance()
+            while self.match([l.Token("separator", separator="colon")]):
                 arg = self.function_arg()
                 if arg is None:
                     panic("invalid function argument")
@@ -1125,8 +1162,9 @@ class Parser:
                 args.append(arg)
             
             rightb = self.advance()
+            print(f"aa {rightb}")
             if rightb.kind != "separator" and rightb.separator != "right_paren":
-                panic("expected right paren after arg list")
+                panic("expected right paren after arg list in procedure declaration")
 
         self.check_newline("PROCEDURE")
  
@@ -1152,8 +1190,9 @@ class Parser:
             panic("invalid identifier after FUNCTION declaration")
 
         args = []
-        leftb = self.advance()
+        leftb = self.peek()
         if leftb.kind == "separator" and leftb.separator == "left_paren":
+            self.advance()
             # there is an arg list
             while self.match([l.Token("separator", separator="comma")]):
                 arg = self.function_arg()
@@ -1163,6 +1202,7 @@ class Parser:
                 args.append(arg)
             
             rightb = self.advance()
+            print(f"aa {rightb}")
             if rightb.kind != "separator" and rightb.separator != "right_paren":
                 panic("expected right paren after arg list")
 
@@ -1206,6 +1246,10 @@ class Parser:
         if inp is not None:
             return inp
 
+        proc_call = self.procedure_call_stmt()
+        if proc_call is not None:
+            return proc_call
+
         declare = self.declare_stmt()
         if declare is not None:
             return declare
@@ -1227,6 +1271,10 @@ class Parser:
         repeatuntil_s = self.repeatuntil_stmt()
         if repeatuntil_s is not None:
             return repeatuntil_s
+
+        procedure = self.procedure_stmt()
+        if procedure is not None:
+            return procedure
 
     def scan_one_statement(self) -> Statement:
         s = self.stmt()

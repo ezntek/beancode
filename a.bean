@@ -1,0 +1,5 @@
+procedure sayhello(number: integer)
+    output "hey!", number
+endprocedure
+
+call sayhello(5)
