@@ -23,10 +23,13 @@ def main():
         program = parser.program()
 
         if PRINT:
+            print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
             for stmt in program.stmts:
                 print(stmt)
                 print()
+            print("\033[0m\033[1m----- END OF AST -----\033[0m")
         print("\033[0m")
+
         if INTERPRET:
             print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
             i = Intepreter(program.stmts)

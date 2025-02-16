@@ -12,15 +12,24 @@ class Intepreter:
     block: list[Statement]
     variables: dict[str, Variable]
     functions: dict[str, ProcedureStatement|FunctionStatement]
+    func: bool
+    proc: bool
+    loop: bool
+    retval: BCValue | None = None
+    _returned: bool
 
-    def __init__(self, block: list[Statement]) -> None:
+    def __init__(self, block: list[Statement], func=False, proc=False, loop=False) -> None:
         self.block = block
         self.variables = dict()
         self.functions = dict()
+        self.func = func
+        self.proc = proc
+        self.loop = loop
+        self._returned = False
 
     @classmethod
-    def new(cls, block: list[Statement]) -> "Interpreter": # type: ignore
-        return cls(block)
+    def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter": # type: ignore
+        return cls(block, func=func, proc=proc, loop=loop) # type: ignore
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue: # type: ignore
         match expr.op:
@@ -349,9 +358,13 @@ class Intepreter:
         else:
             panic(f"attempted to index {v.kind}")
  
-    def visit_procedure_call(self, stmt: ProcedureCall):
+    def visit_call(self, stmt: CallStatement):
         proc = self.functions[stmt.ident]
-        intp = self.new(proc.block)
+
+        if isinstance(proc, FunctionStatement):
+            panic("cannot run CALL on a function! please call the function without the CALL keyword instead.")
+
+        intp = self.new(proc.block, proc=True)
         vars = self.variables
         
         if len(proc.args) != len(stmt.args):
@@ -365,6 +378,32 @@ class Intepreter:
         intp.functions = self.functions
 
         intp.visit_block(proc.block)
+
+    def visit_fncall(self, stmt: FunctionCall) -> BCValue:
+        func = self.functions[stmt.ident]
+
+        if isinstance(func, ProcedureStatement):
+            panic("cannot call procedure without CALL!")
+
+        intp = self.new(func.block, func=True)
+        vars = self.variables
+        
+        if len(func.args) != len(stmt.args):
+            panic(f"procedure {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
+
+        for argdef, argval in zip(func.args, stmt.args):
+            val = self.visit_expr(argval)
+            vars[argdef.name] = Variable(val=val, const=False)
+
+        intp.variables = vars
+        intp.functions = self.functions
+
+        intp.visit_block(func.block)
+        if intp.retval is None:
+            panic(f"function's return value is None!")
+        else:
+            return intp.retval # type: ignore
+        
 
     def visit_expr(self, expr: Expr) -> BCValue: #type: ignore
         if isinstance(expr, Grouping):
@@ -395,6 +434,9 @@ class Intepreter:
             return self.visit_binaryexpr(expr)
         elif isinstance(expr, ArrayIndex):
             return self.visit_array_index(expr) 
+        elif isinstance(expr, FunctionCall):
+            return self.visit_fncall(expr)
+
         else:
             raise ValueError("expr is very corrupted whoops")
 
@@ -502,7 +544,24 @@ class Intepreter:
                         panic("expected REAL for INPUT")
                 else:
                     panic("expected REAL for INPUT")
-                    
+
+    def visit_return_stmt(self, stmt: ReturnStatement):
+        can_return = self.proc or self.func
+        if not can_return: 
+            panic("cannot return in a block that is not a function or procedure!")
+        
+        if self.func:
+            if stmt.expr is None:
+                panic("you must return something from a function!")
+
+            res = self.visit_expr(stmt.expr)
+            self.retval = res
+            self._returned = True
+        elif self.proc:
+            if stmt.expr is not None:
+                panic("you cannot return a value from a procedure!")
+            
+            self._returned = True
 
     def visit_if_stmt(self, stmt: IfStatement):
         cond: BCValue = self.visit_expr(stmt.cond)
@@ -521,7 +580,7 @@ class Intepreter:
 
         block: list[Statement] = stmt.while_s.block # type: ignore
 
-        loop_intp = self.new(block)
+        loop_intp = self.new(block, loop=True)
         loop_intp.variables = self.variables # scope
 
         while self.visit_expr(cond).boolean:
@@ -543,7 +602,7 @@ class Intepreter:
         else:
             step = self.visit_expr(stmt.step).get_integer()
        
-        block = self.new(stmt.block)
+        block = self.new(stmt.block, loop=True)
         block.variables = self.variables
 
         counter = begin
@@ -560,7 +619,7 @@ class Intepreter:
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond # type: ignore
-        loop_intp = self.new(stmt.block)
+        loop_intp = self.new(stmt.block, loop=True)
         loop_intp.variables = self.variables
         
         while True:
@@ -569,6 +628,9 @@ class Intepreter:
                 break
 
     def visit_procedure(self, stmt: ProcedureStatement):
+        self.functions[stmt.name] = stmt
+
+    def visit_function(self, stmt: FunctionStatement):
         self.functions[stmt.name] = stmt
 
     def visit_stmt(self, stmt: Statement):
@@ -585,10 +647,16 @@ class Intepreter:
                 self.visit_output_stmt(stmt.output) # type: ignore
             case "input":
                 self.visit_input_stmt(stmt.input) # type: ignore
+            case "return":
+                self.visit_return_stmt(stmt.return_s) # type: ignore
             case "procedure":
                 self.visit_procedure(stmt.procedure) # type: ignore
-            case "procedure_call":
-                self.visit_procedure_call(stmt.procedure_call) # type: ignore
+            case "function":
+                self.visit_function(stmt.function) # type: ignore
+            case "call":
+                self.visit_call(stmt.call) # type: ignore
+            case "fncall":
+                self.visit_fncall(stmt.fncall) # type: ignore
             case "assign":
                 s: AssignStatement = stmt.assign # type: ignore
 
@@ -691,12 +759,12 @@ class Intepreter:
                     self.variables[key] = Variable(BCValue(kind=d.typ), False)
 
     def visit_block(self, block: list[Statement] | None):
-        if block is not None:
-            for stmt in block:
-                self.visit_stmt(stmt)
-        elif self.block is not None:
-            for stmt in self.block:
-                self.visit_stmt(stmt) 
+        blk = block if block is not None else self.block
+        for stmt in blk:
+            self.visit_stmt(stmt)
+
+            if self._returned:
+                return
 
     def visit_program(self, program: Program):
         if program is not None:
