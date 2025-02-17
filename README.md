@@ -4,7 +4,7 @@
 
 ## information
 
-This is a very cursed IGCSE pseudocode tree-walk non-optimizing super-cursed interpreter written in the best language, Python.
+This is a very cursed non-optimizing super-cursed super-cursed-pro-max-plus-ultra IGCSE pseudocode tree-walk interpreter written in the best language, Python.
 
 (I definitely do not have 30,000 C projects and I definitely do not advocate for C and the burning of Python at the stake for projects such as this).
 
