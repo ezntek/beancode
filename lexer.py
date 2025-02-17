@@ -170,6 +170,9 @@ class Lexer:
         return ch in "+-*/=<>"
 
     def is_numeral(self, potential_num: str) -> bool:
+        if len(potential_num) == 1 and potential_num[0] == '-':
+            return False
+
         if potential_num[0] == '-' and not potential_num[1].isdigit():
             return False
         elif potential_num[0] == '-' and potential_num[1].isdigit():
@@ -288,10 +291,15 @@ class Lexer:
         begin_ch = curr_ch
 
         if not string_or_char_literal:
+            if curr_ch == "-":
+                print(f"{self.file[self.cur-15:self.cur+15]} at {self.cur} data is {self.file[self.cur]}")
+                self.cur += 1 # skip past
+                end += 1
+
             while (
                 not curr_ch.isspace()
                 and not self.is_separator(curr_ch)
-                and (not self.is_operator_start(curr_ch) or curr_ch == '-')
+                and not self.is_operator_start(curr_ch)
             ):
                 self.cur += 1
                 end += 1

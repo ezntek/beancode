@@ -389,7 +389,7 @@ class Intepreter:
         vars = self.variables
         
         if len(func.args) != len(stmt.args):
-            panic(f"procedure {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
+            panic(f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
 
         for argdef, argval in zip(func.args, stmt.args):
             val = self.visit_expr(argval)

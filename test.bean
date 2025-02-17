@@ -1,0 +1,5 @@
+function addone(num: integer) returns integer
+    return num + 1
+endfunction
+
+output addone(6-2) 

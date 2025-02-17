@@ -644,25 +644,24 @@ class Parser:
         self.advance()
 
         args = []
-        
-        if self.peek_next().separator != "right_paren":
-            while self.peek().separator != "right_paren":
-                expr = self.expression()
-                if expr is None:
-                    panic("invalid expression as function argument")
+    
+        while self.peek().separator != "right_paren":
+            expr = self.expression()
+            if expr is None:
+                panic("invalid expression as function argument")
 
-                args.append(expr)
+            args.append(expr)
 
-                comma = self.peek()
-                if comma.separator != "comma" and comma.separator != "right_paren":
-                    panic("expected comma after argument in function call argument list")
-                elif comma.separator == "comma":
-                    self.advance()
+            comma = self.peek()
+            if comma.separator != "comma" and comma.separator != "right_paren":
+                panic("expected comma after argument in function call argument list")
+            elif comma.separator == "comma":
+                self.advance()
 
-            rightb = self.advance()
-            if rightb.separator != "right_paren":
-                panic("expected right paren after arg list in function call")
-        
+        rightb = self.advance()
+        if rightb.separator != "right_paren":
+            panic("expected right paren after arg list in function call")
+    
         return FunctionCall(ident=ident.ident, args=args) # type: ignore
 
     def unary(self) -> Expr | None:
@@ -1303,7 +1302,7 @@ class Parser:
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()
             # avoid writing to the variable for every statement
-            if isinstance(stmt, ReturnStatement):
+            if stmt.kind == "return":
                 returned = True
             stmts.append(stmt)
 

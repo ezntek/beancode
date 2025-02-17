@@ -2,7 +2,8 @@ function factorial(num: integer) returns integer
     if num <= 1 then
         return 1
     else
-        return n * factorial(n-1)
+        return n * factorial( n - 1 )
+    endif
 endfunction
 
 output factorial(5)
