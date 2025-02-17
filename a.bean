@@ -1,5 +1,0 @@
-function gimmefive returns integer
-    return 5
-endfunction
-
-output gimmefive()
