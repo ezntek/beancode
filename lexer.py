@@ -116,12 +116,14 @@ class Lexer:
     row: int
     keywords: list[str]
     types: list[str]
+    res: list[Token]
 
     def __init__(self, file: str) -> None:
         self.cur = 0
         self.bol = 0
         self.row = 1
         self.file = file
+        self.res = []
         self.keywords = [
             "declare",
             "constant",
@@ -292,9 +294,13 @@ class Lexer:
 
         if not string_or_char_literal:
             if curr_ch == "-":
-                print(f"{self.file[self.cur-15:self.cur+15]} at {self.cur} data is {self.file[self.cur]}")
                 self.cur += 1 # skip past
                 end += 1
+                curr_ch = self.file[self.cur]
+
+                if len(self.res) != 0 and self.res[len(self.res)-1].kind in ["ident", "literal"] or self.res[len(self.res)-1].separator in ["right_bracket", "right_paren", "right_curly"]:
+                    res = self.file[begin:end]
+                    return res
 
             while (
                 not curr_ch.isspace()
@@ -385,6 +391,13 @@ class Lexer:
 
         word = self.next_word()
 
+        if len(self.res) != 0:
+            print(f"{word} {self.res[len(self.res)-1].kind}")
+            should_be_sub = lambda *_: self.res[len(self.res)-1].kind in ["ident", "literal"] or self.res[len(self.res)-1].separator in ["right_bracket", "right_paren", "right_curly"]
+
+            if len(word) == 1 and should_be_sub() and word[0] == '-':
+                return Token("operator", operator="sub") 
+
         if self.is_numeral(word):
             return Token("literal", literal=Literal("number", word))
         elif word[0] == '-' and not word[1].isdigit(): # scuffed
@@ -405,14 +418,14 @@ class Lexer:
         return Token("ident", ident=word)
 
     def tokenize(self) -> list[Token]:
-        res = []
+        self.res = []
 
         while self.cur < len(self.file):
             t: Token | None
             if (t := self.next_token()) is not None:
-                res.append(t)
+                self.res.append(t)
             else:
                 break
 
-        res.append(Token("newline"))
-        return res
+        self.res.append(Token("newline"))
+        return self.res

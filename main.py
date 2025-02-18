@@ -3,7 +3,7 @@ from interpreter import Intepreter
 from lexer import *
 from parser import Parser
 
-PRINT = True
+PRINT = False
 INTERPRET = True
 
 def main():
