@@ -1,5 +1,5 @@
 from sys import argv
-from interpreter import Intepreter
+from interpreter import Interpreter
 from lexer import *
 from parser import Parser
 
@@ -32,7 +32,8 @@ def main():
 
         if INTERPRET:
             print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
-            i = Intepreter(program.stmts)
+            i = Interpreter(program.stmts)
+            i.toplevel = True
             i.visit_block(None)
 
 if __name__ == "__main__":

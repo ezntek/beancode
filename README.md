@@ -37,4 +37,3 @@ why
 * ***TODO: else if if i feel freaky***
 * ***a fecesload of testing***
 * the code is horrible (unidiomatic. i miss C. i miss tagged unions from rust. i _strongly dislike_ oop.)
-* does recursion work? *checks* it doesn't even support expressions as function arguments. I don't think so.

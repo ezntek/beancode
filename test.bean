@@ -1,5 +1,9 @@
-function addone(num: integer) returns integer
-    return num + 1
+function factorial(num: integer) returns integer
+    if num <= 1 then
+        return 1
+    else
+        return num * factorial(num - 1)
+    endif
 endfunction
 
-output addone(6-2)
+output factorial(5)

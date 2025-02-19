@@ -1298,17 +1298,10 @@ class Parser:
         self.check_newline("FUNCTION")
  
         stmts = []
-        returned = False
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()
-            # avoid writing to the variable for every statement
-            if stmt.kind == "return":
-                returned = True
             stmts.append(stmt)
 
-        if not returned:
-            panic("functions must return at least one value once!")
-        
         self.advance() # bye bye ENDFUNCTION
 
         res = FunctionStatement(name=ident.ident, args=args, returns=typ, block=stmts)

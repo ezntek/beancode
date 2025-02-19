@@ -1,4 +1,5 @@
 from parser import *
+import typing as t
 
 @dataclass
 class Variable:
@@ -8,18 +9,23 @@ class Variable:
     def is_uninitialized(self) -> bool:
         return self.val.is_uninitialized()
 
-class Intepreter:
+BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure"]
+
+class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]
     functions: dict[str, ProcedureStatement|FunctionStatement]
+    calls: list[BlockType]
     func: bool
     proc: bool
     loop: bool
+    toplevel: bool
     retval: BCValue | None = None
     _returned: bool
 
     def __init__(self, block: list[Statement], func=False, proc=False, loop=False) -> None:
         self.block = block
+        self.calls = list()
         self.variables = dict()
         self.functions = dict()
         self.func = func
@@ -30,6 +36,21 @@ class Intepreter:
     @classmethod
     def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter": # type: ignore
         return cls(block, func=func, proc=proc, loop=loop) # type: ignore
+
+    def can_return(self) -> tuple[bool, bool]:
+        proc = False
+        func = False
+
+        for item in reversed(self.calls):
+            if item == "procedure":
+                proc = True
+                break
+            elif item == "function":
+                func = True
+                break
+
+        return (proc, func) 
+
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue: # type: ignore
         match expr.op:
@@ -365,6 +386,8 @@ class Intepreter:
             panic("cannot run CALL on a function! please call the function without the CALL keyword instead.")
 
         intp = self.new(proc.block, proc=True)
+        intp.calls = self.calls
+        intp.calls.append("procedure")
         vars = self.variables
         
         if len(proc.args) != len(stmt.args):
@@ -386,6 +409,8 @@ class Intepreter:
             panic("cannot call procedure without CALL!")
 
         intp = self.new(func.block, func=True)
+        intp.calls = self.calls
+        intp.calls.append("function")
         vars = self.variables
         
         if len(func.args) != len(stmt.args):
@@ -399,6 +424,9 @@ class Intepreter:
         intp.functions = self.functions
 
         intp.visit_block(func.block)
+        if intp._returned is False:
+            panic(f"function did not return a value!")
+
         if intp.retval is None:
             panic(f"function's return value is None!")
         else:
@@ -545,19 +573,20 @@ class Intepreter:
                 else:
                     panic("expected REAL for INPUT")
 
-    def visit_return_stmt(self, stmt: ReturnStatement):
-        can_return = self.proc or self.func
-        if not can_return: 
-            panic("cannot return in a block that is not a function or procedure!")
-        
-        if self.func:
+    def visit_return_stmt(self, stmt: ReturnStatement): 
+        proc, func = self.can_return()
+
+        if not proc and not func:
+            panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+        if func:
             if stmt.expr is None:
                 panic("you must return something from a function!")
 
             res = self.visit_expr(stmt.expr)
             self.retval = res
             self._returned = True
-        elif self.proc:
+        elif proc:
             if stmt.expr is not None:
                 panic("you cannot return a value from a procedure!")
             
@@ -567,24 +596,44 @@ class Intepreter:
         cond: BCValue = self.visit_expr(stmt.cond)
 
         if cond.boolean:
-            blk = self.new(stmt.if_block)
+            intp: Interpreter = self.new(stmt.if_block)
         else:
-            blk = self.new(stmt.else_block)
+            intp: Interpreter = self.new(stmt.else_block)
         
-        blk.variables = self.variables
-        blk.visit_block(None)
-            
+        intp.variables = self.variables
+        intp.functions = self.functions
+        intp.calls = self.calls
+        intp.calls.append("if") # type: ignore
+        intp.visit_block(None)
+        if intp._returned:
+            proc, func = self.can_return()
+
+            if not proc and not func:
+                panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+            self._returned = True
+            self.retval = intp.retval
 
     def visit_while_stmt(self, stmt: WhileStatement):
         cond: Expr = stmt.cond # type: ignore
 
         block: list[Statement] = stmt.while_s.block # type: ignore
 
-        loop_intp = self.new(block, loop=True)
-        loop_intp.variables = self.variables # scope
+        intp = self.new(block, loop=True)
+        intp.variables = self.variables # scope
+        intp.functions = self.functions
 
         while self.visit_expr(cond).boolean:
-            loop_intp.visit_block(block)
+            intp.visit_block(block)
+            if intp._returned:
+                proc, func = self.can_return()
+
+                if not proc and not func:
+                    panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+                self._returned = True
+                self.retval = intp.retval
+                return
 
     def visit_for_stmt(self, stmt: ForStatement):
         begin = self.visit_expr(stmt.begin)
@@ -602,28 +651,65 @@ class Intepreter:
         else:
             step = self.visit_expr(stmt.step).get_integer()
        
-        block = self.new(stmt.block, loop=True)
-        block.variables = self.variables
+        intp = self.new(stmt.block, loop=True)
+        intp.calls = self.calls
+        intp.calls.append("for")
+        intp.variables = self.variables
+        intp.functions = self.functions
 
         counter = begin
-        block.variables[stmt.counter.ident] = Variable(counter, const=False)
+        intp.variables[stmt.counter.ident] = Variable(counter, const=False)
 
         if step > 0:
             while counter.get_integer() <= end.get_integer():
-                block.visit_block(None)
+                intp.visit_block(None)
+                if intp._returned:
+                    proc, func = self.can_return()
+
+                    if not proc and not func:
+                        panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+                    self._returned = True
+                    self.retval = intp.retval
+                    return
+
                 counter.integer = counter.integer + step # type: ignore
         elif step < 0:
             while counter.get_integer() >= end.get_integer():
-                block.visit_block(None)
+                intp.visit_block(None)
+
+                if intp._returned:
+                    proc, func = self.can_return()
+
+                    if not proc and not func:
+                        panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+                    self._returned = True
+                    self.retval = intp.retval
+                    return
+
                 counter.integer = counter.integer + step # type: ignore
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond # type: ignore
-        loop_intp = self.new(stmt.block, loop=True)
-        loop_intp.variables = self.variables
-        
+        intp = self.new(stmt.block, loop=True)
+        intp.calls = self.calls
+        intp.calls.append("repeatuntil")
+        intp.variables = self.variables
+        intp.functions = self.functions
+
         while True:
-            loop_intp.visit_block(None)
+            intp.visit_block(None)
+            if intp._returned:
+                proc, func = self.can_return()
+
+                if not proc and not func:
+                    panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+
+                self._returned = True
+                self.retval = intp.retval
+                return
+
             if self.visit_expr(cond).boolean:
                 break
 

@@ -1,6 +1,8 @@
 import typing as t
 from dataclasses import dataclass
 
+import util
+
 Keyword = t.Literal[
     "declare",
     "constant",
@@ -357,8 +359,7 @@ class Lexer:
             if len(word) > 3:
                 row = self.row
                 col = self.cur - self.bol - len(word)
-                print(f"char literal at {row},{col} cannot contain more than 1 char")
-                exit(1)
+                util.panic(f"char literal at {row},{col} cannot contain more than 1 char")
 
             return Token("literal", literal=Literal("char", word[1]))
 
@@ -392,7 +393,6 @@ class Lexer:
         word = self.next_word()
 
         if len(self.res) != 0:
-            print(f"{word} {self.res[len(self.res)-1].kind}")
             should_be_sub = lambda *_: self.res[len(self.res)-1].kind in ["ident", "literal"] or self.res[len(self.res)-1].separator in ["right_bracket", "right_paren", "right_curly"]
 
             if len(word) == 1 and should_be_sub() and word[0] == '-':
