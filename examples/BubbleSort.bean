@@ -1,0 +1,35 @@
+procedure bubblesort(arr: array[1:10] of integer)
+    declare temp: integer
+    constant len <- 10
+
+    for i <- 1 to len
+        for j <- 1 to len - i
+            if arr[j] > arr[j+1] then
+                temp <- arr[j]
+                arr[j] <- arr[j+1]
+                arr[j+1] <- temp
+            endif
+        next j
+    next i
+endprocedure
+
+procedure printarray(arr: array[1:10] of integer)
+    for i <- 1 to 10
+        output arr[i]
+    next i
+endprocedure
+
+declare arr: array[1:10] of integer
+arr[1] <- 9
+arr[2] <- 4
+arr[3] <- 7
+arr[4] <- 5
+arr[5] <- 2
+arr[6] <- 6
+arr[7] <- 3
+arr[8] <- 10
+arr[9] <- 1
+arr[10] <- 4
+
+call bubblesort(arr)
+call printarray(arr)
