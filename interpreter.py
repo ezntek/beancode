@@ -77,16 +77,16 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real # type: ignore
                
                     if rhs.kind not in ["integer", "real"]:
-                        panic(f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}")
+                        error(f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}")
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real # type: ignore
 
                     return BCValue("boolean", boolean=(lhs_num > rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        panic(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
+                        error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
                     elif lhs.kind == "boolean":
-                        panic(f"illegal to compare booleans")
+                        error(f"illegal to compare booleans")
                     elif lhs.kind == "string":
                         return BCValue("boolean", boolean=(lhs.get_string() > rhs.get_string()))
             case "less_than":
@@ -100,16 +100,16 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real # type: ignore
                
                     if rhs.kind not in ["integer", "real"]:
-                        panic(f"impossible to perform less_than between {lhs.kind} and {rhs.kind}")
+                        error(f"impossible to perform less_than between {lhs.kind} and {rhs.kind}")
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real # type: ignore
 
                     return BCValue("boolean", boolean=(lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        panic(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
+                        error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
                     elif lhs.kind == "boolean":
-                        panic(f"illegal to compare booleans")
+                        error(f"illegal to compare booleans")
                     elif lhs.kind == "string":
                         return BCValue("boolean", boolean=(lhs.get_string() < rhs.get_string()))
             case "greater_than_or_equal":
@@ -123,16 +123,16 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real # type: ignore
                
                     if rhs.kind not in ["integer", "real"]:
-                        panic(f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}")
+                        error(f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}")
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real # type: ignore
 
                     return BCValue("boolean", boolean=(lhs_num >= rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        panic(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
+                        error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
                     elif lhs.kind == "boolean":
-                        panic(f"illegal to compare booleans")
+                        error(f"illegal to compare booleans")
                     elif lhs.kind == "string":
                         return BCValue("boolean", boolean=(lhs.get_string() >= rhs.get_string()))
             case "less_than_or_equal":
@@ -146,16 +146,16 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real # type: ignore
                
                     if rhs.kind not in ["integer", "real"]:
-                        panic(f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}")
+                        error(f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}")
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real # type: ignore
 
                     return BCValue("boolean", boolean=(lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        panic(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
+                        error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}")
                     elif lhs.kind == "boolean":
-                        panic(f"illegal to compare booleans")
+                        error(f"illegal to compare booleans")
                     elif lhs.kind == "string":
                         return BCValue("boolean", boolean=(lhs.get_string() <= rhs.get_string()))
             # add sub mul div
@@ -280,10 +280,10 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
                 
                 if lhs.kind != "boolean":
-                    panic(f"cannot perform logical AND on value with type {lhs.kind}")
+                    error(f"cannot perform logical AND on value with type {lhs.kind}")
             
                 if rhs.kind != "boolean":
-                    panic(f"cannot perform logical AND on value with type {lhs.kind}")
+                    error(f"cannot perform logical AND on value with type {lhs.kind}")
                 
                 lhs_b = lhs.get_boolean()
                 rhs_b = rhs.get_boolean()
@@ -295,10 +295,10 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
                 
                 if lhs.kind != "boolean":
-                    panic(f"cannot perform logical OR on value with type {lhs.kind}")
+                    error(f"cannot perform logical OR on value with type {lhs.kind}")
             
                 if rhs.kind != "boolean":
-                    panic(f"cannot perform logical OR on value with type {lhs.kind}")
+                    error(f"cannot perform logical OR on value with type {lhs.kind}")
                 
                 lhs_b = lhs.get_boolean()
                 rhs_b = rhs.get_boolean()
@@ -313,7 +313,7 @@ class Interpreter:
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            panic("found None for array index")
+            error("found None for array index")
         
         v = self.variables[ind.ident.ident].val
         
@@ -322,24 +322,24 @@ class Interpreter:
             
             if a.typ.is_matrix:
                 if ind.idx_inner is None:
-                    panic("expected 2 indices for matrix indexing")
+                    error("expected 2 indices for matrix indexing")
                 
                 inner_index = self.visit_expr(ind.idx_inner).integer
                 if inner_index is None:
-                    panic("found None for inner array index")
+                    error("found None for inner array index")
 
                 return (index, inner_index)
             else:
                 return (index, None)
         else:
-            panic(f"attemped to index {v.kind}")
+            error(f"attemped to index {v.kind}")
 
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue: # type: ignore
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            panic("found None for array index")
+            error("found None for array index")
         
         v = self.variables[ind.ident.ident].val
          
@@ -353,13 +353,13 @@ class Interpreter:
             if a.typ.is_matrix:
                 inner = tup[1]
                 if inner is None:
-                    panic("second index not present for matrix index")
+                    error("second index not present for matrix index")
                 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1]+1): # type: ignore
-                    panic("attempted to access out of bounds array element")
+                    error("attempted to access out of bounds array element")
                 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3]+1): # type: ignore
-                    panic("attempted to access out of bounds array element")
+                    error("attempted to access out of bounds array element")
 
                 res = a.matrix[tup[0]-1][inner-1] # type: ignore
                 
@@ -369,7 +369,7 @@ class Interpreter:
                     return res
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1]+1): # type: ignore
-                    panic("attempted to access out of bounds array element")
+                    error("attempted to access out of bounds array element")
                 
                 res = a.flat[tup[0]-1] # type: ignore
                 if res.is_uninitialized():
@@ -377,13 +377,13 @@ class Interpreter:
                 else:
                     return res
         else:
-            panic(f"attempted to index {v.kind}")
+            error(f"attempted to index {v.kind}")
  
     def visit_call(self, stmt: CallStatement):
         proc = self.functions[stmt.ident]
 
         if isinstance(proc, FunctionStatement):
-            panic("cannot run CALL on a function! please call the function without the CALL keyword instead.")
+            error("cannot run CALL on a function! please call the function without the CALL keyword instead.")
 
         intp = self.new(proc.block, proc=True)
         intp.calls = self.calls
@@ -391,7 +391,7 @@ class Interpreter:
         vars = self.variables
         
         if len(proc.args) != len(stmt.args):
-            panic(f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call")
+            error(f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call")
 
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
@@ -406,7 +406,7 @@ class Interpreter:
         func = self.functions[stmt.ident]
 
         if isinstance(func, ProcedureStatement):
-            panic("cannot call procedure without CALL!")
+            error("cannot call procedure without CALL!")
 
         intp = self.new(func.block, func=True)
         intp.calls = self.calls
@@ -414,7 +414,7 @@ class Interpreter:
         vars = self.variables
         
         if len(func.args) != len(stmt.args):
-            panic(f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
+            error(f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
 
         for argdef, argval in zip(func.args, stmt.args):
             val = self.visit_expr(argval)
@@ -425,10 +425,10 @@ class Interpreter:
 
         intp.visit_block(func.block)
         if intp._returned is False:
-            panic(f"function did not return a value!")
+            error(f"function did not return a value!")
 
         if intp.retval is None:
-            panic(f"function's return value is None!")
+            error(f"function's return value is None!")
         else:
             return intp.retval # type: ignore
         
@@ -439,7 +439,7 @@ class Interpreter:
         elif isinstance(expr, Negation):
             inner = self.visit_expr(expr.inner)
             if inner.kind not in ["integer", "real"]:
-                panic(f"attemped to negate a value of type {inner.kind}")
+                error(f"attemped to negate a value of type {inner.kind}")
 
             if inner.kind == "integer":
                 return BCValue("integer", integer=-inner.integer) # type: ignore
@@ -448,13 +448,13 @@ class Interpreter:
         elif isinstance(expr, Not):
             inner = self.visit_expr(expr.inner)
             if inner.kind != "boolean":
-                panic(f"attempted to perform logical NOT on value of type {inner.kind}")
+                error(f"attempted to perform logical NOT on value of type {inner.kind}")
 
             return BCValue("boolean", boolean=not inner.get_boolean())
         elif isinstance(expr, Identifier):
             var = self.variables[expr.ident]
             if var.val == None or var.is_uninitialized():
-                panic("attempted to access an uninitialized variable")
+                error("attempted to access an uninitialized variable")
             return var.val
         elif isinstance(expr, Literal):
             return expr.to_bcvalue()
@@ -522,10 +522,10 @@ class Interpreter:
         data: Variable | None = self.variables.get(id)
 
         if data is None:
-            panic(f"attempted to call `INPUT` into nonexistent variable {id}")
+            error(f"attempted to call `INPUT` into nonexistent variable {id}")
 
         if data.const:
-            panic(f"attempted to call `INPUT` into constant {id}")
+            error(f"attempted to call `INPUT` into constant {id}")
 
         match data.val.kind:
             case "string":
@@ -533,13 +533,13 @@ class Interpreter:
                 self.variables[id].val.string = inp
             case "char":
                 if len(inp) > 1:
-                    panic(f"expected single character but got `{inp}` for CHAR")
+                    error(f"expected single character but got `{inp}` for CHAR")
 
                 self.variables[id].val.kind = "char"
                 self.variables[id].val.char = inp
             case "boolean":
                 if inp.lower() not in ["true", "false", "yes", "no"]:
-                    panic(f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got `{inp}`")
+                    error(f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got `{inp}`")
 
                 inp = inp.lower()
                 if inp in ["true", "yes"]:
@@ -557,9 +557,9 @@ class Interpreter:
                         self.variables[id].val.kind = "integer"
                         self.variables[id].val.integer = res
                     except ValueError:
-                        panic("expected INTEGER for INPUT")
+                        error("expected INTEGER for INPUT")
                 else:
-                    panic("expected INTEGER for INPUT")
+                    error("expected INTEGER for INPUT")
             case "real":
                 inp = inp.lower().strip()
                 p = Parser([])
@@ -569,26 +569,26 @@ class Interpreter:
                         self.variables[id].val.kind = "real"
                         self.variables[id].val.real = res
                     except ValueError:
-                        panic("expected REAL for INPUT")
+                        error("expected REAL for INPUT")
                 else:
-                    panic("expected REAL for INPUT")
+                    error("expected REAL for INPUT")
 
     def visit_return_stmt(self, stmt: ReturnStatement): 
         proc, func = self.can_return()
 
         if not proc and not func:
-            panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+            error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
         if func:
             if stmt.expr is None:
-                panic("you must return something from a function!")
+                error("you must return something from a function!")
 
             res = self.visit_expr(stmt.expr)
             self.retval = res
             self._returned = True
         elif proc:
             if stmt.expr is not None:
-                panic("you cannot return a value from a procedure!")
+                error("you cannot return a value from a procedure!")
             
             self._returned = True
 
@@ -609,7 +609,7 @@ class Interpreter:
             proc, func = self.can_return()
 
             if not proc and not func:
-                panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+                error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
             self._returned = True
             self.retval = intp.retval
@@ -629,7 +629,7 @@ class Interpreter:
                 proc, func = self.can_return()
 
                 if not proc and not func:
-                    panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+                    error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
                 self._returned = True
                 self.retval = intp.retval
@@ -639,12 +639,12 @@ class Interpreter:
         begin = self.visit_expr(stmt.begin)
 
         if begin.kind != "integer":
-            panic("non-integer expression used for for loop begin")
+            error("non-integer expression used for for loop begin")
 
         end = self.visit_expr(stmt.end)
 
         if end.kind != "integer":
-            panic("non-integer expression used for for loop end")
+            error("non-integer expression used for for loop end")
         
         if stmt.step is None:
             step = 1
@@ -667,7 +667,7 @@ class Interpreter:
                     proc, func = self.can_return()
 
                     if not proc and not func:
-                        panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+                        error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
                     self._returned = True
                     self.retval = intp.retval
@@ -682,7 +682,7 @@ class Interpreter:
                     proc, func = self.can_return()
 
                     if not proc and not func:
-                        panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+                        error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
                     self._returned = True
                     self.retval = intp.retval
@@ -704,7 +704,7 @@ class Interpreter:
                 proc, func = self.can_return()
 
                 if not proc and not func:
-                    panic(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
+                    error(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
 
                 self._returned = True
                 self.retval = intp.retval
@@ -750,11 +750,11 @@ class Interpreter:
                     key = s.ident.ident.ident
 
                     if self.variables[key].val.array is None:
-                        panic(f"tried to index a variable of type {self.variables[key].val.kind} like an array")
+                        error(f"tried to index a variable of type {self.variables[key].val.kind} like an array")
 
                     tup = self._get_array_index(s.ident)
                     if tup[1] is None and self.variables[key].val.array.typ.is_matrix: # type: ignore
-                        panic(f"not enough indices for matrix")
+                        error(f"not enough indices for matrix")
                     
                     val = self.visit_expr(s.value)
                     a: BCArray = self.variables[key].val.array # type: ignore
@@ -762,31 +762,31 @@ class Interpreter:
     
                     if a.typ.is_matrix: # type: ignore
                         if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1]+1): # type: ignore
-                            panic(f"tried to access out of bounds array index {tup[0]}")   
+                            error(f"tried to access out of bounds array index {tup[0]}")   
                         
                         if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3]+1): # type: ignore
-                            panic(f"tried to access out of bounds array index {tup[1]}")
+                            error(f"tried to access out of bounds array index {tup[1]}")
 
                         a.matrix[tup[0]-1][tup[1]-1] = val # type: ignore
                     else:
                         if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1]+1): # type: ignore
-                            panic(f"tried to access out of bounds array index {tup[0]}")
+                            error(f"tried to access out of bounds array index {tup[0]}")
                         a.flat[tup[0]-1] = val # type: ignore
                 else:
                     key = s.ident.ident
 
                     if key not in self.variables:
-                        panic(f"attempted to use variable {key} without declaring it")
+                        error(f"attempted to use variable {key} without declaring it")
 
                     if self.variables[key].const:
-                        panic(f"attemped to write to constant {key}")
+                        error(f"attemped to write to constant {key}")
                     self.variables[key].val = self.visit_expr(s.value)
             case "constant":
                 c: ConstantStatement = stmt.constant # type: ignore
                 key = c.ident.ident
 
                 if key in self.variables:
-                    panic(f"variable {key} declared!")
+                    error(f"variable {key} declared!")
 
                 self.variables[key] = Variable(c.value.to_bcvalue(), True)
             case "declare":
@@ -794,7 +794,7 @@ class Interpreter:
                 key = d.ident.ident
                 
                 if key in self.variables:
-                    panic(f"variable {key} declared!") 
+                    error(f"variable {key} declared!") 
 
                 if isinstance(d.typ, BCArrayType):
                     atype = d.typ
@@ -802,24 +802,24 @@ class Interpreter:
                     if atype.is_matrix:
                         inner_end = self.visit_expr(atype.matrix_bounds[3]) # type: ignore
                         if inner_end.kind != "integer":
-                            panic(f"cannot use type of {inner_end.kind} as array bound!")
+                            error(f"cannot use type of {inner_end.kind} as array bound!")
                         
                         # directly setting the result of the comprehension results in multiple pionters pointing to the same list
                         get_inner_arr = lambda: [BCValue.empty(inner_type) for _ in range(inner_end.integer)] # type: ignore
 
                         outer_end = self.visit_expr(atype.matrix_bounds[1]) # type: ignore
                         if outer_end.kind != "integer":
-                            panic(f"cannot use type of {outer_end.kind} as array bound!")
+                            error(f"cannot use type of {outer_end.kind} as array bound!")
 
                         outer_arr: BCValue = [get_inner_arr() for _ in range(outer_end.integer)] # type: ignore
                         
                         outer_begin = self.visit_expr(atype.matrix_bounds[0]) # type: ignore
                         if outer_begin.kind != "integer":
-                            panic(f"cannot use type of {outer_begin.kind} as array bound!")
+                            error(f"cannot use type of {outer_begin.kind} as array bound!")
  
                         inner_begin = self.visit_expr(atype.matrix_bounds[2]) # type: ignore
                         if inner_begin.kind != "integer":
-                            panic(f"cannot use type of {inner_begin.kind} as array bound!")
+                            error(f"cannot use type of {inner_begin.kind} as array bound!")
 
                         bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer) # type: ignore
                         atype.is_matrix = True
@@ -827,11 +827,11 @@ class Interpreter:
                     else:
                         begin = self.visit_expr(atype.flat_bounds[0]) # type: ignore
                         if begin.kind != "integer":
-                            panic(f"cannot use type of {begin.kind} as array bound!")
+                            error(f"cannot use type of {begin.kind} as array bound!")
 
                         end = self.visit_expr(atype.flat_bounds[1]) # type: ignore
                         if end.kind != "integer":
-                            panic(f"cannot use type of {end.kind} as array bound!")
+                            error(f"cannot use type of {end.kind} as array bound!")
 
                         arr: BCValue = [BCValue.empty(atype) for _ in range(end.integer)] # type: ignore
 

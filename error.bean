@@ -1,0 +1,2 @@
+output "good morning"
+output 1 + "a"

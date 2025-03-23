@@ -2,16 +2,19 @@ from sys import argv
 from interpreter import Interpreter
 from lexer import *
 from parser import Parser
+from util import BCError
 
 PRINT = False
-INTERPRET = True
+INTERPRET = True 
 
 def main():
     fn = argv[1]
     print("\033[2m", end='')
+
     with open(fn, "r+") as f:
         file_content = f.read()
 
+    try: 
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
 
@@ -35,6 +38,8 @@ def main():
             i = Interpreter(program.stmts)
             i.toplevel = True
             i.visit_block(None)
+    except BCError as err:
+       err.print(fn, file_content)
 
 if __name__ == "__main__":
     main()

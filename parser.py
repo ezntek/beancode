@@ -6,32 +6,35 @@ import typing
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
 
+
 @dataclass
 class BCArrayType:
     inner: BCPrimitiveType
     is_matrix: bool  # true: 2d array
     flat_bounds: tuple["Expr", "Expr"] | None = None  # begin:end
-    matrix_bounds: tuple["Expr", "Expr", "Expr", "Expr"] | None = None # begin:end,begin:end
+    matrix_bounds: tuple["Expr", "Expr", "Expr", "Expr"] | None = (
+        None  # begin:end,begin:end
+    )
 
     def has_bounds(self) -> bool:
         return self.flat_bounds is not None or self.matrix_bounds is not None
 
     def get_flat_bounds(self) -> tuple["Expr", "Expr"]:
         if self.flat_bounds is None:
-            panic("tried to access flat bounds on array without flat bounds")
+            raise BCParseError("tried to access flat bounds on array without flat bounds")
         return self.flat_bounds
 
     def get_matrix_bounds(self) -> tuple["Expr", "Expr", "Expr", "Expr"]:
         if self.matrix_bounds is None:
-            panic("tried to access matrixbounds on array without matrix bounds")
+            raise BCParseError("tried to access matrixbounds on array without matrix bounds")
         return self.matrix_bounds
 
 
 @dataclass
 class BCArray:
     typ: BCArrayType
-    flat: list["BCValue"] | None = None # must be the BCPrimitiveType
-    matrix: list[list["BCValue"]] | None = None  # must be the BCPrimitiveType
+    flat: list["BCValue"] | None = None  # must be a BCPrimitiveType
+    matrix: list[list["BCValue"]] | None = None  # must be a BCPrimitiveType
     flat_bounds: tuple[int, int] | None = None
     matrix_bounds: tuple[int, int, int, int] | None = None
 
@@ -66,48 +69,56 @@ class BCValue:
         )
 
     @classmethod
-    def empty(cls, kind: BCType) -> 'BCValue':
-        return cls(kind, integer=None, real=None, char=None, string=None, boolean=None, array=None)
+    def empty(cls, kind: BCType) -> "BCValue":
+        return cls(
+            kind,
+            integer=None,
+            real=None,
+            char=None,
+            string=None,
+            boolean=None,
+            array=None,
+        )
 
     def get_integer(self) -> int:
         if self.kind != "integer":
-            panic(f"tried to access integer value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access integer value from BCValue of {self.kind}")
 
         return self.integer  # type: ignore
 
     def get_real(self) -> float:
         if self.kind != "real":
-            panic(f"tried to access real value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access real value from BCValue of {self.kind}")
 
         return self.real  # type: ignore
 
     def get_char(self) -> str:
         if self.kind != "char":
-            panic(f"tried to access char value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access char value from BCValue of {self.kind}")
 
         return self.char  # type: ignore
 
     def get_string(self) -> str:
         if self.kind != "string":
-            panic(f"tried to access string value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access string value from BCValue of {self.kind}")
 
         return self.string  # type: ignore
 
     def get_boolean(self) -> bool:
         if self.kind != "boolean":
-            panic(f"tried to access boolean value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access boolean value from BCValue of {self.kind}")
 
         return self.boolean  # type: ignore
 
     def get_array(self) -> BCArray:
         if self.kind != "array":
-            panic(f"tried to access array value from BCValue of {self.kind}")
+            raise BCParseError(f"tried to access array value from BCValue of {self.kind}")
 
         return self.array  # type: ignore
 
-    def __repr__(self) -> str: # type: ignore
+    def __repr__(self) -> str:  # type: ignore
         if isinstance(self.kind, BCArrayType):
-            panic("BCValue of array can only be represented at runtime")
+            raise BCParseError("BCValue of array can only be represented at runtime")
 
         match self.kind:
             case "string":
@@ -122,7 +133,7 @@ class BCValue:
                 return str(self.get_boolean())
             case "null":
                 return "(uninitialized)"
-    
+
 
 @dataclass
 class Expr:
@@ -133,9 +144,11 @@ class Expr:
 class Negation(Expr):
     inner: Expr
 
+
 @dataclass
 class Not(Expr):
     inner: Expr
+
 
 @dataclass
 class Grouping(Expr):
@@ -145,6 +158,7 @@ class Grouping(Expr):
 @dataclass
 class Identifier(Expr):
     ident: str
+
 
 Operator = t.Literal[
     "assign",
@@ -162,6 +176,8 @@ Operator = t.Literal[
     "or",
     "not",
 ]
+
+
 @dataclass
 class BinaryExpr(Expr):
     lhs: Expr
@@ -214,15 +230,18 @@ StatementKind = t.Literal[
     "return",
 ]
 
+
 @dataclass
 class CallStatement:
     ident: str
     args: list[Expr]
 
+
 @dataclass
 class FunctionCall(Expr):
     ident: str
     args: list[Expr]
+
 
 @dataclass
 class DeclareStatement:
@@ -279,16 +298,19 @@ class RepeatUntilStatement:
     cond: Expr
     block: list["Statement"]
 
+
 @dataclass
 class FunctionArgument:
     name: str
     typ: BCType
+
 
 @dataclass
 class ProcedureStatement:
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
+
 
 @dataclass
 class FunctionStatement:
@@ -297,9 +319,11 @@ class FunctionStatement:
     returns: BCType
     block: list["Statement"]
 
+
 @dataclass
 class ReturnStatement:
     expr: Expr | None
+
 
 @dataclass
 class Statement:
@@ -316,7 +340,7 @@ class Statement:
     function: FunctionStatement | None = None
     procedure: ProcedureStatement | None = None
     call: CallStatement | None = None
-    fncall: FunctionCall | None = None # Impostor! expr as statement?!
+    fncall: FunctionCall | None = None  # Impostor! expr as statement?!
     return_s: ReturnStatement | None = None
 
     def __repr__(self) -> str:
@@ -350,6 +374,7 @@ class Statement:
             case "fncall":
                 return self.fncall.__repr__()
 
+
 @dataclass
 class Program:
     stmts: list[Statement]
@@ -363,27 +388,27 @@ class Parser:
         self.cur = 0
         self.tokens = tokens
 
-    def check(self, tok: l.Token) -> bool:
+    def check(self, tok: tuple[l.TokenType, str]) -> bool:
         if self.cur == len(self.tokens):
             return False
 
         peek = self.peek()
-        if tok.kind != peek.kind:
+        if tok[0] != peek.kind:
             return False
 
-        match tok.kind:
+        match tok[0]:
             case "type":
-                return tok.typ == peek.typ
+                return tok[1] == peek.typ
             case "ident":
-                return tok.ident == peek.ident
+                return tok[1] == peek.ident
             case "keyword":
-                return tok.keyword == peek.keyword
+                return tok[1] == peek.keyword
             case "literal":
-                return tok.literal == peek.literal
+                return tok[1] == peek.literal
             case "operator":
-                return tok.operator == peek.operator
+                return tok[1] == peek.operator
             case "separator":
-                return tok.separator == peek.separator
+                return tok[1] == peek.separator
 
         return False
 
@@ -400,7 +425,7 @@ class Parser:
     def check_newline(self, s: str):
         nl = self.advance()
         if nl.kind != "newline":
-            panic(f"expected newline after {s}, but found `{self.prev()}`")
+            raise BCParseError(f"expected newline after {s}, but found `{self.prev()}`", nl)
 
     def prev(self) -> l.Token:
         return self.tokens[self.cur - 1]
@@ -411,7 +436,7 @@ class Parser:
     def peek_next(self) -> l.Token:
         return self.tokens[self.cur + 1]
 
-    def match(self, typs: list[l.Token]) -> bool:
+    def match(self, typs: list[tuple[l.TokenType, str]]) -> bool:
         for typ in typs:
             if self.check(typ):
                 self.advance()
@@ -454,7 +479,7 @@ class Parser:
             case "char":
                 val = lit.value
                 if len(val) > 1:
-                    panic(f"more than 1 character in char literal `{lit}`")
+                    raise BCParseError(f"more than 1 character in char literal `{lit}`")
                 return Literal("char", char=val[0])
             case "string":
                 val = lit.value
@@ -466,7 +491,7 @@ class Parser:
                 elif val == "false":
                     return Literal("boolean", boolean=False)
                 else:
-                    panic(f"invalid boolean literal `{lit.value}`")
+                    raise BCParseError(f"invalid boolean literal `{lit.value}`")
             case "number":
                 val = lit.value
 
@@ -474,18 +499,18 @@ class Parser:
                     try:
                         res = float(val)
                     except ValueError:
-                        panic(f"invalid number literal `{val}`")
+                        raise BCParseError(f"invalid number literal `{val}`")
 
                     return Literal("real", real=res)
                 elif self.is_integer(val):
                     try:
                         res = int(val)
                     except ValueError:
-                        panic(f"invalid number literal `{val}`")
+                        raise BCParseError(f"invalid number literal `{val}`")
 
                     return Literal("integer", integer=res)
                 else:
-                    panic(f"invalid number literal `{val}`")
+                    raise BCParseError(f"invalid number literal `{val}`")
 
     def type(self) -> BCType | None:
         PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
@@ -508,15 +533,15 @@ class Parser:
             if left_bracket.separator == "left_bracket":
                 begin = self.expression()
                 if begin is None:
-                    panic("invalid expression as beginning value of array declaration")
+                    raise BCParseError("invalid expression as beginning value of array declaration")
 
                 colon = self.advance()
                 if colon.kind != "separator" and colon.separator != "colon":
-                    panic("expected colon after beginning value of array declaration")
+                    raise BCParseError("expected colon after beginning value of array declaration")
 
                 end = self.expression()
                 if end is None:
-                    panic("invalid expression as ending value of array declaration")
+                    raise BCParseError("invalid expression as ending value of array declaration")
 
                 flat_bounds = (begin, end)
 
@@ -529,7 +554,7 @@ class Parser:
                 ):
                     inner_begin = self.expression()
                     if inner_begin is None:
-                        panic(
+                        raise BCParseError(
                             "invalid expression as beginning value of array declaration"
                         )
 
@@ -538,13 +563,13 @@ class Parser:
                         inner_colon.kind != "separator"
                         and inner_colon.separator != "colon"
                     ):
-                        panic(
+                        raise BCParseError(
                             "expected colon after beginning value of array declaration"
                         )
 
                     inner_end = self.expression()
                     if inner_end is None:
-                        panic("invalid expression as ending value of array declaration")
+                        raise BCParseError("invalid expression as ending value of array declaration")
 
                     matrix_bounds = (
                         flat_bounds[0],
@@ -557,28 +582,30 @@ class Parser:
 
                     right_bracket = self.advance()
                     if right_bracket.separator != "right_bracket":
-                        panic("expected ending right bracket after matrix length declaration")
-                    
+                        raise BCParseError(
+                            "expected ending right bracket after matrix length declaration"
+                        )
+
                     is_matrix = True
                 else:
-                    panic(
+                    raise BCParseError(
                         "expected right bracket or comma after array bounds declaration"
                     )
 
             of = self.advance()
             if of.kind != "keyword" and of.keyword != "of":
-                panic("expected `OF` after `ARRAY` and/or size declaration")
+                raise BCParseError("expected `OF` after `ARRAY` and/or size declaration")
 
             # TODO: refactor
             arrtyp = self.advance()
 
             if arrtyp.typ == "array":
-                panic(
+                raise BCParseError(
                     "cannot have array as array element type, please use the matrix syntax instead"
                 )
 
             if arrtyp.typ not in PRIM_TYPES:
-                panic("invalid type used as array element type")
+                raise BCParseError("invalid type used as array element type")
 
             inner = arrtyp.typ  # type: ignore
 
@@ -603,11 +630,11 @@ class Parser:
 
         leftb = self.advance()
         if leftb.separator != "left_bracket":
-            panic("expected left_bracket after ident in array index")
+            raise BCParseError("expected left_bracket after ident in array index")
 
         exp = self.expression()
         if exp is None:
-            panic("expected expression as array index")
+            raise BCParseError("expected expression as array index")
 
         rightb = self.advance()
         exp_inner = None
@@ -616,15 +643,15 @@ class Parser:
         elif rightb.separator == "comma":
             exp_inner = self.expression()
             if exp_inner is None:
-                panic("expected expression as array index")
+                raise BCParseError("expected expression as array index")
 
             rightb = self.advance()
             if rightb.separator != "right_bracket":
-                panic("expected right_bracket after expression in array index")
+                raise BCParseError("expected right_bracket after expression in array index")
         else:
-            panic("expected right_bracket after expression in array index")
+            raise BCParseError("expected right_bracket after expression in array index")
 
-        return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner) # type: ignore 
+        return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
 
     def operator(self) -> l.Operator | None:
         o = self.advance()
@@ -644,25 +671,25 @@ class Parser:
         self.advance()
 
         args = []
-    
+
         while self.peek().separator != "right_paren":
             expr = self.expression()
             if expr is None:
-                panic("invalid expression as function argument")
+                raise BCParseError("invalid expression as function argument")
 
             args.append(expr)
 
             comma = self.peek()
             if comma.separator != "comma" and comma.separator != "right_paren":
-                panic("expected comma after argument in function call argument list")
+                raise BCParseError("expected comma after argument in function call argument list")
             elif comma.separator == "comma":
                 self.advance()
 
         rightb = self.advance()
         if rightb.separator != "right_paren":
-            panic("expected right paren after arg list in function call")
-    
-        return FunctionCall(ident=ident.ident, args=args) # type: ignore
+            raise BCParseError("expected right paren after arg list in function call")
+
+        return FunctionCall(ident=ident.ident, args=args)  # type: ignore
 
     def unary(self) -> Expr | None:
         p = self.peek()
@@ -681,25 +708,25 @@ class Parser:
             self.advance()
             e = self.expression()
             if e is None:
-                panic("invalid expression inside grouping")
+                raise BCParseError("invalid expression inside grouping")
 
             end = self.advance()
 
-            if end != l.Token("separator", separator="right_paren"):
-                panic("expected ending ) delimiter after (")
+            if end.separator != "right_paren":
+                raise BCParseError("expected ending ) delimiter after (")
 
             return Grouping(inner=e)
         elif p.kind == "operator" and p.operator == "sub":
             self.advance()
             e = self.expression()
             if e is None:
-                panic("invalid expression for negation")
+                raise BCParseError("invalid expression for negation")
             return Negation(e)
         elif p.kind == "keyword" and p.keyword == "not":
             self.advance()
             e = self.expression()
             if e is None:
-                panic("invalid expression for logical NOT")
+                raise BCParseError("invalid expression for logical NOT")
             return Not(e)
         else:
             return None
@@ -709,13 +736,11 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match(
-            [l.Token("operator", operator="mul"), l.Token("operator", operator="div")]
-        ):
+        while self.match([("operator", "mul"), ("operator", "div")]):
             op = self.prev().operator
 
             if op is None:
-                panic("factor: op is None")
+                raise BCParseError("factor: op is None")
 
             right = self.unary()
 
@@ -732,13 +757,11 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match(
-            [l.Token("operator", operator="add"), l.Token("operator", operator="sub")]
-        ):
+        while self.match([("operator", "add"), ("operator", "sub")]):
             op = self.prev().operator
 
             if op is None:
-                panic("term: op is is None")
+                raise BCParseError("term: op is is None")
 
             right = self.factor()
             if right is None:
@@ -756,15 +779,15 @@ class Parser:
 
         while self.match(
             [
-                l.Token("operator", operator="greater_than"),
-                l.Token("operator", operator="less_than"),
-                l.Token("operator", operator="greater_than_or_equal"),
-                l.Token("operator", operator="less_than_or_equal"),
+                ("operator", "greater_than"),
+                ("operator", "less_than"),
+                ("operator", "greater_than_or_equal"),
+                ("operator", "less_than_or_equal"),
             ]
         ):
             op = self.prev().operator
             if op is None:
-                panic("comparison: op is None")
+                raise BCParseError("comparison: op is None")
 
             right = self.term()
             if right is None:
@@ -782,13 +805,13 @@ class Parser:
 
         while self.match(
             [
-                l.Token("operator", operator="not_equal"),
-                l.Token("operator", operator="equal"),
+                ("operator", "not_equal"),
+                ("operator", "equal"),
             ]
         ):
             op = self.prev().operator
             if op is None:
-                panic("equality: op is None")
+                raise BCParseError("equality: op is None")
 
             right = self.comparison()
             if right is None:
@@ -800,25 +823,26 @@ class Parser:
 
     def logical_comparison(self) -> Expr | None:
         expr = self.equality()
-        if expr is None: return None
+        if expr is None:
+            return None
 
-        while self.match([l.Token("keyword", keyword="and"), l.Token("keyword", keyword="or")]):
+        while self.match([("keyword", "and"), ("keyword", "or")]):
             kw = self.prev().keyword
             if kw is None:
-                panic("logical_comparison: kw is None")
+                raise BCParseError("logical_comparison: kw is None")
 
             right = self.equality()
 
             if right is None:
                 return None
 
-            op: Operator = "" # type: ignore
+            op: Operator = ""  # type: ignore
             if kw == "and":
                 op = "and"
             elif kw == "or":
                 op = "or"
 
-            expr = BinaryExpr(expr, op, right) # kw must be and or or
+            expr = BinaryExpr(expr, op, right)  # kw must be and or or
 
         return expr
 
@@ -838,12 +862,11 @@ class Parser:
         self.advance()
         initial = self.expression()
         if initial is None:
-            panic("found OUTPUT but no expression that follows")
+            raise BCParseError("found OUTPUT but no expression that follows")
 
         exprs.append(initial)
 
-        comma = l.Token(kind="separator", separator="comma")
-        while self.match([comma]):
+        while self.match([("separator", "comma")]):
             new = self.expression()
             if new is None:
                 break
@@ -868,7 +891,7 @@ class Parser:
 
         ident = self.ident()
         if not isinstance(ident, Identifier) or Identifier is None:
-            panic(f"expected identifier after `INPUT` but found {ident}")
+            raise BCParseError(f"expected identifier after `INPUT` but found {ident}")
 
         self.check_newline("INPUT")
 
@@ -888,7 +911,7 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            panic("invalid expression used as RETURN expression")
+            raise BCParseError("invalid expression used as RETURN expression")
 
         return Statement("return", return_s=ReturnStatement(expr))
 
@@ -903,7 +926,7 @@ class Parser:
         # CALL <ident>(<expr>, <expr>)
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            panic("invalid ident after procedure call")
+            raise BCParseError("invalid ident after procedure call")
 
         leftb = self.advance()
         args = []
@@ -911,19 +934,21 @@ class Parser:
             while self.peek().separator != "right_paren":
                 expr = self.expression()
                 if expr is None:
-                    panic("invalid expression as procedure argument")
+                    raise BCParseError("invalid expression as procedure argument")
 
                 args.append(expr)
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
-                    panic("expected comma after argument in procedure call argument list")
+                    raise BCParseError(
+                        "expected comma after argument in procedure call argument list"
+                    )
                 elif comma.separator == "comma":
                     self.advance()
 
             rightb = self.advance()
             if rightb.separator != "right_paren":
-                panic("expected right paren after arg list in procedure call")
+                raise BCParseError("expected right paren after arg list in procedure call")
 
         self.check_newline("procedure call")
 
@@ -945,15 +970,15 @@ class Parser:
 
         ident = self.advance()
         if ident.ident is None:
-            panic("expected ident after declare stmt")
+            raise BCParseError("expected ident after declare stmt")
 
         colon = self.advance()
         if colon.kind != "separator" and colon.separator != "colon":
-            panic("expected colon `:` after ident in declare")
+            raise BCParseError("expected colon `:` after ident in declare")
 
         typ = self.type()
         if typ is None:
-            panic("invalid type after DECLARE")
+            raise BCParseError("invalid type after DECLARE")
 
         self.check_newline("variable declaration (DECLARE)")
 
@@ -974,15 +999,15 @@ class Parser:
 
         ident: Identifier | None = self.ident()  # type: ignore
         if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
-            panic("expected ident after constant stmt")
+            raise BCParseError("expected ident after constant stmt")
 
         arrow = self.advance()
         if arrow.kind != "operator" and arrow.operator != "assign":
-            panic("expected `<-` after variable name in constant declaration")
+            raise BCParseError("expected `<-` after variable name in constant declaration")
 
         literal: Literal | None = self.literal()  # type: ignore
         if literal is None:
-            panic("expected literal after `<-` in constant declaration")
+            raise BCParseError("expected literal after `<-` in constant declaration")
 
         self.check_newline("constant declaration (CONSTANT)")
 
@@ -1012,7 +1037,7 @@ class Parser:
 
         expr: Expr | None = self.expression()
         if expr is None:
-            panic("expected expression after `<-` in assignment")
+            raise BCParseError("expected expression after `<-` in assignment")
 
         self.check_newline("assignment")
 
@@ -1030,7 +1055,7 @@ class Parser:
 
         cond = self.expression()
         if cond is None:
-            panic("found invalid expression for if condition")
+            raise BCParseError("found invalid expression for if condition")
 
         # allow stupid igcse shit
         if self.peek().kind == "newline":
@@ -1038,7 +1063,7 @@ class Parser:
 
         then = self.advance()
         if then.keyword != "then":
-            panic("expected `THEN` after if condition")
+            raise BCParseError("expected `THEN` after if condition")
 
         # dont enforce newline after then
         if self.peek().kind == "newline":
@@ -1070,7 +1095,7 @@ class Parser:
         case = self.peek()
 
         if case.kind == "keyword" and case.keyword == "case":
-            panic("case of not implemented")
+            raise BCParseError("case of not implemented")
 
     def while_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -1083,11 +1108,11 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            panic("found invalid expression for while loop condition")
+            raise BCParseError("found invalid expression for while loop condition")
 
         do = self.advance()
         if do.keyword != "do":
-            panic("expected `DO` after while loop condition")
+            raise BCParseError("expected `DO` after while loop condition")
 
         # oh dear
         self.check_newline("while loop declaration")
@@ -1117,30 +1142,30 @@ class Parser:
 
         counter: Identifier | None = self.ident()  # type: ignore
         if counter.ident is None or not isinstance(counter, Identifier):  # type: ignore
-            panic("expected ident before `<-` in a for loop")
+            raise BCParseError("expected ident before `<-` in a for loop")
 
         assign = self.advance()
         if assign.operator != "assign":
-            panic("expected assignment operator `<-` after counter in a for loop")
+            raise BCParseError("expected assignment operator `<-` after counter in a for loop")
 
         begin = self.expression()
         if begin is None:
-            panic("invalid expression as begin in for loop")
+            raise BCParseError("invalid expression as begin in for loop")
 
         to = self.advance()
         if to.keyword != "to":
-            panic("expected TO after beginning value in for loop")
+            raise BCParseError("expected TO after beginning value in for loop")
 
         end = self.expression()
         if end is None:
-            panic("invalid expression as end in for loop")
+            raise BCParseError("invalid expression as end in for loop")
 
         step: Expr | None = None
         if self.peek().keyword == "step":
             self.advance()
             step = self.expression()
             if step is None:
-                panic("invalid expression as step in for loop")
+                raise BCParseError("invalid expression as step in for loop")
 
         self.check_newline("after for loop declaration")
 
@@ -1152,9 +1177,9 @@ class Parser:
 
         next_counter: Identifier | None = self.ident()  # type: ignore
         if next_counter is None or not isinstance(counter, Identifier):
-            panic("expected identifier after NEXT in a for loop")
+            raise BCParseError("expected identifier after NEXT in a for loop")
         elif counter.ident != next_counter.ident:
-            panic(
+            raise BCParseError(
                 f"initialized counter as {counter.ident} but used {next_counter.ident} after loop"
             )
 
@@ -1183,7 +1208,7 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            panic("found invalid expression for repeat-until loop condition")
+            raise BCParseError("found invalid expression for repeat-until loop condition")
 
         self.check_newline("after repeat-until loop declaration")
 
@@ -1194,15 +1219,15 @@ class Parser:
         # ident : type
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            panic("invalid identifier for function arg")
+            raise BCParseError("invalid identifier for function arg")
 
         colon = self.advance()
         if colon.kind != "separator" and colon.separator != "colon":
-            panic("expected colon after ident in function argument")
+            raise BCParseError("expected colon after ident in function argument")
 
         typ = self.type()
         if typ is None:
-            panic("invalid type after colon in function argument")
+            raise BCParseError("invalid type after colon in function argument")
 
         return FunctionArgument(name=ident.ident, typ=typ)
 
@@ -1212,11 +1237,11 @@ class Parser:
         if begin.keyword != "procedure":
             return None
 
-        self.advance() # byebye PROCEDURE
-        
+        self.advance()  # byebye PROCEDURE
+
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            panic("invalid identifier after PROCEDURE declaration")
+            raise BCParseError("invalid identifier after PROCEDURE declaration")
 
         args = []
         leftb = self.peek()
@@ -1226,43 +1251,45 @@ class Parser:
             while self.peek().separator != "right_paren":
                 arg = self.function_arg()
                 if arg is None:
-                    panic("invalid function argument")
-                
+                    raise BCParseError("invalid function argument")
+
                 args.append(arg)
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
-                    panic("expected comma after procedure argument in list")
-                
+                    raise BCParseError("expected comma after procedure argument in list")
+
                 if comma.separator == "comma":
                     self.advance()
-            
+
             rightb = self.advance()
             if rightb.kind != "separator" and rightb.separator != "right_paren":
-                panic(f"expected right paren after arg list in procedure declaration, found {rightb}")
+                raise BCParseError(
+                    f"expected right paren after arg list in procedure declaration, found {rightb}"
+                )
 
         self.check_newline("PROCEDURE")
- 
+
         stmts = []
         while self.peek().keyword != "endprocedure":
             stmts.append(self.scan_one_statement())
 
-        self.advance() # bye bye ENDPROCEDURE
+        self.advance()  # bye bye ENDPROCEDURE
 
         res = ProcedureStatement(name=ident.ident, args=args, block=stmts)
         return Statement("procedure", procedure=res)
 
     def function_stmt(self) -> Statement | None:
-        begin = self.peek()        
+        begin = self.peek()
 
         if begin.keyword != "function":
             return None
 
-        self.advance() # byebye FUNCTION
-        
+        self.advance()  # byebye FUNCTION
+
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            panic("invalid identifier after FUNCTION declaration")
+            raise BCParseError("invalid identifier after FUNCTION declaration")
 
         args = []
         leftb = self.peek()
@@ -1272,37 +1299,39 @@ class Parser:
             while self.peek().separator != "right_paren":
                 arg = self.function_arg()
                 if arg is None:
-                    panic("invalid function argument")
-                
+                    raise BCParseError("invalid function argument")
+
                 args.append(arg)
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
-                    panic("expected comma after function argument in list")
-                
+                    raise BCParseError("expected comma after function argument in list")
+
                 if comma.separator == "comma":
                     self.advance()
-            
+
             rightb = self.advance()
             if rightb.kind != "separator" and rightb.separator != "right_paren":
-                panic(f"expected right paren after arg list in function declaration, found {rightb}")
+                raise BCParseError(
+                    f"expected right paren after arg list in function declaration, found {rightb}"
+                )
 
         returns = self.advance()
         if returns.keyword != "returns":
-            panic("expected RETURNS after function arguments")
+            raise BCParseError("expected RETURNS after function arguments")
 
         typ = self.type()
         if typ is None:
-            panic("invalid type after RETURNS for function return value")
+            raise BCParseError("invalid type after RETURNS for function return value")
 
         self.check_newline("FUNCTION")
- 
+
         stmts = []
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()
             stmts.append(stmt)
 
-        self.advance() # bye bye ENDFUNCTION
+        self.advance()  # bye bye ENDFUNCTION
 
         res = FunctionStatement(name=ident.ident, args=args, returns=typ, block=stmts)
         return Statement("function", function=res)
@@ -1332,9 +1361,9 @@ class Parser:
         if proc_call is not None:
             return proc_call
 
-        fncall: FunctionCall | None = self.function_call() # type: ignore
+        fncall: FunctionCall | None = self.function_call()  # type: ignore
         if fncall is not None:
-            return Statement("fncall", fncall=fncall) 
+            return Statement("fncall", fncall=fncall)
 
         return_s = self.return_stmt()
         if return_s is not None:
@@ -1377,7 +1406,7 @@ class Parser:
             self.clean_newlines()
             return s
         else:
-            panic(f"found invalid statement at `{self.peek()}`")
+            raise BCParseError(f"found invalid statement at `{self.peek()}`")
 
     def program(self) -> Program:
         stmts = []

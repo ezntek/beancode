@@ -80,11 +80,16 @@ class Literal:
     kind: LType
     value: str
 
-TokenType = t.Literal["newline", "keyword", "ident", "literal", "operator", "separator", "type"]
+
+TokenType = t.Literal[
+    "newline", "keyword", "ident", "literal", "operator", "separator", "type"
+]
+
 
 @dataclass
 class Token:
     kind: TokenType
+    pos: tuple[int, int, int]
     keyword: Keyword | None = None
     ident: str | None = None
     literal: Literal | None = None
@@ -92,24 +97,26 @@ class Token:
     separator: Separator | None = None
     typ: Type | None = None
 
-    def __repr__(self) -> str:
+    # content, kind
+    def get(self) -> tuple[str, TokenType]:
         if self.keyword != None:
-            return f"token(keyword): {self.keyword}"
+            return (self.keyword, "keyword")
         elif self.ident != None:
-            return f"token(ident): {self.ident}"
+            return (self.ident, "ident")
         elif self.literal != None:
-            return f"token(literal): {self.literal}"
+            return (self.literal.value, "literal")
         elif self.operator != None:
-            return f"token(operator): {self.operator}"
+            return (self.operator, "operator")
         elif self.separator != None:
-            return f"token(separator): {self.separator}"
+            return (self.separator, "separator")
         elif self.typ != None:
-            return f"token(type): {self.typ}"
-        elif self.kind == "newline":
-            return "token(newline)"
+            return (self.typ, "type")
         else:
-            return "INVALID TOKEN"
+            raise Exception() # TODO: fix
 
+    def __repr__(self) -> str:
+        s, kind = self.get()
+        return f"token({kind}): {s}"
 
 class Lexer:
     file: str
@@ -167,6 +174,11 @@ class Lexer:
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 
+    def get_pos(self) -> tuple[int, int, int]:
+        row = self.row
+        col = self.cur - self.bol
+        return (row, col, self.bol)
+
     def is_separator(self, ch: str) -> bool:
         return ch in "{}[]():,."
 
@@ -174,12 +186,12 @@ class Lexer:
         return ch in "+-*/=<>"
 
     def is_numeral(self, potential_num: str) -> bool:
-        if len(potential_num) == 1 and potential_num[0] == '-':
+        if len(potential_num) == 1 and potential_num[0] == "-":
             return False
 
-        if potential_num[0] == '-' and not potential_num[1].isdigit():
+        if potential_num[0] == "-" and not potential_num[1].isdigit():
             return False
-        elif potential_num[0] == '-' and potential_num[1].isdigit():
+        elif potential_num[0] == "-" and potential_num[1].isdigit():
             potential_num = potential_num[1:]
 
         for ch in potential_num:
@@ -197,7 +209,9 @@ class Lexer:
         if self.cur >= len(self.file):
             return
 
-        while self.cur < len(self.file) and (self.file[self.cur].isspace() and self.file[self.cur] != '\n'): 
+        while self.cur < len(self.file) and (
+            self.file[self.cur].isspace() and self.file[self.cur] != "\n"
+        ):
             self.cur += 1
 
         return self.trim_comment()
@@ -210,7 +224,7 @@ class Lexer:
             self.cur += 2
             while self.cur < len(self.file) and self.file[self.cur] != "\n":
                 self.cur += 1
-            self.cur += 1 # get rid of newline
+            self.cur += 1  # get rid of newline
 
             return self.trim_left()
 
@@ -245,7 +259,7 @@ class Lexer:
 
             if res is not None:
                 self.cur += 2
-                return Token("operator", operator=res)  # type: ignore
+                return Token("operator", self.get_pos(), operator=res)  # type: ignore
 
         hm = {
             ">": "greater_than",
@@ -264,7 +278,7 @@ class Lexer:
                 return None
 
             self.cur += 1
-            return Token("operator", operator=res)  # type: ignore
+            return Token("operator", self.get_pos(), operator=res)  # type: ignore
 
     def next_separator(self) -> Token | None:
         hm = {
@@ -283,7 +297,7 @@ class Lexer:
 
         if res is not None:
             self.cur += 1
-            return Token("separator", separator=res)  # type: ignore
+            return Token("separator", self.get_pos(), separator=res)  # type: ignore
 
     def next_word(self) -> str:
         # do not question why this works. its sorcery from the old zig shit
@@ -296,11 +310,16 @@ class Lexer:
 
         if not string_or_char_literal:
             if curr_ch == "-":
-                self.cur += 1 # skip past
+                self.cur += 1  # skip past
                 end += 1
                 curr_ch = self.file[self.cur]
 
-                if len(self.res) != 0 and self.res[len(self.res)-1].kind in ["ident", "literal"] or self.res[len(self.res)-1].separator in ["right_bracket", "right_paren", "right_curly"]:
+                if (
+                    len(self.res) != 0
+                    and self.res[len(self.res) - 1].kind in ["ident", "literal"]
+                    or self.res[len(self.res) - 1].separator
+                    in ["right_bracket", "right_paren", "right_curly"]
+                ):
                     res = self.file[begin:end]
                     return res
 
@@ -340,28 +359,39 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if self.is_keyword(word.lower()):
-            return Token("keyword", keyword=word.lower())  # type: ignore
+            return Token("keyword", (self.row, self.cur - self.bol - len(word)), keyword=word.lower())  # type: ignore
         else:
             return None
 
     def next_type(self, typ: str) -> Token | None:
         if typ.lower() in ["integer", "string", "boolean", "real", "array", "char"]:
-            return Token("type", typ=typ.lower())  # type: ignore
+            return Token("type", (self.row, self.cur - self.bol - len(typ)), typ=typ.lower())  # type: ignore
         else:
             return None
 
     def next_string_or_char_literal(self, word: str) -> Token | None:
         if word[0] == '"' and word[len(word) - 1] == '"':
             slc = word[1 : len(word) - 1]
-            return Token("literal", literal=Literal("string", slc))
+            return Token(
+                "literal",
+                (self.row, self.cur - self.bol - (len(word) + 2), self.bol),
+                literal=Literal("string", slc),
+            )
 
         if word[0] == "'" and word[len(word) - 1] == "'":
             if len(word) > 3:
                 row = self.row
                 col = self.cur - self.bol - len(word)
-                util.panic(f"char literal at {row},{col} cannot contain more than 1 char")
+                util.BCParseError(
+                    f"char literal cannot contain more than 1 char", (row, col, self.bol)
+                )
 
-            return Token("literal", literal=Literal("char", word[1]))
+            # -3 for begin delim, char and end delim
+            return Token(
+                "literal",
+                (self.row, self.cur - self.bol - 3, self.bol),
+                literal=Literal("char", word[1]),
+            )
 
         return None
 
@@ -381,10 +411,9 @@ class Lexer:
             self.row += 1
             self.bol = self.cur + 1
             self.cur += 1
-            return Token("newline")
+            return Token("newline", self.get_pos())
 
-
-        if (t := self.next_operator()) is not None: 
+        if (t := self.next_operator()) is not None:
             return t
 
         if (t := self.next_separator()) is not None:
@@ -393,16 +422,23 @@ class Lexer:
         word = self.next_word()
 
         if len(self.res) != 0:
-            should_be_sub = lambda *_: self.res[len(self.res)-1].kind in ["ident", "literal"] or self.res[len(self.res)-1].separator in ["right_bracket", "right_paren", "right_curly"]
+            should_be_sub = lambda *_: self.res[len(self.res) - 1].kind in [
+                "ident",
+                "literal",
+            ] or self.res[len(self.res) - 1].separator in [
+                "right_bracket",
+                "right_paren",
+                "right_curly",
+            ]
 
-            if len(word) == 1 and should_be_sub() and word[0] == '-':
-                return Token("operator", operator="sub") 
+            if len(word) == 1 and should_be_sub() and word[0] == "-":
+                return Token("operator", self.get_pos(), operator="sub")
 
         if self.is_numeral(word):
-            return Token("literal", literal=Literal("number", word))
-        elif word[0] == '-' and not word[1].isdigit(): # scuffed
+            return Token("literal", self.get_pos(), literal=Literal("number", word))
+        elif word[0] == "-" and not word[1].isdigit():  # scuffed
             self.cur += 1
-            return Token("operator", operator="sub")
+            return Token("operator", self.get_pos(), operator="sub")
 
         if t := self.next_keyword(word):
             return t
@@ -415,7 +451,7 @@ class Lexer:
         if (b := self.next_boolean(word)) is not None:
             return Token("literal", literal=Literal("boolean", b))  # type: ignore
 
-        return Token("ident", ident=word)
+        return Token("ident", self.get_pos(), ident=word)
 
     def tokenize(self) -> list[Token]:
         self.res = []
@@ -427,5 +463,5 @@ class Lexer:
             else:
                 break
 
-        self.res.append(Token("newline"))
+        self.res.append(Token("newline", self.get_pos()))
         return self.res
