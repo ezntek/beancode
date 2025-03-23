@@ -359,13 +359,13 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if self.is_keyword(word.lower()):
-            return Token("keyword", (self.row, self.cur - self.bol - len(word)), keyword=word.lower())  # type: ignore
+            return Token("keyword", (self.row, self.cur - self.bol - len(word), self.bol), keyword=word.lower())  # type: ignore
         else:
             return None
 
     def next_type(self, typ: str) -> Token | None:
         if typ.lower() in ["integer", "string", "boolean", "real", "array", "char"]:
-            return Token("type", (self.row, self.cur - self.bol - len(typ)), typ=typ.lower())  # type: ignore
+            return Token("type", (self.row, self.cur - self.bol - len(typ), self.bol), typ=typ.lower())  # type: ignore
         else:
             return None
 
@@ -435,7 +435,7 @@ class Lexer:
                 return Token("operator", self.get_pos(), operator="sub")
 
         if self.is_numeral(word):
-            return Token("literal", self.get_pos(), literal=Literal("number", word))
+            return Token("literal", (self.row, self.cur - self.bol - len(word), self.bol), literal=Literal("number", word))
         elif word[0] == "-" and not word[1].isdigit():  # scuffed
             self.cur += 1
             return Token("operator", self.get_pos(), operator="sub")
@@ -449,9 +449,9 @@ class Lexer:
 
         b: str | None
         if (b := self.next_boolean(word)) is not None:
-            return Token("literal", literal=Literal("boolean", b))  # type: ignore
+            return Token("literal", (self.row, self.cur - self.bol - len(word), self.bol), literal=Literal("boolean", b))  # type: ignore
 
-        return Token("ident", self.get_pos(), ident=word)
+        return Token("ident", (self.row, self.cur - self.bol - len(word), self.bol), ident=word)
 
     def tokenize(self) -> list[Token]:
         self.res = []

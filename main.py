@@ -39,7 +39,8 @@ def main():
             i.toplevel = True
             i.visit_block(None)
     except BCError as err:
-       err.print(fn, file_content)
+        err.print(fn, file_content)
+        exit(1)
 
 if __name__ == "__main__":
     main()
