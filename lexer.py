@@ -74,6 +74,31 @@ Separator = t.Literal[
     "dot",
 ]
 
+_SEPARATORS = {
+    "left_curly": "{",
+    "right_curly": "}",
+    "left_bracket": "[",
+    "right_bracket": "]",
+    "left_paren": "(",
+    "right_paren": ")",
+    "colon": ":",
+    "comma": ",",
+    "dot": "."
+}
+
+_OPERATORS = {
+    "assign": "<-",
+    "less_than_or_equal": "<=",
+    "greater_than_or_equal": ">=",
+    "not_equal": "<>",
+    "greater_than": ">",
+    "less_than": "<",
+    "equal": "=",
+    "mul": "*",
+    "add": "+",
+    "sub": "-",
+    "div": "/"
+}
 
 @dataclass
 class Literal:
@@ -111,11 +136,31 @@ class Token:
             return (self.separator, "separator")
         elif self.typ != None:
             return (self.typ, "type")
+        elif self.kind == "newline":
+            return ("\n", "newline")
+        else:
+            raise Exception() # TODO: fix
+
+    # content, kind
+    def get_raw(self) -> tuple[str, TokenType]:
+        if self.keyword != None:
+            return (self.keyword, "keyword")
+        elif self.ident != None:
+            return (self.ident, "ident")
+        elif self.literal != None:
+            return (self.literal.value, "literal")
+        elif self.operator != None:
+            return (_OPERATORS[self.operator], "operator")
+        elif self.separator != None:
+            return (_SEPARATORS[self.separator], "separator")
+        elif self.typ != None:
+            return (self.typ, "type")
         else:
             raise Exception() # TODO: fix
 
     def __repr__(self) -> str:
         s, kind = self.get()
+        s = s if s != "\n" else ""
         return f"token({kind}): {s}"
 
 class Lexer:
@@ -174,10 +219,10 @@ class Lexer:
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 
-    def get_pos(self) -> tuple[int, int, int]:
+    def get_pos(self, back=1) -> tuple[int, int, int]:
         row = self.row
         col = self.cur - self.bol
-        return (row, col, self.bol)
+        return (row, col - back, self.bol)
 
     def is_separator(self, ch: str) -> bool:
         return ch in "{}[]():,."
@@ -255,11 +300,11 @@ class Lexer:
                 "<>": "not_equal",
             }
 
-            res = hm.get(cur_pair)
+            res = _OPERATORS.get(cur_pair)
 
             if res is not None:
                 self.cur += 2
-                return Token("operator", self.get_pos(), operator=res)  # type: ignore
+                return Token("operator", self.get_pos(back=2), operator=res)  # type: ignore
 
         hm = {
             ">": "greater_than",

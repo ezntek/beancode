@@ -1146,7 +1146,7 @@ class Parser:
 
         assign = self.advance()
         if assign.operator != "assign":
-            raise BCParseError("expected assignment operator `<-` after counter in a for loop", self.peek())
+            raise BCParseError("expected assignment operator `<-` after counter in a for loop", assign)
 
         begin = self.expression()
         if begin is None:
@@ -1154,7 +1154,7 @@ class Parser:
 
         to = self.advance()
         if to.keyword != "to":
-            raise BCParseError("expected TO after beginning value in for loop", self.peek())
+            raise BCParseError("expected TO after beginning value in for loop", to)
 
         end = self.expression()
         if end is None:

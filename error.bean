@@ -1,2 +1,3 @@
-output "good morning"
-output + 1
+for i = 1 to 5
+    output gay
+endfor

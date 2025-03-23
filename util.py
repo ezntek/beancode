@@ -5,7 +5,7 @@ class BCError(Exception):
     def __init__(self, msg: str, ctx = None) -> None: # type: ignore
         if type(ctx).__name__ == "Token":
             self.pos = ctx.pos # type: ignore
-            self.len = len(ctx.get()[0]) # type: ignore
+            self.len = len(ctx.get_raw()[0]) # type: ignore
         elif type(ctx) == tuple[int, int, int]:
             self.pos = ctx
             self.len = 1
@@ -28,7 +28,7 @@ class BCError(Exception):
         padding = len(str(line) + "  | ") + col 
         spaces = lambda *_: ' ' * padding
  
-        print(f"\033[0m\033[1m\"{filename}\":{line}: ", end='')
+        print(f"\033[0m\033[1m{filename}:{line}: ", end='')
         print(self.msg, end='')
 
         print(line_begin, end='')
