@@ -601,6 +601,12 @@ class Interpreter:
 
         if data.const:
             raise BCError(f"attempted to call `INPUT` into constant {id}")
+            
+        if type(data.val.kind) == BCArrayType:
+            raise BCError(f"attempted to call `INPUT` on an array")
+
+        if inp.strip() == "":
+            raise BCError(f"empty string supplied into variable with type `{data.val.kind.upper()}`") # type: ignore
 
         match data.val.kind:
             case "string":

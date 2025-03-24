@@ -216,8 +216,6 @@ class Lexer:
             "readfile",
             "writefile",
             "closefile",
-            "div",
-            "mod",
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 

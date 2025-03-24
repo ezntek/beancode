@@ -1,6 +1,3 @@
-from typing import Any
-
-
 class BCError(Exception):
     # row, col, bol
     pos: tuple[int, int, int]
@@ -27,6 +24,10 @@ class BCError(Exception):
         eol = bol
         while eol != len(file_content) and file_content[eol] != '\n':
             eol += 1
+
+        if self.pos == (0, 0, 0):
+            print(self.msg, end='')
+            return
 
         line_begin = f" \033[31;1m{line}\033[0m | "
         padding = len(str(line) + "  | ") + col - 1
@@ -76,7 +77,7 @@ class BCWarning(Exception):
             return
 
         line_begin = f" \033[35;1m{line}\033[0m | "
-        padding = len(str(line) + "  | ") + col - 1
+        padding = len(str(line) + "  | ") + col
         spaces = lambda *_: ' ' * padding
  
         print(f"\033[0m\033[1m{filename}:{line}: ", end='')
