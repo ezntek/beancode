@@ -155,6 +155,8 @@ class Token:
             return (_SEPARATORS[self.separator], "separator")
         elif self.typ != None:
             return (self.typ, "type")
+        elif self.kind == "newline":
+            return ("\n", "newline")
         else:
             raise Exception() # TODO: fix
 
@@ -222,7 +224,7 @@ class Lexer:
     def get_pos(self, back=1) -> tuple[int, int, int]:
         row = self.row
         col = self.cur - self.bol
-        return (row, col - back, self.bol)
+        return (row, col + 1 - back, self.bol)
 
     def is_separator(self, ch: str) -> bool:
         return ch in "{}[]():,."
@@ -300,7 +302,7 @@ class Lexer:
                 "<>": "not_equal",
             }
 
-            res = _OPERATORS.get(cur_pair)
+            res = hm.get(cur_pair)
 
             if res is not None:
                 self.cur += 2
@@ -427,7 +429,7 @@ class Lexer:
             if len(word) > 3:
                 row = self.row
                 col = self.cur - self.bol - len(word)
-                util.BCParseError(
+                util.BCError(
                     f"char literal cannot contain more than 1 char", (row, col, self.bol)
                 )
 
@@ -480,7 +482,7 @@ class Lexer:
                 return Token("operator", self.get_pos(), operator="sub")
 
         if self.is_numeral(word):
-            return Token("literal", (self.row, self.cur - self.bol - len(word), self.bol), literal=Literal("number", word))
+            return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("number", word))
         elif word[0] == "-" and not word[1].isdigit():  # scuffed
             self.cur += 1
             return Token("operator", self.get_pos(), operator="sub")
@@ -494,9 +496,9 @@ class Lexer:
 
         b: str | None
         if (b := self.next_boolean(word)) is not None:
-            return Token("literal", (self.row, self.cur - self.bol - len(word), self.bol), literal=Literal("boolean", b))  # type: ignore
+            return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("boolean", b))  # type: ignore
 
-        return Token("ident", (self.row, self.cur - self.bol - len(word), self.bol), ident=word)
+        return Token("ident", (self.row, self.cur - self.bol - len(word) + 1, self.bol), ident=word)
 
     def tokenize(self) -> list[Token]:
         self.res = []
