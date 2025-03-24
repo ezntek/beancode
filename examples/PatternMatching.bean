@@ -1,0 +1,9 @@
+declare num: integer
+output "enter a number"
+input num
+
+case of num
+    1: output "hi"
+    2: output "bye"
+    otherwise output "what?"
+endcase

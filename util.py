@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class BCError(Exception):
     # row, col, bol
     pos: tuple[int, int, int]
@@ -44,8 +47,9 @@ class BCWarning(Exception):
     # row, col, bol
     pos: tuple[int, int, int]
 
-    def __init__(self, msg: str, ctx = None) -> None: # type: ignore
+    def __init__(self, msg: str, ctx=None, data=None) -> None: # type: ignore
         self.len = 1
+        self.data = data
         if type(ctx).__name__ == "Token":
             self.pos = ctx.pos # type: ignore
             self.len = len(ctx.get_raw()[0]) # type: ignore
@@ -81,3 +85,8 @@ class BCWarning(Exception):
         print(tildes)
         indicator = f"{spaces()}\033[35;1m∟ \033[0m\033[1mwarning at line {line} column {col}\033[0m"
         print(indicator)
+
+def panic(msg: str):
+    print(f"\033[31;1mpanic! \033[0m{msg}")
+    print("\033[31mplease report this error to the developers. A traceback is provided:\033[0m")
+    raise Exception("panicked")

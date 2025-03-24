@@ -220,6 +220,7 @@ StatementKind = t.Literal[
     "constant",
     "assign",
     "if",
+    "caseof",
     "while",
     "for",
     "repeatuntil",
@@ -277,6 +278,16 @@ class IfStatement:
     if_block: list["Statement"]
     else_block: list["Statement"]
 
+@dataclass
+class CaseofBranch:
+    expr: Expr
+    stmt: "Statement"
+
+@dataclass
+class CaseofStatement:
+    expr: Expr
+    branches: list[CaseofBranch]
+    otherwise: "Statement | None"
 
 @dataclass
 class WhileStatement:
@@ -334,6 +345,7 @@ class Statement:
     constant: ConstantStatement | None = None
     assign: AssignStatement | None = None
     if_s: IfStatement | None = None
+    caseof: CaseofStatement | None = None
     while_s: WhileStatement | None = None
     for_s: ForStatement | None = None
     repeatuntil: RepeatUntilStatement | None = None
@@ -357,6 +369,8 @@ class Statement:
                 return self.assign.__repr__()
             case "if":
                 return self.if_s.__repr__()
+            case "caseof":
+                return self.caseof.__repr__()
             case "while":
                 return self.while_s.__repr__()
             case "for":
@@ -1091,11 +1105,57 @@ class Parser:
         res = IfStatement(cond=cond, if_block=if_stmts, else_block=else_stmts)
         return Statement("if", if_s=res)
 
-    def caseof_stmt(self) -> None:
+    def caseof_stmt(self) -> Statement | None:
         case = self.peek()
+        
+        #if case.kind == "keyword" and case.keyword == "case":
+        #    raise BCError("case of not implemented", self.peek())
+        
+        if case.keyword != "case":
+            return
+        self.advance()
 
-        if case.kind == "keyword" and case.keyword == "case":
-            raise BCError("case of not implemented", self.peek())
+        if self.peek().keyword != "of":
+            return
+        self.advance()
+
+        main_expr = self.expression()
+        if main_expr is None:
+            raise BCError("found invalid expression for case of value", self.peek())
+        
+        self.check_newline("after case of expression")
+
+        branches: list[CaseofBranch] = []
+        otherwise: Statement | None = None
+        next_expr: Expr | None = None
+        while self.peek().keyword != "endcase":
+            is_otherwise = self.peek().keyword == "otherwise"
+
+            if not is_otherwise:
+                expr = self.expression() if next_expr is None else next_expr
+                if not expr:
+                    raise BCError("invalid expression for case of branch", self.peek())
+
+                colon = self.advance()
+                if colon.separator != "colon":
+                    raise BCError("expected colon after case of branch expression", self.prev())
+            else:
+                self.advance()
+
+            stmt = self.stmt()
+            
+            if stmt is None:
+                raise BCError("expected statement for case of branch block")
+
+            if is_otherwise:
+                otherwise = stmt
+            else:
+                branches.append(CaseofBranch(expr, stmt)) # type: ignore
+        self.advance()
+
+        res = CaseofStatement(main_expr, branches, otherwise)
+        return Statement(kind="caseof", caseof=res)
+
 
     def while_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -1404,7 +1464,7 @@ class Parser:
         cur = self.peek()
         expr = self.expression()
         if expr:
-            raise BCWarning("unused expression", cur)
+            raise BCWarning("unused expression", cur, data=expr)
         else:
             raise BCError("invalid statement or expression", cur)
 

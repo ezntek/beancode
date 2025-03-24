@@ -4,7 +4,7 @@ from lexer import *
 from parser import Parser
 from util import BCError, BCWarning
 
-PRINT = False
+PRINT = True
 INTERPRET = True 
 
 def main():
