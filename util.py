@@ -71,6 +71,10 @@ class BCWarning(Exception):
         while eol != len(file_content) and file_content[eol] != '\n':
             eol += 1
 
+        if self.pos == (0, 0, 0):
+            print(self.msg, end='')
+            return
+
         line_begin = f" \033[35;1m{line}\033[0m | "
         padding = len(str(line) + "  | ") + col - 1
         spaces = lambda *_: ' ' * padding

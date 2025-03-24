@@ -11,6 +11,8 @@ class Variable:
 
 BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure"]
 
+LIBROUTINES = {"ucase": 1, "lcase": 1, "div": 2, "mod": 2, "substring": 3, "length": 1}
+
 class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]
@@ -402,7 +404,80 @@ class Interpreter:
 
         intp.visit_block(proc.block)
 
+    def visit_ucase(self, txt: str) -> BCValue:
+        return BCValue("string", string=txt.upper())
+
+    def visit_lcase(self, txt: str) -> BCValue:
+        return BCValue("string", string=txt.lower())
+
+    def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
+        s = txt[begin:begin+length]
+        return BCValue("string", string=s)
+
+    def visit_length(self, txt: str) -> BCValue:
+        return BCValue("integer", integer=len(txt))
+
+    def visit_div(self, lhs: int | float, rhs: int | float) -> BCValue:
+        return BCValue("integer", integer=int(lhs//rhs))
+
+    def visit_mod(self, lhs: int | float, rhs: int | float) -> BCValue:
+        if type(rhs) == float:
+            return BCValue("real", real=float(rhs%rhs))
+        else:
+            return BCValue("integer", integer=int(lhs%rhs))
+
+    def visit_libroutine(self, name: str, args: list[Expr]) -> BCValue: # type: ignore
+        nargs = LIBROUTINES[name.lower()]
+        
+        if len(args) < nargs:
+            raise BCError(f"expected {nargs} args, but got {len(args)} in call to library routine {name}")
+
+        evargs: list[BCValue] = []
+        for _, arg in zip(range(nargs), args):
+            evargs.append(self.visit_expr(arg))
+
+        match name.lower():
+            case "ucase":
+                [txt, *_] = evargs
+                return self.visit_ucase(txt.get_string())
+            case "lcase":
+                [txt, *_] = evargs
+                return self.visit_lcase(txt.get_string())
+            case "substring":
+                [txt, begin, length, *_] = evargs
+                return self.visit_substring(txt.get_string(), begin.get_integer(), length.get_integer())
+            case "div":
+                [lhs, rhs, *_] = evargs
+
+                if lhs.kind not in ["integer", "real"]:
+                    raise BCError(f"expected INTEGER or REAL for the lhs of DIV, get {lhs.kind}")
+                if rhs.kind not in ["integer", "real"]:
+                    raise BCError(f"expected INTEGER or REAL for the rhs of DIV, get {rhs.kind}")
+                
+                lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+
+                return self.visit_div(lhs_val, rhs_val)
+            case "mod":
+                [lhs, rhs, *_] = evargs
+
+                if lhs.kind not in ["integer", "real"]:
+                    raise BCError(f"expected INTEGER or REAL for the lhs of MOD, get {lhs.kind}")
+                if rhs.kind not in ["integer", "real"]:
+                    raise BCError(f"expected INTEGER or REAL for the rhs of MOD, get {rhs.kind}")
+                
+                lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+
+                return self.visit_mod(lhs_val, rhs_val)
+            case "length":
+                [txt, *_] = evargs
+                return self.visit_length(txt.get_string())
+
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
+        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
+            return self.visit_libroutine(stmt.ident, stmt.args)
+
         func = self.functions[stmt.ident]
 
         if isinstance(func, ProcedureStatement):
@@ -415,7 +490,7 @@ class Interpreter:
         
         if len(func.args) != len(stmt.args):
             raise BCError(f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call")
-
+        
         for argdef, argval in zip(func.args, stmt.args):
             val = self.visit_expr(argval)
             vars[argdef.name] = Variable(val=val, const=False)
