@@ -1,9 +1,11 @@
-declare num: integer
-output "enter a number"
-input num
+DECLARE Num: INTEGER
 
-case of num
-    1: output "hi"
-    2: output "bye"
-    otherwise output "what?"
-endcase
+REPEAT
+    OUTPUT "enter a number"
+    INPUT Num
+    CASE OF Num
+        1: OUTPUT "yay"
+        0: OUTPUT "nay"
+        OTHERWISE OUTPUT "what?"
+    ENDCASE
+UNTIL Num = 1

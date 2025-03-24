@@ -4,7 +4,7 @@ from lexer import *
 from parser import Parser
 from util import BCError, BCWarning
 
-PRINT = True
+PRINT = False
 INTERPRET = True 
 
 def main():
@@ -34,6 +34,7 @@ def main():
     if warnings:
         for warning in warnings:
             warning.print(fn, file_content)
+        exit(1)
 
     if PRINT:
         print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
@@ -45,9 +46,13 @@ def main():
 
     if INTERPRET:
         print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
-        i = Interpreter(program.stmts)
-        i.toplevel = True
-        i.visit_block(None)
+        try:
+            i = Interpreter(program.stmts)
+            i.toplevel = True
+            i.visit_block(None)
+        except BCError as err:
+            err.print(fn, file_content)
+            exit(1)
 
 if __name__ == "__main__":
     main()

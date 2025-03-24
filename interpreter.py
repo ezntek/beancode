@@ -610,14 +610,26 @@ class Interpreter:
 
             if not proc and not func:
                 raise BCError(f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}")
-
+            
             self._returned = True
             self.retval = intp.retval
+
+    def visit_caseof_stmt(self, stmt: CaseofStatement):
+        value: BCValue = self.visit_expr(stmt.expr)
+        
+        for branch in stmt.branches:
+            rhs = self.visit_expr(branch.expr)
+            if value == rhs:
+                self.visit_stmt(branch.stmt)
+                return
+
+        if stmt.otherwise is not None:
+            self.visit_stmt(stmt.otherwise)
 
     def visit_while_stmt(self, stmt: WhileStatement):
         cond: Expr = stmt.cond # type: ignore
 
-        block: list[Statement] = stmt.while_s.block # type: ignore
+        block: list[Statement] = stmt.block # type: ignore
 
         intp = self.new(block, loop=True)
         intp.variables = self.variables # scope
@@ -723,6 +735,8 @@ class Interpreter:
         match stmt.kind:
             case "if":
                 self.visit_if_stmt(stmt.if_s) # type: ignore
+            case "caseof":
+                self.visit_caseof_stmt(stmt.caseof) # type: ignore
             case "for":
                 self.visit_for_stmt(stmt.for_s) # type: ignore
             case "while":
