@@ -942,9 +942,10 @@ class Parser:
         if not isinstance(ident, Identifier):
             raise BCError("invalid ident after procedure call", self.peek())
 
-        leftb = self.advance()
+        leftb = self.peek()
         args = []
         if leftb.kind == "separator" and leftb.separator == "left_paren":
+            self.advance()
             while self.peek().separator != "right_paren":
                 expr = self.expression()
                 if expr is None:
@@ -965,6 +966,7 @@ class Parser:
                 raise BCError("expected right paren after arg list in procedure call", self.peek())
 
         self.check_newline("procedure call")
+        
 
         res = CallStatement(ident=ident.ident, args=args)
         return Statement("call", call=res)

@@ -1,0 +1,122 @@
+/*
+--- NONSTANDARD LIBRARY ROUTINES: ---
+// treats an integer as a char
+FUNCTION ASCHAR(codepoint: INTEGER) RETURNS CHAR
+
+// outputs one character without a newline, and returns the input
+FUNCTION PUTCHAR(ch: CHAR) RETURNS CHAR
+---
+*/
+
+CONSTANT dbg <- FALSE
+CONSTANT maxsize <- 30000
+
+DECLARE cells: ARRAY[1:maxsize] of INTEGER
+FOR i <- 1 TO maxsize
+    cells[i] <- 0
+NEXT i
+
+DECLARE pc: INTEGER
+pc <- 0
+DECLARE ptr: INTEGER
+ptr <- 1
+
+DECLARE src: string
+OUTPUT "enter brainfuck source code"
+input src
+
+DECLARE srclen: INTEGER
+srclen <- LENGTH(src)
+
+DECLARE loops: ARRAY[1:100] of INTEGER
+FOR i <- 1 TO 100
+    loops[i] <- 0
+NEXT i
+DECLARE loopslen: INTEGER
+loopslen <- 1
+
+FUNCTION wrapinc(base: INTEGER) returns INTEGER
+    IF base + 1 > 255 THEN
+        return 0
+    ELSE
+        return base + 1
+    ENDIF
+ENDFUNCTION
+
+FUNCTION wrapdec(base: INTEGER) returns INTEGER
+    IF base - 1 < 0 THEN
+        return 255
+    ELSE
+        return base - 1
+    ENDIF
+ENDFUNCTION
+
+PROCEDURE dec
+    IF ptr - 1 < 1 THEN
+        ptr <- maxsize
+    ELSE
+        ptr <- ptr - 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE inc
+    IF ptr + 1 > maxsize THEN
+        ptr <- 1
+    ELSE
+        ptr <- ptr + 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE loopbegin
+    IF cells[ptr] = 0 THEN
+        WHILE substring(src, pc, 1) <> "]" DO
+            pc <- pc + 1
+        ENDWHILE
+    ELSE
+        loops[loopslen] <- pc
+        loopslen <- loopslen + 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE loopend
+    IF loopslen = 0 THEN
+        OUTPUT "found closing bracket without opening bracket"
+        exit(1)
+    ENDIF
+
+    IF cells[ptr] <> 0 THEN
+        pc <- loops[loopslen-1]
+    ELSE
+        loopslen <- loopslen - 1
+        loops[loopslen] <- 0
+    ENDIF
+ENDPROCEDURE
+
+// PROCEDURE wrapper cos my interpreter dumb asf
+PROCEDURE out
+    // OUTPUT cells[ptr]
+    PUTCHAR(ASCHAR(cells[ptr]))
+ENDPROCEDURE
+
+PROCEDURE debug
+    IF dbg THEN
+        OUTPUT "pc=", pc, " ptr=", ptr, " instr=", substring(src, pc, 1), " loopslen=", loopslen
+    ENDIF
+ENDPROCEDURE
+
+WHILE pc < srclen DO
+    CALL debug
+    CASE of substring(src, pc, 1)
+        "<": CALL dec
+        ">": CALL inc
+        "+": cells[ptr] <- wrapinc(cells[ptr])
+        "-": cells[ptr] <- wrapdec(cells[ptr])
+        "[": CALL loopbegin
+        "]": CALL loopend
+        ".": CALL out
+        // otherwise not enforced
+    ENDCASE
+    pc <- pc + 1
+ENDWHILE
+
+OUTPUT ""

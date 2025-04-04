@@ -11,7 +11,7 @@ class Variable:
 
 BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure"]
 
-LIBROUTINES = {"ucase": 1, "lcase": 1, "div": 2, "mod": 2, "substring": 3, "length": 1}
+LIBROUTINES = {"ucase": 1, "lcase": 1, "div": 2, "mod": 2, "substring": 3, "length": 1, "aschar": 1, "putchar": 1, "exit": 1}
 
 class Interpreter:
     block: list[Statement]
@@ -417,6 +417,15 @@ class Interpreter:
     def visit_length(self, txt: str) -> BCValue:
         return BCValue("integer", integer=len(txt))
 
+    def visit_aschar(self, val: int) -> BCValue:
+        return BCValue("char", char=chr(val))
+    
+    def visit_putchar(self, ch: str):
+        print(ch[0], end='')
+
+    def visit_exit(self, code: int) -> t.NoReturn:
+        exit(code)
+
     def visit_div(self, lhs: int | float, rhs: int | float) -> BCValue:
         return BCValue("integer", integer=int(lhs//rhs))
 
@@ -473,6 +482,16 @@ class Interpreter:
             case "length":
                 [txt, *_] = evargs
                 return self.visit_length(txt.get_string())
+            case "aschar":
+                [val, *_] = evargs
+                return self.visit_aschar(val.get_integer())
+            case "putchar":
+                [ch, *_] = evargs
+                self.visit_putchar(ch.get_char())
+                return ch
+            case "exit":
+                [code, *_] = evargs
+                self.visit_exit(code.get_integer())
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
