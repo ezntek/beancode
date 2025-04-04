@@ -5,6 +5,9 @@ FUNCTION ASCHAR(codepoint: INTEGER) RETURNS CHAR
 
 // outputs one character without a newline, and returns the input
 FUNCTION PUTCHAR(ch: CHAR) RETURNS CHAR
+
+// exits the program at the callsite with an OS error coder
+PROCEDURE EXIT(code: INTEGER) 
 ---
 */
 
