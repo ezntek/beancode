@@ -1,23 +1,38 @@
+import os
 from sys import argv
+import typing
+from codegen import LuaCodegen
 from interpreter import Interpreter
 from lexer import *
 from parser import Parser
 from util import BCError, BCWarning
 
-PRINT = False
-INTERPRET = True 
+from tap import Tap
+
+Backend = typing.Literal["interpreter", "lua", "none"]
+
+
+class Args(Tap):
+    file: str  # filename
+    out_file: str = ""
+    backend: Backend = "interpreter"
+    print: bool = True
+    debug: bool = False
+
 
 def main():
-    fn = argv[1]
-    print("\033[2m", end='')
+    args = Args().parse_args()
 
-    with open(fn, "r+") as f:
+    if not os.path.exists(args.file):
+        util.panic(f"file {args.file} does not exist!")
+
+    with open(args.file, "r+") as f:
         file_content = f.read()
-        
+
     lexer = Lexer(file_content)
     toks = lexer.tokenize()
 
-    if PRINT:
+    if args.print:
         for tok in toks:
             print(tok)
 
@@ -28,32 +43,44 @@ def main():
     try:
         program, warnings = parser.program()
     except BCError as err:
-        err.print(fn, file_content)
+        err.print(args.file, file_content)
         exit(1)
 
     if warnings:
         for warning in warnings:
-            warning.print(fn, file_content)
+            warning.print(args.file, file_content)
         exit(1)
 
-    if PRINT:
-        print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
-        for stmt in program.stmts:
-            print(stmt)
-            print()
-        print("\033[0m\033[1m----- END OF AST -----\033[0m")
-    print("\033[0m")
+    match args.backend:
+        case "interpreter":
+            print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
+            try:
+                i = Interpreter(program.stmts)
+                i.toplevel = True
+                i.visit_block(None)
+            except BCError as err:
+                err.print(args.file, file_content)
+                exit(1)
+        case "lua":
+            cg = LuaCodegen(program.stmts)
+            code = cg.generate()
+            if args.out_file == "":
+                print("\033[1m----- BEGINNING OF GENERATED CODE -----\033[0m")
+                print(code)
+                print("\033[1m----- END OF GENERATED CODE -----\033[0m")
+            else:
+                with open(args.out_file) as f:
+                    f.write(code)
 
-    if INTERPRET:
-        print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
-        try:
-            i = Interpreter(program.stmts)
-            i.toplevel = True
-            i.visit_block(None)
-        except BCError as err:
-            err.print(fn, file_content)
-            exit(1)
+        case "none":         
+            if args.print:
+                print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
+                for stmt in program.stmts:
+                    print(stmt)
+                    print()
+                print("\033[0m\033[1m----- END OF AST -----\033[0m")
+            print("\033[0m")
+                    
 
 if __name__ == "__main__":
     main()
-
