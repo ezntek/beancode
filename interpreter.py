@@ -9,6 +9,9 @@ class Variable:
     def is_uninitialized(self) -> bool:
         return self.val.is_uninitialized()
 
+    def is_null(self) -> bool:
+        return self.val.is_null()
+
 BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure"]
 
 LIBROUTINES = {"ucase": 1, "lcase": 1, "div": 2, "mod": 2, "substring": 3, "length": 1, "aschar": 1, "putchar": 1, "exit": 1}
@@ -34,6 +37,9 @@ class Interpreter:
         self.proc = proc
         self.loop = loop
         self._returned = False
+
+        self.variables["null"] = Variable(BCValue("null"), True)
+        self.variables["NULL"] = Variable(BCValue("null"), True)
 
     @classmethod
     def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter": # type: ignore
@@ -347,7 +353,7 @@ class Interpreter:
          
         if isinstance(v.kind, BCArrayType):
             if v.array is None:
-                return BCValue.empty("null")
+                return BCValue("null")
 
             a: BCArray = v.array # type: ignore
             
@@ -366,7 +372,7 @@ class Interpreter:
                 res = a.matrix[tup[0]-1][inner-1] # type: ignore
                 
                 if res.is_uninitialized():
-                    return BCValue.empty("null")
+                    return BCValue("null")
                 else:
                     return res
             else:
@@ -375,7 +381,7 @@ class Interpreter:
                 
                 res = a.flat[tup[0]-1] # type: ignore
                 if res.is_uninitialized():
-                    return BCValue.empty("null")
+                    return BCValue("null")
                 else:
                     return res
         else:
@@ -411,8 +417,14 @@ class Interpreter:
         return BCValue("string", string=txt.lower())
 
     def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
+        begin = begin - 1
         s = txt[begin:begin+length]
-        return BCValue("string", string=s)
+        if len(s) == 0:
+            return BCValue("null")
+        if len(s) == 1:
+            return BCValue("char", char=s[0])
+        else:
+            return BCValue("string", string=s)
 
     def visit_length(self, txt: str) -> BCValue:
         return BCValue("integer", integer=len(txt))
@@ -547,6 +559,8 @@ class Interpreter:
             return BCValue("boolean", boolean=not inner.get_boolean())
         elif isinstance(expr, Identifier):
             var = self.variables[expr.ident]
+            if var.is_null():
+                raise BCError("attempted to access a null variable")
             if var.val == None or var.is_uninitialized():
                 raise BCError("attempted to access an uninitialized variable")
             return var.val
@@ -919,7 +933,7 @@ class Interpreter:
                             raise BCError(f"cannot use type of {inner_end.kind} as array bound!")
                         
                         # directly setting the result of the comprehension results in multiple pionters pointing to the same list
-                        get_inner_arr = lambda: [BCValue.empty(inner_type) for _ in range(inner_end.integer)] # type: ignore
+                        get_inner_arr = lambda: [BCValue(inner_type) for _ in range(inner_end.integer)] # type: ignore
 
                         outer_end = self.visit_expr(atype.matrix_bounds[1]) # type: ignore
                         if outer_end.kind != "integer":
@@ -947,7 +961,7 @@ class Interpreter:
                         if end.kind != "integer":
                             raise BCError(f"cannot use type of {end.kind} as array bound!")
 
-                        arr: BCValue = [BCValue.empty(atype) for _ in range(end.integer)] # type: ignore
+                        arr: BCValue = [BCValue(atype) for _ in range(end.integer)] # type: ignore
 
                         bounds = (begin.integer, end.integer) # type: ignore
                         atype.is_matrix = False

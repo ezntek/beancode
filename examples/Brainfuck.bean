@@ -110,13 +110,13 @@ ENDPROCEDURE
 WHILE pc < srclen DO
     CALL debug
     CASE of substring(src, pc, 1)
-        "<": CALL dec
-        ">": CALL inc
-        "+": cells[ptr] <- wrapinc(cells[ptr])
-        "-": cells[ptr] <- wrapdec(cells[ptr])
-        "[": CALL loopbegin
-        "]": CALL loopend
-        ".": CALL out
+        '<': CALL dec
+        '>': CALL inc
+        '+': cells[ptr] <- wrapinc(cells[ptr])
+        '-': cells[ptr] <- wrapdec(cells[ptr])
+        '[': CALL loopbegin
+        ']': CALL loopend
+        '.': CALL out
         // otherwise not enforced
     ENDCASE
     pc <- pc + 1

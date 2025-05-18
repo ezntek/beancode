@@ -2,10 +2,14 @@ declare x: integer
 declare y: integer
 declare z: integer
 
+declare nFibs: integer
+output "how many fibs"
+input nFibs
+
 x <- 0
 y <- 1
 
-for i <- 1 to 20000
+for i <- 1 to nFibs
     z <- x + y
     output z
     y <- x

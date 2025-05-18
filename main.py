@@ -32,7 +32,7 @@ def main():
     lexer = Lexer(file_content)
     toks = lexer.tokenize()
 
-    if args.print:
+    if args.debug:
         for tok in toks:
             print(tok)
 

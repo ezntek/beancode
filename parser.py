@@ -68,6 +68,9 @@ class BCValue:
             and self.array is None
         )
 
+    def is_null(self) -> bool:
+        return (self.kind == "null")
+
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
         return cls(
@@ -492,9 +495,32 @@ class Parser:
         match lit.kind:
             case "char":
                 val = lit.value
-                if len(val) > 1:
-                    raise BCError(f"more than 1 character in char literal `{lit}`", c)
-                return Literal("char", char=val[0])
+                if val[0] == '\\':
+                    if len(val) == 1:
+                        return Literal("char", char='\\')
+                    c = ''
+                    match val[1]:
+                        case 'n':
+                            c = '\n'
+                        case 'r':
+                            c = '\r'
+                        case 'e':
+                            c = '\033'
+                        case 'a':
+                            c = '\a'
+                        case 'b':
+                            c = '\b'
+                        case 'f':
+                            c = '\f'
+                        case 'v':
+                            c = '\v'
+                        case '\\':
+                            c = '\\'
+                    return Literal("char", char=c)
+                else:
+                    if len(val) > 1:
+                        raise BCError(f"more than 1 character in char literal `{lit}`", c)
+                    return Literal("char", char=val[0])
             case "string":
                 val = lit.value
                 return Literal("string", string=val)

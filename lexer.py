@@ -415,27 +415,20 @@ class Lexer:
             return None
 
     def next_string_or_char_literal(self, word: str) -> Token | None:
+        slc = word[1 : len(word) - 1]
+        pos = (self.row, self.cur - self.bol - (len(word) + 2), self.bol)
         if word[0] == '"' and word[len(word) - 1] == '"':
-            slc = word[1 : len(word) - 1]
             return Token(
                 "literal",
-                (self.row, self.cur - self.bol - (len(word) + 2), self.bol),
+                pos,
                 literal=Literal("string", slc),
             )
 
         if word[0] == "'" and word[len(word) - 1] == "'":
-            if len(word) > 3:
-                row = self.row
-                col = self.cur - self.bol - len(word)
-                util.BCError(
-                    f"char literal cannot contain more than 1 char", (row, col, self.bol)
-                )
-
-            # -3 for begin delim, char and end delim
             return Token(
                 "literal",
-                (self.row, self.cur - self.bol - 3, self.bol),
-                literal=Literal("char", word[1]),
+                pos,
+                literal=Literal("char", slc),
             )
 
         return None
