@@ -1,0 +1,8 @@
+CompileFlags:
+ Add: [ '-I./3rdparty/include/' ]
+
+If:
+ PathMatch: .*.h
+CompileFlags:
+ Add: [-xc-header]
+
