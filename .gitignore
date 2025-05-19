@@ -1,6 +1,5 @@
 settings.h
 *.tar.gz
-beancode/
 beancode
 *.o
 .vscode
