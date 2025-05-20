@@ -425,7 +425,7 @@ class Interpreter:
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            raise BCError("found None for array index")
+            raise BCError("found (null) for array index")
 
         v = self.variables[ind.ident.ident].val
 
@@ -438,7 +438,7 @@ class Interpreter:
 
                 inner_index = self.visit_expr(ind.idx_inner).integer
                 if inner_index is None:
-                    raise BCError("found None for inner array index")
+                    raise BCError("found (null) for inner array index")
 
                 return (index, inner_index)
             else:
@@ -450,7 +450,7 @@ class Interpreter:
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            raise BCError("found None for array index")
+            raise BCError("found (null) for array index")
 
         v = self.variables[ind.ident.ident].val
 
@@ -467,10 +467,16 @@ class Interpreter:
                     raise BCError("second index not present for matrix index")
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
-                    raise BCError("attempted to access out of bounds array element")
+                    if tup[0] == 0:
+                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                    else:
+                        raise BCError(f"attempted to access out of bounds array element `{tup[0]}`")
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
-                    raise BCError("attempted to access out of bounds array element")
+                    if tup[1] == 0:
+                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                    else:
+                        raise BCError(f"attempted to access out of bounds array element `{tup[1]}`")
 
                 res = a.matrix[tup[0] - 1][inner - 1]  # type: ignore
 
@@ -479,8 +485,12 @@ class Interpreter:
                 else:
                     return res
             else:
+                    
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
-                    raise BCError("attempted to access out of bounds array element")
+                    if tup[0] == 0:
+                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                    else:
+                        raise BCError(f"attempted to access out of bounds array element {tup[0]}")
 
                 res = a.flat[tup[0] - 1]  # type: ignore
                 if res.is_uninitialized():
@@ -512,8 +522,8 @@ class Interpreter:
             val = self.visit_expr(argval)
             vars[argdef.name] = Variable(val=val, const=False)
 
-        intp.variables = vars
-        intp.functions = self.functions
+        intp.variables = dict(vars)
+        intp.functions = dict(self.functions)
 
         intp.visit_block(proc.block)
 
@@ -647,8 +657,8 @@ class Interpreter:
             val = self.visit_expr(argval)
             vars[argdef.name] = Variable(val=val, const=False)
 
-        intp.variables = vars
-        intp.functions = self.functions
+        intp.variables = dict(vars)
+        intp.functions = (self.functions)
 
         intp.visit_block(func.block)
         if intp._returned is False:
@@ -845,8 +855,8 @@ class Interpreter:
         else:
             intp: Interpreter = self.new(stmt.else_block)
 
-        intp.variables = self.variables
-        intp.functions = self.functions
+        intp.variables = dict(self.variables)
+        intp.functions = dict(self.functions)
         intp.calls = self.calls
         intp.calls.append("if")  # type: ignore
         intp.visit_block(None)
@@ -879,8 +889,8 @@ class Interpreter:
         block: list[Statement] = stmt.block  # type: ignore
 
         intp = self.new(block, loop=True)
-        intp.variables = self.variables  # scope
-        intp.functions = self.functions
+        intp.variables = dict(self.variables)  # scope
+        intp.functions = dict(self.functions)
 
         while self.visit_expr(cond).boolean:
             intp.visit_block(block)
@@ -915,10 +925,15 @@ class Interpreter:
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
         intp.calls.append("for")
-        intp.variables = self.variables
-        intp.functions = self.functions
+        intp.variables = self.variables.copy()
+        intp.functions = self.functions.copy()
 
         counter = begin
+    
+        var_existed = stmt.counter.ident in intp.variables
+        if var_existed:
+            var_prev_value = intp.variables[stmt.counter.ident]
+
         intp.variables[stmt.counter.ident] = Variable(counter, const=False)
 
         if step > 0:
@@ -954,14 +969,19 @@ class Interpreter:
                     return
 
                 counter.integer = counter.integer + step  # type: ignore
+        
+        if not var_existed:
+            intp.variables.pop(stmt.counter.ident)
+        else:
+            intp.variables[stmt.counter.ident] = var_prev_value # type: ignore
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond  # type: ignore
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
         intp.calls.append("repeatuntil")
-        intp.variables = self.variables
-        intp.functions = self.functions
+        intp.variables = dict(self.variables)
+        intp.functions = dict(self.functions)
 
         while True:
             intp.visit_block(None)
