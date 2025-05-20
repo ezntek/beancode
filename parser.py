@@ -123,6 +123,9 @@ class BCValue:
         if isinstance(self.kind, BCArrayType):
             raise BCError("BCValue of array can only be represented at runtime")
 
+        if self.is_uninitialized():
+            return "(null)"
+
         match self.kind:
             case "string":
                 return self.get_string()
@@ -135,7 +138,7 @@ class BCValue:
             case "boolean":
                 return str(self.get_boolean())
             case "null":
-                return "(uninitialized)"
+                return "(null)"
 
 
 @dataclass

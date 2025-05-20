@@ -1,5 +1,4 @@
 import os
-from sys import argv
 import typing
 from codegen import LuaCodegen
 from interpreter import Interpreter
