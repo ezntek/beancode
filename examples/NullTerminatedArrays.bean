@@ -1,0 +1,18 @@
+// fun fact! since all array values are set to NULL/null by default,
+// they are technically null-terminated.
+
+declare a: array[1:10] of integer
+for i <- 1 to 3
+    a[i] <- 3*i+5
+next i
+
+declare cur: integer
+declare i: integer
+
+i <- 1
+cur <- a[i]
+while cur <> null do
+    output cur
+    i <- i + 1
+    cur <- a[i]
+endwhile
