@@ -1100,6 +1100,14 @@ class Interpreter:
         intp.functions = dict(self.functions)
         intp.visit_block(None)
 
+        for name, var in intp.variables.items():
+            if var.export:
+                self.variables[name] = var
+
+        for name, fn in intp.functions.items():
+            if fn.export:
+                self.functions[name] = fn
+
     def visit_procedure(self, stmt: ProcedureStatement):
         self.functions[stmt.name] = stmt
 
