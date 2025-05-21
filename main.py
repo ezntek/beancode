@@ -52,7 +52,12 @@ def main():
 
     match args.backend:
         case "interpreter":
-            print(program)
+            if args.debug:
+                print("\033[1m----- BEGINNING OF AST -----\033[0m")
+                for stmt in program.stmts:
+                    print(stmt)
+                    print()
+
             print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
             try:
                 i = Interpreter(program.stmts)

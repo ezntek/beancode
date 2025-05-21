@@ -69,7 +69,7 @@ class BCValue:
         )
 
     def is_null(self) -> bool:
-        return (self.kind == "null")
+        return self.kind == "null"
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
@@ -252,12 +252,6 @@ class FunctionCall(Expr):
 
 
 @dataclass
-class DeclareStatement:
-    ident: Identifier
-    typ: BCType
-
-
-@dataclass
 class OutputStatement:
     items: list[Expr]
 
@@ -271,6 +265,14 @@ class InputStatement:
 class ConstantStatement:
     ident: Identifier
     value: Literal
+    extern: bool = False
+
+
+@dataclass
+class DeclareStatement:
+    ident: Identifier
+    typ: BCType
+    extern: bool = False
 
 
 @dataclass
@@ -285,16 +287,19 @@ class IfStatement:
     if_block: list["Statement"]
     else_block: list["Statement"]
 
+
 @dataclass
 class CaseofBranch:
     expr: Expr
     stmt: "Statement"
+
 
 @dataclass
 class CaseofStatement:
     expr: Expr
     branches: list[CaseofBranch]
     otherwise: "Statement | None"
+
 
 @dataclass
 class WhileStatement:
@@ -328,6 +333,7 @@ class ProcedureStatement:
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
+    extern: bool = False
 
 
 @dataclass
@@ -336,15 +342,18 @@ class FunctionStatement:
     args: list[FunctionArgument]
     returns: BCType
     block: list["Statement"]
+    extern: bool = False
 
 
 @dataclass
 class ReturnStatement:
     expr: Expr | None
 
+
 @dataclass
 class HiStatement:
     block: list["Statement"]
+
 
 @dataclass
 class Statement:
@@ -505,31 +514,33 @@ class Parser:
         match lit.kind:
             case "char":
                 val = lit.value
-                if val[0] == '\\':
+                if val[0] == "\\":
                     if len(val) == 1:
-                        return Literal("char", char='\\')
-                    c = ''
+                        return Literal("char", char="\\")
+                    c = ""
                     match val[1]:
-                        case 'n':
-                            c = '\n'
-                        case 'r':
-                            c = '\r'
-                        case 'e':
-                            c = '\033'
-                        case 'a':
-                            c = '\a'
-                        case 'b':
-                            c = '\b'
-                        case 'f':
-                            c = '\f'
-                        case 'v':
-                            c = '\v'
-                        case '\\':
-                            c = '\\'
+                        case "n":
+                            c = "\n"
+                        case "r":
+                            c = "\r"
+                        case "e":
+                            c = "\033"
+                        case "a":
+                            c = "\a"
+                        case "b":
+                            c = "\b"
+                        case "f":
+                            c = "\f"
+                        case "v":
+                            c = "\v"
+                        case "\\":
+                            c = "\\"
                     return Literal("char", char=c)
                 else:
                     if len(val) > 1:
-                        raise BCError(f"more than 1 character in char literal `{lit}`", c)
+                        raise BCError(
+                            f"more than 1 character in char literal `{lit}`", c
+                        )
                     return Literal("char", char=val[0])
             case "string":
                 val = lit.value
@@ -583,15 +594,23 @@ class Parser:
             if left_bracket.separator == "left_bracket":
                 begin = self.expression()
                 if begin is None:
-                    raise BCError("invalid expression as beginning value of array declaration", begin)
+                    raise BCError(
+                        "invalid expression as beginning value of array declaration",
+                        begin,
+                    )
 
                 colon = self.advance()
                 if colon.kind != "separator" and colon.separator != "colon":
-                    raise BCError("expected colon after beginning value of array declaration", colon)
+                    raise BCError(
+                        "expected colon after beginning value of array declaration",
+                        colon,
+                    )
 
                 end = self.expression()
                 if end is None:
-                    raise BCError("invalid expression as ending value of array declaration", end)
+                    raise BCError(
+                        "invalid expression as ending value of array declaration", end
+                    )
 
                 flat_bounds = (begin, end)
 
@@ -605,7 +624,8 @@ class Parser:
                     inner_begin = self.expression()
                     if inner_begin is None:
                         raise BCError(
-                            "invalid expression as beginning value of array declaration", inner_begin
+                            "invalid expression as beginning value of array declaration",
+                            inner_begin,
                         )
 
                     inner_colon = self.advance()
@@ -614,12 +634,16 @@ class Parser:
                         and inner_colon.separator != "colon"
                     ):
                         raise BCError(
-                            "expected colon after beginning value of array declaration", inner_colon
+                            "expected colon after beginning value of array declaration",
+                            inner_colon,
                         )
 
                     inner_end = self.expression()
                     if inner_end is None:
-                        raise BCError("invalid expression as ending value of array declaration", inner_end)
+                        raise BCError(
+                            "invalid expression as ending value of array declaration",
+                            inner_end,
+                        )
 
                     matrix_bounds = (
                         flat_bounds[0],
@@ -633,13 +657,15 @@ class Parser:
                     right_bracket = self.advance()
                     if right_bracket.separator != "right_bracket":
                         raise BCError(
-                            "expected ending right bracket after matrix length declaration", right_bracket
+                            "expected ending right bracket after matrix length declaration",
+                            right_bracket,
                         )
 
                     is_matrix = True
                 else:
                     raise BCError(
-                        "expected right bracket or comma after array bounds declaration", right_bracket
+                        "expected right bracket or comma after array bounds declaration",
+                        right_bracket,
                     )
 
             of = self.advance()
@@ -651,7 +677,8 @@ class Parser:
 
             if arrtyp.typ == "array":
                 raise BCError(
-                    "cannot have array as array element type, please use the matrix syntax instead", arrtyp
+                    "cannot have array as array element type, please use the matrix syntax instead",
+                    arrtyp,
                 )
 
             if arrtyp.typ not in PRIM_TYPES:
@@ -697,9 +724,13 @@ class Parser:
 
             rightb = self.advance()
             if rightb.separator != "right_bracket":
-                raise BCError("expected right_bracket after expression in array index", rightb)
+                raise BCError(
+                    "expected right_bracket after expression in array index", rightb
+                )
         else:
-            raise BCError("expected right_bracket after expression in array index", rightb)
+            raise BCError(
+                "expected right_bracket after expression in array index", rightb
+            )
 
         return ArrayIndex(ident=ident, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
 
@@ -731,13 +762,18 @@ class Parser:
 
             comma = self.peek()
             if comma.separator != "comma" and comma.separator != "right_paren":
-                raise BCError("expected comma after argument in function call argument list", comma)
+                raise BCError(
+                    "expected comma after argument in function call argument list",
+                    comma,
+                )
             elif comma.separator == "comma":
                 self.advance()
 
         rightb = self.advance()
         if rightb.separator != "right_paren":
-            raise BCError("expected right paren after arg list in function call", rightb)
+            raise BCError(
+                "expected right paren after arg list in function call", rightb
+            )
 
         return FunctionCall(ident=ident.ident, args=args)  # type: ignore
 
@@ -941,7 +977,9 @@ class Parser:
 
         ident = self.ident()
         if not isinstance(ident, Identifier) or Identifier is None:
-            raise BCError(f"expected identifier after `INPUT` but found {ident}", self.peek())
+            raise BCError(
+                f"expected identifier after `INPUT` but found {ident}", self.peek()
+            )
 
         self.check_newline("INPUT")
 
@@ -985,40 +1023,48 @@ class Parser:
             while self.peek().separator != "right_paren":
                 expr = self.expression()
                 if expr is None:
-                    raise BCError("invalid expression as procedure argument", self.peek())
+                    raise BCError(
+                        "invalid expression as procedure argument", self.peek()
+                    )
 
                 args.append(expr)
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
                     raise BCError(
-                        "expected comma after argument in procedure call argument list", self.peek()
+                        "expected comma after argument in procedure call argument list",
+                        self.peek(),
                     )
                 elif comma.separator == "comma":
                     self.advance()
 
             rightb = self.advance()
             if rightb.separator != "right_paren":
-                raise BCError("expected right paren after arg list in procedure call", self.peek())
+                raise BCError(
+                    "expected right paren after arg list in procedure call", self.peek()
+                )
 
         self.check_newline("procedure call")
-        
 
         res = CallStatement(ident=ident.ident, args=args)
         return Statement("call", call=res)
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
+        extern = False
+
+        if begin.keyword == "extern":
+            extern = True
+            begin = self.peek_next()
 
         # combining the conditions does NOT WORK.
-        if begin.kind != "keyword":
-            return None
-
         if begin.keyword != "declare":
             return None
 
         # consume the keyword
         self.advance()
+        if extern == True:
+            self.advance()
 
         ident = self.advance()
         if ident.ident is None:
@@ -1034,11 +1080,16 @@ class Parser:
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ)  # type: ignore
+        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ, extern=extern)  # type: ignore
         return Statement("declare", declare=res)
 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
+        extern = False
+
+        if begin.keyword == "extern":
+            begin = self.peek_next()
+            extern = True
 
         if begin.kind != "keyword":
             return None
@@ -1048,6 +1099,8 @@ class Parser:
 
         # consume the kw
         self.advance()
+        if extern == True:
+            self.advance()
 
         ident: Identifier | None = self.ident()  # type: ignore
         if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
@@ -1055,15 +1108,19 @@ class Parser:
 
         arrow = self.advance()
         if arrow.kind != "operator" and arrow.operator != "assign":
-            raise BCError("expected `<-` after variable name in constant declaration", self.peek())
+            raise BCError(
+                "expected `<-` after variable name in constant declaration", self.peek()
+            )
 
         literal: Literal | None = self.literal()  # type: ignore
         if literal is None:
-            raise BCError("expected literal after `<-` in constant declaration", self.peek())
+            raise BCError(
+                "expected literal after `<-` in constant declaration", self.peek()
+            )
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(ident, literal)
+        res = ConstantStatement(ident, literal, extern=extern)
         return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
@@ -1145,10 +1202,10 @@ class Parser:
 
     def caseof_stmt(self) -> Statement | None:
         case = self.peek()
-        
-        #if case.kind == "keyword" and case.keyword == "case":
+
+        # if case.kind == "keyword" and case.keyword == "case":
         #    raise BCError("case of not implemented", self.peek())
-        
+
         if case.keyword != "case":
             return
         self.advance()
@@ -1160,7 +1217,7 @@ class Parser:
         main_expr = self.expression()
         if main_expr is None:
             raise BCError("found invalid expression for case of value", self.peek())
-        
+
         self.check_newline("after case of expression")
 
         branches: list[CaseofBranch] = []
@@ -1176,24 +1233,25 @@ class Parser:
 
                 colon = self.advance()
                 if colon.separator != "colon":
-                    raise BCError("expected colon after case of branch expression", self.prev())
+                    raise BCError(
+                        "expected colon after case of branch expression", self.prev()
+                    )
             else:
                 self.advance()
 
             stmt = self.stmt()
-            
+
             if stmt is None:
                 raise BCError("expected statement for case of branch block")
 
             if is_otherwise:
                 otherwise = stmt
             else:
-                branches.append(CaseofBranch(expr, stmt)) # type: ignore
+                branches.append(CaseofBranch(expr, stmt))  # type: ignore
         self.advance()
 
         res = CaseofStatement(main_expr, branches, otherwise)
         return Statement(kind="caseof", caseof=res)
-
 
     def while_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -1206,7 +1264,9 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("found invalid expression for while loop condition", self.peek())
+            raise BCError(
+                "found invalid expression for while loop condition", self.peek()
+            )
 
         do = self.advance()
         if do.keyword != "do":
@@ -1244,7 +1304,9 @@ class Parser:
 
         assign = self.advance()
         if assign.operator != "assign":
-            raise BCError("expected assignment operator `<-` after counter in a for loop", assign)
+            raise BCError(
+                "expected assignment operator `<-` after counter in a for loop", assign
+            )
 
         begin = self.expression()
         if begin is None:
@@ -1278,7 +1340,8 @@ class Parser:
             raise BCError("expected identifier after NEXT in a for loop", self.peek())
         elif counter.ident != next_counter.ident:
             raise BCError(
-                f"initialized counter as {counter.ident} but used {next_counter.ident} after loop", self.prev()
+                f"initialized counter as {counter.ident} but used {next_counter.ident} after loop",
+                self.prev(),
             )
 
         # thanks python for not having proper null handling
@@ -1306,7 +1369,9 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("found invalid expression for repeat-until loop condition", self.peek())
+            raise BCError(
+                "found invalid expression for repeat-until loop condition", self.peek()
+            )
 
         self.check_newline("after repeat-until loop declaration")
 
@@ -1321,7 +1386,9 @@ class Parser:
 
         colon = self.advance()
         if colon.kind != "separator" and colon.separator != "colon":
-            raise BCError("expected colon after ident in function argument", self.peek())
+            raise BCError(
+                "expected colon after ident in function argument", self.peek()
+            )
 
         typ = self.type()
         if typ is None:
@@ -1331,11 +1398,15 @@ class Parser:
 
     def procedure_stmt(self) -> Statement | None:
         begin = self.peek()
+        extern = False
 
-        if begin.keyword != "procedure":
-            return None
+        if begin.keyword == "extern":
+            begin = self.peek_next()
+            extern = True
 
         self.advance()  # byebye PROCEDURE
+        if extern == True:
+            self.advance()
 
         ident = self.ident()
         if not isinstance(ident, Identifier):
@@ -1355,7 +1426,9 @@ class Parser:
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
-                    raise BCError("expected comma after procedure argument in list", self.peek())
+                    raise BCError(
+                        "expected comma after procedure argument in list", self.peek()
+                    )
 
                 if comma.separator == "comma":
                     self.advance()
@@ -1363,7 +1436,8 @@ class Parser:
             rightb = self.advance()
             if rightb.kind != "separator" and rightb.separator != "right_paren":
                 raise BCError(
-                    f"expected right paren after arg list in procedure declaration, found {rightb}", self.peek()
+                    f"expected right paren after arg list in procedure declaration, found {rightb}",
+                    self.peek(),
                 )
 
         self.check_newline("PROCEDURE")
@@ -1374,16 +1448,25 @@ class Parser:
 
         self.advance()  # bye bye ENDPROCEDURE
 
-        res = ProcedureStatement(name=ident.ident, args=args, block=stmts)
+        res = ProcedureStatement(
+            name=ident.ident, args=args, block=stmts, extern=extern
+        )
         return Statement("procedure", procedure=res)
 
     def function_stmt(self) -> Statement | None:
         begin = self.peek()
+        extern = False
+
+        if begin.keyword == "extern":
+            begin = self.peek_next()
+            extern = True
 
         if begin.keyword != "function":
             return None
 
         self.advance()  # byebye FUNCTION
+        if extern == True:
+            self.advance()
 
         ident = self.ident()
         if not isinstance(ident, Identifier):
@@ -1403,7 +1486,9 @@ class Parser:
 
                 comma = self.peek()
                 if comma.separator != "comma" and comma.separator != "right_paren":
-                    raise BCError("expected comma after function argument in list", self.peek())
+                    raise BCError(
+                        "expected comma after function argument in list", self.peek()
+                    )
 
                 if comma.separator == "comma":
                     self.advance()
@@ -1411,7 +1496,8 @@ class Parser:
             rightb = self.advance()
             if rightb.kind != "separator" and rightb.separator != "right_paren":
                 raise BCError(
-                    f"expected right paren after arg list in function declaration, found {rightb}", self.peek()
+                    f"expected right paren after arg list in function declaration, found {rightb}",
+                    self.peek(),
                 )
 
         returns = self.advance()
@@ -1420,7 +1506,9 @@ class Parser:
 
         typ = self.type()
         if typ is None:
-            raise BCError("invalid type after RETURNS for function return value", self.peek())
+            raise BCError(
+                "invalid type after RETURNS for function return value", self.peek()
+            )
 
         self.check_newline("FUNCTION")
 
@@ -1431,7 +1519,9 @@ class Parser:
 
         self.advance()  # bye bye ENDFUNCTION
 
-        res = FunctionStatement(name=ident.ident, args=args, returns=typ, block=stmts)
+        res = FunctionStatement(
+            name=ident.ident, args=args, returns=typ, block=stmts, extern=extern
+        )
         return Statement("function", function=res)
 
     def hi_stmt(self) -> Statement | None:
@@ -1439,7 +1529,7 @@ class Parser:
         if hi.keyword != "hi":
             return
         self.advance()
-        
+
         self.check_newline("manual scope declaration")
 
         self.clean_newlines()
@@ -1517,7 +1607,7 @@ class Parser:
         function = self.function_stmt()
         if function is not None:
             return function
-    
+
         hi = self.hi_stmt()
         if hi is not None:
             return hi
@@ -1550,6 +1640,5 @@ class Parser:
                 stmts.append(stmt)
         except BCWarning as warn:
             warnings.append(warn)
-
 
         return (Program(stmts=stmts), warnings)

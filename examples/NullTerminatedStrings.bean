@@ -14,7 +14,7 @@ procedure puts(txt: string)
         i <- i + 1
         ch <- substring(txt, i, 1)
     endwhile
-    putchar('\n')
+    call putchar('\n')
 endprocedure
 
 function strlen(txt: string) returns integer
