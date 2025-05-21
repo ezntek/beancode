@@ -33,7 +33,6 @@ LIBROUTINES_NORETURN = {
     "exit": 1,
 }
 
-
 class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]

@@ -111,6 +111,7 @@ WHILE pc < srclen DO
         '[': CALL loopbegin
         ']': CALL loopend
         '.': CALL PUTCHAR(ASCHAR(cells[ptr]))
+        ',': cells[ptr] <- GETCHAR()
         // otherwise not enforced
     ENDCASE
     pc <- pc + 1
