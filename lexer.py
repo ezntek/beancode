@@ -41,6 +41,10 @@ Keyword = t.Literal[
     "closefile",
     "div",
     "mod",
+    # extra feachur™
+    "extern",
+    "hi",
+    "bye",
 ]
 
 # lexer types
@@ -216,6 +220,10 @@ class Lexer:
             "readfile",
             "writefile",
             "closefile",
+            # extra feature
+            "hi",
+            "bye",
+            "include",
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 

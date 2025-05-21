@@ -52,6 +52,7 @@ def main():
 
     match args.backend:
         case "interpreter":
+            print(program)
             print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
             try:
                 i = Interpreter(program.stmts)

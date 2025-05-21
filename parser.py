@@ -235,6 +235,7 @@ StatementKind = t.Literal[
     "call",
     "fncall",
     "return",
+    "hi",
 ]
 
 
@@ -341,6 +342,9 @@ class FunctionStatement:
 class ReturnStatement:
     expr: Expr | None
 
+@dataclass
+class HiStatement:
+    block: list["Statement"]
 
 @dataclass
 class Statement:
@@ -360,6 +364,7 @@ class Statement:
     call: CallStatement | None = None
     fncall: FunctionCall | None = None  # Impostor! expr as statement?!
     return_s: ReturnStatement | None = None
+    hi: HiStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -393,6 +398,8 @@ class Statement:
                 return self.return_s.__repr__()
             case "fncall":
                 return self.fncall.__repr__()
+            case "hi":
+                return self.hi.__repr__()
 
 
 @dataclass
@@ -1427,6 +1434,25 @@ class Parser:
         res = FunctionStatement(name=ident.ident, args=args, returns=typ, block=stmts)
         return Statement("function", function=res)
 
+    def hi_stmt(self) -> Statement | None:
+        hi = self.peek()
+        if hi.keyword != "hi":
+            return
+        self.advance()
+        
+        self.check_newline("manual scope declaration")
+
+        self.clean_newlines()
+
+        stmts = []
+        while self.peek().keyword != "bye":
+            stmts.append(self.scan_one_statement())
+
+        self.advance()
+        self.check_newline("after scope declaration end")
+        res = HiStatement(stmts)
+        return Statement("hi", hi=res)
+
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.advance()
@@ -1491,6 +1517,10 @@ class Parser:
         function = self.function_stmt()
         if function is not None:
             return function
+    
+        hi = self.hi_stmt()
+        if hi is not None:
+            return hi
 
         cur = self.peek()
         expr = self.expression()

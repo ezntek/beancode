@@ -15,7 +15,7 @@ class Variable:
         return self.val.is_null()
 
 
-BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure"]
+BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure", "hi"]
 
 LIBROUTINES = {
     "ucase": 1,
@@ -31,6 +31,7 @@ LIBROUTINES = {
 LIBROUTINES_NORETURN = {
     "putchar": 1,
     "exit": 1,
+    "print": 1
 }
 
 class Interpreter:
@@ -629,7 +630,7 @@ class Interpreter:
                 [val, *_] = evargs
                 return self.visit_aschar(val.get_integer()) 
             case "getchar":
-                return self.visit_getchar()
+                return self.visit_getchar() 
 
     def visit_libroutine_noreturn(self, name: str, args: list[Expr]):
         nargs = LIBROUTINES_NORETURN[name.lower()]
@@ -650,6 +651,9 @@ class Interpreter:
             case "exit":
                 [code, *_] = evargs
                 self.visit_exit(code.get_integer())
+            case "print":
+                [s, *_] = evargs
+                print(s)
        
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
@@ -1049,6 +1053,13 @@ class Interpreter:
             if self.visit_expr(cond).boolean:
                 break
 
+    def visit_hi_stmt(self, stmt: HiStatement):
+        intp = self.new(stmt.block, loop=False)
+        intp.calls.append("hi")
+        intp.variables = dict(self.variables)
+        intp.functions = dict(self.functions)
+        intp.visit_block(None)
+
     def visit_procedure(self, stmt: ProcedureStatement):
         self.functions[stmt.name] = stmt
 
@@ -1077,6 +1088,8 @@ class Interpreter:
                 self.visit_procedure(stmt.procedure)  # type: ignore
             case "function":
                 self.visit_function(stmt.function)  # type: ignore
+            case "hi":
+                self.visit_hi_stmt(stmt.hi) # type: ignore
             case "call":
                 self.visit_call(stmt.call)  # type: ignore
             case "fncall":
