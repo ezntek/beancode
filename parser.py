@@ -236,6 +236,7 @@ StatementKind = t.Literal[
     "fncall",
     "return",
     "hi",
+    "include",
 ]
 
 
@@ -265,14 +266,14 @@ class InputStatement:
 class ConstantStatement:
     ident: Identifier
     value: Literal
-    extern: bool = False
+    export: bool = False
 
 
 @dataclass
 class DeclareStatement:
     ident: Identifier
     typ: BCType
-    extern: bool = False
+    export: bool = False
 
 
 @dataclass
@@ -333,7 +334,7 @@ class ProcedureStatement:
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
-    extern: bool = False
+    export: bool = False
 
 
 @dataclass
@@ -342,7 +343,7 @@ class FunctionStatement:
     args: list[FunctionArgument]
     returns: BCType
     block: list["Statement"]
-    extern: bool = False
+    export: bool = False
 
 
 @dataclass
@@ -354,6 +355,9 @@ class ReturnStatement:
 class HiStatement:
     block: list["Statement"]
 
+@dataclass
+class IncludeStatement:
+    file: str
 
 @dataclass
 class Statement:
@@ -374,6 +378,7 @@ class Statement:
     fncall: FunctionCall | None = None  # Impostor! expr as statement?!
     return_s: ReturnStatement | None = None
     hi: HiStatement | None = None
+    include: IncludeStatement | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -409,7 +414,8 @@ class Statement:
                 return self.fncall.__repr__()
             case "hi":
                 return self.hi.__repr__()
-
+            case "include":
+                return self.include.__repr__()
 
 @dataclass
 class Program:
@@ -1051,10 +1057,10 @@ class Parser:
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
-        extern = False
+        export = False
 
-        if begin.keyword == "extern":
-            extern = True
+        if begin.keyword == "export":
+            export = True
             begin = self.peek_next()
 
         # combining the conditions does NOT WORK.
@@ -1063,7 +1069,7 @@ class Parser:
 
         # consume the keyword
         self.advance()
-        if extern == True:
+        if export == True:
             self.advance()
 
         ident = self.advance()
@@ -1080,16 +1086,16 @@ class Parser:
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ, extern=extern)  # type: ignore
+        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ, export=export)  # type: ignore
         return Statement("declare", declare=res)
 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
-        extern = False
+        export = False
 
-        if begin.keyword == "extern":
+        if begin.keyword == "export":
             begin = self.peek_next()
-            extern = True
+            export = True
 
         if begin.kind != "keyword":
             return None
@@ -1099,7 +1105,7 @@ class Parser:
 
         # consume the kw
         self.advance()
-        if extern == True:
+        if export == True:
             self.advance()
 
         ident: Identifier | None = self.ident()  # type: ignore
@@ -1120,7 +1126,7 @@ class Parser:
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(ident, literal, extern=extern)
+        res = ConstantStatement(ident, literal, export=export)
         return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
@@ -1398,14 +1404,17 @@ class Parser:
 
     def procedure_stmt(self) -> Statement | None:
         begin = self.peek()
-        extern = False
+        export = False
 
-        if begin.keyword == "extern":
+        if begin.keyword == "export":
             begin = self.peek_next()
-            extern = True
+            export = True
+
+        if begin.keyword != "procedure":
+            return
 
         self.advance()  # byebye PROCEDURE
-        if extern == True:
+        if export == True:
             self.advance()
 
         ident = self.ident()
@@ -1449,23 +1458,23 @@ class Parser:
         self.advance()  # bye bye ENDPROCEDURE
 
         res = ProcedureStatement(
-            name=ident.ident, args=args, block=stmts, extern=extern
+            name=ident.ident, args=args, block=stmts, export=export
         )
         return Statement("procedure", procedure=res)
 
     def function_stmt(self) -> Statement | None:
         begin = self.peek()
-        extern = False
+        export = False
 
-        if begin.keyword == "extern":
+        if begin.keyword == "export":
             begin = self.peek_next()
-            extern = True
+            export = True
 
         if begin.keyword != "function":
             return None
 
         self.advance()  # byebye FUNCTION
-        if extern == True:
+        if export == True:
             self.advance()
 
         ident = self.ident()
@@ -1520,7 +1529,7 @@ class Parser:
         self.advance()  # bye bye ENDFUNCTION
 
         res = FunctionStatement(
-            name=ident.ident, args=args, returns=typ, block=stmts, extern=extern
+            name=ident.ident, args=args, returns=typ, block=stmts, export=export
         )
         return Statement("function", function=res)
 
@@ -1542,6 +1551,22 @@ class Parser:
         self.check_newline("after scope declaration end")
         res = HiStatement(stmts)
         return Statement("hi", hi=res)
+
+    def include_stmt(self) -> Statement | None:
+        include = self.peek()
+        if include.keyword != "include":
+            return
+        self.advance()
+
+        name = self.advance()
+        if name.kind != "literal":
+            raise BCError("Include must be followed by a literal of the name of the file to include")
+
+        if name.literal.kind != "string": # type: ignore
+            raise BCError("literal for include must be a string!")
+
+        res = IncludeStatement(name.literal.value) # type: ignore
+        return Statement("include", include=res)
 
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
@@ -1575,6 +1600,10 @@ class Parser:
         return_s = self.return_stmt()
         if return_s is not None:
             return return_s
+
+        include = self.include_stmt()
+        if include is not None:
+            return include
 
         declare = self.declare_stmt()
         if declare is not None:

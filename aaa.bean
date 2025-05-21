@@ -1,2 +1,0 @@
-extern declare a: integer
-a <- 5

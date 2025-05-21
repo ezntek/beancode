@@ -28,6 +28,24 @@ why
 
 `python main.py yourfile.bean` (the extension does not matter)
 
+## xtra feachurse™
+
+there are many extra features:
+
+1. Includes can be done with `include "file.bean"`, relative to the file.
+2. You can declare a manual scope with:
+   ```
+   HI
+       OUTPUT "Hallo, Welt."
+   BYE
+   ```
+3. There are many custom library routines:
+ * `FUNCTION ASCHAR(code: INTEGER) RETURNS CHAR`
+ * `FUNCTION GETCHAR() RETURNS CHAR`
+ * `PROCEDURE PUTCHAR(ch: CHAR)`
+ * `PROCEDURE EXIT(code: INTEGER)`
+ * `PROCEDURE PRINT(txt: STRING)`
+
 ## quirks
 
 * ***the errors are complete unintelligible dogfeces***. I will not fix them. I do not want to fix them.

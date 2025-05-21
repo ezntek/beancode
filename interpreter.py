@@ -1,12 +1,17 @@
+import os
 import sys
+from lexer import Lexer
 from parser import *
 import typing as t
+
+import util
 
 
 @dataclass
 class Variable:
     val: BCValue
     const: bool
+    export: bool = False
 
     def is_uninitialized(self) -> bool:
         return self.val.is_uninitialized()
@@ -57,6 +62,7 @@ class Interpreter:
         self.proc = proc
         self.loop = loop
         self._returned = False
+        self.cur_stmt = 0
 
         self.variables["null"] = Variable(BCValue("null"), True)
         self.variables["NULL"] = Variable(BCValue("null"), True)
@@ -677,7 +683,7 @@ class Interpreter:
 
         for argdef, argval in zip(func.args, stmt.args):
             val = self.visit_expr(argval)
-            vars[argdef.name] = Variable(val=val, const=False)
+            vars[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.variables = dict(vars)
         intp.functions = (self.functions)
@@ -714,7 +720,7 @@ class Interpreter:
 
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
-            vars[argdef.name] = Variable(val=val, const=False)
+            vars[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.variables = dict(vars)
         intp.functions = dict(self.functions)
@@ -899,6 +905,39 @@ class Interpreter:
                 raise BCError("you cannot return a value from a procedure!")
 
             self._returned = True
+
+    def visit_include_stmt(self, stmt: IncludeStatement):
+        filename = stmt.file
+
+        # FIXME: abstract this stuff into another file
+        if not os.path.exists(filename):
+            util.panic(f"file {filename} does not exist!")
+        with open(filename, "r+") as f:
+            file_content = f.read()
+        lexer = Lexer(file_content)
+        toks = lexer.tokenize()
+        warnings: list[BCWarning]
+        parser = Parser(toks)
+        try:
+            program, warnings = parser.program()
+        except BCError as err:
+            err.print(filename, file_content)
+            exit(1)
+        if warnings:
+            for warning in warnings:
+                warning.print(filename, file_content)
+            exit(1)
+
+        intp = self.new(program.stmts)
+        intp.visit_block(None)
+
+        for name, var in intp.variables.items():
+            if var.export:
+                self.variables[name] = var
+
+        for name, fn in intp.functions.items():
+            if fn.export:
+                self.functions[name] = fn
 
     def visit_if_stmt(self, stmt: IfStatement):
         cond: BCValue = self.visit_expr(stmt.cond)
@@ -1090,6 +1129,8 @@ class Interpreter:
                 self.visit_function(stmt.function)  # type: ignore
             case "hi":
                 self.visit_hi_stmt(stmt.hi) # type: ignore
+            case "include":
+                self.visit_include_stmt(stmt.include) # type: ignore
             case "call":
                 self.visit_call(stmt.call)  # type: ignore
             case "fncall":
@@ -1148,7 +1189,7 @@ class Interpreter:
                 if key in self.variables:
                     raise BCError(f"variable {key} declared!")
 
-                self.variables[key] = Variable(c.value.to_bcvalue(), True)
+                self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
             case "declare":
                 d: DeclareStatement = stmt.declare  # type: ignore
                 key = d.ident.ident
@@ -1212,17 +1253,21 @@ class Interpreter:
                         res = BCArray(typ=atype, flat=arr, flat_bounds=bounds)  # type: ignore
 
                     self.variables[key] = Variable(
-                        BCValue(kind=d.typ, array=res), False
+                        BCValue(kind=d.typ, array=res), False, export=d.export
                     )
                 else:
-                    self.variables[key] = Variable(BCValue(kind=d.typ), False)
+                    self.variables[key] = Variable(BCValue(kind=d.typ), False, export=d.export)
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block
-        for stmt in blk:
+        cur = 0
+        while cur < len(blk):
+            stmt = self.block[cur]
+            self.cur_stmt = cur
             self.visit_stmt(stmt)
             if self._returned:
                 return
+            cur += 1
 
     def visit_program(self, program: Program):
         if program is not None:

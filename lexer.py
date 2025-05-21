@@ -43,7 +43,7 @@ Keyword = t.Literal[
     "mod",
     # extra feachur™
     "include",
-    "extern",
+    "export",
     "hi",
     "bye",
 ]
@@ -225,7 +225,7 @@ class Lexer:
             "hi",
             "bye",
             "include",
-            "extern",
+            "export",
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 
