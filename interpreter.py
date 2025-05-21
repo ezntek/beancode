@@ -908,9 +908,10 @@ class Interpreter:
 
     def visit_include_stmt(self, stmt: IncludeStatement):
         filename = stmt.file
+        path = os.path.join(__file__, filename)
 
         # FIXME: abstract this stuff into another file
-        if not os.path.exists(filename):
+        if not os.path.exists(path):
             util.panic(f"file {filename} does not exist!")
         with open(filename, "r+") as f:
             file_content = f.read()
