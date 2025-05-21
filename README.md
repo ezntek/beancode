@@ -32,7 +32,7 @@ why
 
 there are many extra features:
 
-1. Includes can be done with `include "file.bean"`, relative to the file.
+1. Includes can be done with `include "file.bean"`, relative to the file. Mark a declaration, constant, procedure or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`
 2. You can declare a manual scope with:
    ```
    HI
