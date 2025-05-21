@@ -4,7 +4,7 @@
 FUNCTION ASCHAR(codepoint: INTEGER) RETURNS CHAR
 
 // outputs one character without a newline, and returns the input
-FUNCTION PUTCHAR(ch: CHAR) RETURNS CHAR
+PROCEDURE PUTCHAR(ch: CHAR)
 
 // exits the program at the callsite with an OS error coder
 PROCEDURE EXIT(code: INTEGER) 
@@ -84,7 +84,7 @@ ENDPROCEDURE
 PROCEDURE loopend
     IF loopslen = 0 THEN
         OUTPUT "found closing bracket without opening bracket"
-        exit(1)
+        CALL EXIT(1)
     ENDIF
 
     IF cells[ptr] <> 0 THEN
@@ -93,12 +93,6 @@ PROCEDURE loopend
         loopslen <- loopslen - 1
         loops[loopslen] <- 0
     ENDIF
-ENDPROCEDURE
-
-// PROCEDURE wrapper cos my interpreter dumb asf
-PROCEDURE out
-    // OUTPUT cells[ptr]
-    PUTCHAR(ASCHAR(cells[ptr]))
 ENDPROCEDURE
 
 PROCEDURE debug
@@ -116,7 +110,7 @@ WHILE pc < srclen DO
         '-': cells[ptr] <- wrapdec(cells[ptr])
         '[': CALL loopbegin
         ']': CALL loopend
-        '.': CALL out
+        '.': CALL PUTCHAR(ASCHAR(cells[ptr]))
         // otherwise not enforced
     ENDCASE
     pc <- pc + 1

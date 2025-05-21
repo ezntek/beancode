@@ -1,3 +1,4 @@
+import sys
 from parser import *
 import typing as t
 
@@ -24,6 +25,10 @@ LIBROUTINES = {
     "substring": 3,
     "length": 1,
     "aschar": 1,
+    "getchar": 0,
+}
+
+LIBROUTINES_NORETURN = {
     "putchar": 1,
     "exit": 1,
 }
@@ -305,10 +310,31 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError("Cannot add bools, chars, and strings!")
+                if lhs.kind in ["char", "string"] or rhs.kind in ["char", "string"]:
+                    # concatenate instead
+                    lhs_str_or_char: str = str()
+                    rhs_str_or_char: str = str()
 
-                if rhs.kind in ["boolean", "char", "string"]:
+                    if lhs.kind == "string":
+                        lhs_str_or_char = lhs.get_string()
+                    elif lhs.kind == "char":
+                        lhs_str_or_char = lhs.get_char()
+                    
+                    if rhs.kind == "string":
+                        rhs_str_or_char = rhs.get_string()
+                    elif rhs.kind == "char":
+                        rhs_str_or_char = rhs.get_char()
+                    
+                    if lhs_str_or_char == None:
+                        raise BCError("left hand side in string/char concatenation is null!")
+
+                    if rhs_str_or_char == None:
+                        raise BCError("right hand side in string/char concatenation is null!")
+
+                    res = str(lhs_str_or_char + rhs_str_or_char)
+                    return BCValue("string", string=res)
+
+                if "boolean" in [lhs.kind, rhs.kind]:
                     raise ValueError("Cannot add bools, chars, and strings!")
 
                 lhs_num: int | float | None = 0
@@ -500,33 +526,6 @@ class Interpreter:
         else:
             raise BCError(f"attempted to index {v.kind}")
 
-    def visit_call(self, stmt: CallStatement):
-        proc = self.functions[stmt.ident]
-
-        if isinstance(proc, FunctionStatement):
-            raise BCError(
-                "cannot run CALL on a function! please call the function without the CALL keyword instead."
-            )
-
-        intp = self.new(proc.block, proc=True)
-        intp.calls = self.calls
-        intp.calls.append("procedure")
-        vars = self.variables
-
-        if len(proc.args) != len(stmt.args):
-            raise BCError(
-                f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call"
-            )
-
-        for argdef, argval in zip(proc.args, stmt.args):
-            val = self.visit_expr(argval)
-            vars[argdef.name] = Variable(val=val, const=False)
-
-        intp.variables = dict(vars)
-        intp.functions = dict(self.functions)
-
-        intp.visit_block(proc.block)
-
     def visit_ucase(self, txt: str) -> BCValue:
         return BCValue("string", string=txt.upper())
 
@@ -548,6 +547,10 @@ class Interpreter:
 
     def visit_aschar(self, val: int) -> BCValue:
         return BCValue("char", char=chr(val))
+
+    def visit_getchar(self) -> BCValue:
+        s = sys.stdin.read(1)[0] # get ONE character
+        return BCValue("char", char=s)
 
     def visit_putchar(self, ch: str):
         print(ch[0], end="")
@@ -625,14 +628,30 @@ class Interpreter:
                 return self.visit_length(txt.get_string())
             case "aschar":
                 [val, *_] = evargs
-                return self.visit_aschar(val.get_integer())
+                return self.visit_aschar(val.get_integer()) 
+            case "getchar":
+                return self.visit_getchar()
+
+    def visit_libroutine_noreturn(self, name: str, args: list[Expr]):
+        nargs = LIBROUTINES_NORETURN[name.lower()]
+     
+        if len(args) < nargs:
+            raise BCError(
+                f"expected {nargs} args, but got {len(args)} in call to library routine {name}"
+            )
+
+        evargs: list[BCValue] = []
+        for _, arg in zip(range(nargs), args):
+            evargs.append(self.visit_expr(arg))
+    
+        match name:
             case "putchar":
                 [ch, *_] = evargs
                 self.visit_putchar(ch.get_char())
-                return ch
             case "exit":
                 [code, *_] = evargs
                 self.visit_exit(code.get_integer())
+       
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
@@ -668,6 +687,37 @@ class Interpreter:
             raise BCError(f"function's return value is None!")
         else:
             return intp.retval  # type: ignore
+        
+    def visit_call(self, stmt: CallStatement):
+        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES_NORETURN:
+            return self.visit_libroutine_noreturn(stmt.ident, stmt.args)
+
+        proc = self.functions[stmt.ident]
+
+        if isinstance(proc, FunctionStatement):
+            raise BCError(
+                "cannot run CALL on a function! please call the function without the CALL keyword instead."
+            )
+
+        intp = self.new(proc.block, proc=True)
+        intp.calls = self.calls
+        intp.calls.append("procedure")
+        vars = self.variables
+
+        if len(proc.args) != len(stmt.args):
+            raise BCError(
+                f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call"
+            )
+
+        for argdef, argval in zip(proc.args, stmt.args):
+            val = self.visit_expr(argval)
+            vars[argdef.name] = Variable(val=val, const=False)
+
+        intp.variables = dict(vars)
+        intp.functions = dict(self.functions)
+
+        intp.visit_block(proc.block)
+
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Grouping):
