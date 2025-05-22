@@ -787,7 +787,7 @@ class Interpreter:
 
     def _typecast_real(self, inner: BCValue) -> BCValue:
         r = 0.0
-        
+
         match inner.kind:
             case "string":
                 s = inner.get_string()
@@ -807,11 +807,13 @@ class Interpreter:
         return BCValue("real", real=r)
 
     def _typecast_char(self, inner: BCValue) -> BCValue:
-        c = ''
+        c = ""
 
         match inner.kind:
             case "string":
-                raise BCError(f"cannot convert a STRING to a CHAR! use SUBSTRING(yourstring, begin, 1) to get a character.")
+                raise BCError(
+                    f"cannot convert a STRING to a CHAR! use SUBSTRING(yourstring, begin, 1) to get a character."
+                )
             case "integer":
                 c = chr(inner.get_integer())
             case "real":
@@ -828,19 +830,19 @@ class Interpreter:
 
         match inner.kind:
             case "string":
-                b = (inner.get_string() != "")
+                b = inner.get_string() != ""
             case "integer":
-                b = (inner.get_integer() != 0)
+                b = inner.get_integer() != 0
             case "real":
-                b = (inner.get_real() != 0.0)
+                b = inner.get_real() != 0.0
             case "char":
-                b = (ord(inner.get_char()) != 0)
+                b = ord(inner.get_char()) != 0
             case "boolean":
                 return inner
 
         return BCValue("boolean", boolean=b)
 
-    def visit_typecast(self, tc: Typecast) -> BCValue: # type: ignore
+    def visit_typecast(self, tc: Typecast) -> BCValue:  # type: ignore
         inner = self.visit_expr(tc.expr)
 
         if inner.kind == "null":
@@ -857,6 +859,23 @@ class Interpreter:
                 return self._typecast_char(inner)
             case "boolean":
                 return self._typecast_boolean(inner)
+
+    def visit_array_literal(self, expr: ArrayLiteral) -> BCValue:
+        vals = [self.visit_expr(expr.items[0])]
+        typ = vals[0].kind
+
+        for val in expr.items[1:]:
+            newval = self.visit_expr(val)
+            if newval.kind != typ:
+                raise BCError("array literal may not contain items of multiple types!")
+            vals.append(newval)
+
+        bounds = (1, len(vals))
+
+        arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=None)  # type: ignore
+        return BCValue(
+            kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)
+        )
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Typecast):
@@ -894,6 +913,8 @@ class Interpreter:
             return var.val
         elif isinstance(expr, Literal):
             return expr.to_bcvalue()
+        elif isinstance(expr, ArrayLiteral):
+            return self.visit_array_literal(expr)
         elif isinstance(expr, BinaryExpr):
             return self.visit_binaryexpr(expr)
         elif isinstance(expr, ArrayIndex):
@@ -1246,6 +1267,118 @@ class Interpreter:
     def visit_function(self, stmt: FunctionStatement):
         self.functions[stmt.name] = stmt
 
+    def visit_assign_stmt(self, s: AssignStatement):
+        if isinstance(s.ident, ArrayIndex):
+            key = s.ident.ident.ident
+
+            if self.variables[key].val.array is None:
+                raise BCError(
+                    f"tried to index a variable of type {self.variables[key].val.kind} like an array"
+                )
+
+            tup = self._get_array_index(s.ident)
+            if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore
+                raise BCError(f"not enough indices for matrix")
+
+            val = self.visit_expr(s.value)
+            a: BCArray = self.variables[key].val.array  # type: ignore
+
+            if a.typ.is_matrix:  # type: ignore
+                if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
+                    raise BCError(f"tried to access out of bounds array index {tup[0]}")
+
+                if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
+                    raise BCError(f"tried to access out of bounds array index {tup[1]}")
+
+                a.matrix[tup[0] - 1][tup[1] - 1] = val  # type: ignore
+            else:
+                if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
+                    raise BCError(f"tried to access out of bounds array index {tup[0]}")
+                a.flat[tup[0] - 1] = val  # type: ignore
+        else:
+            key = s.ident.ident
+
+            if key not in self.variables:
+                raise BCError(f"attempted to use variable {key} without declaring it")
+
+            if self.variables[key].const:
+                raise BCError(f"attemped to write to constant {key}")
+            self.variables[key].val = self.visit_expr(s.value)
+
+    def visit_constant_stmt(self, c: ConstantStatement):
+        key = c.ident.ident
+
+        if key in self.variables:
+            raise BCError(f"variable {key} declared!")
+
+        self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
+
+    def visit_declare_stmt(self, d: DeclareStatement):
+        key = d.ident.ident
+
+        if key in self.variables:
+            raise BCError(f"variable {key} declared!")
+
+        if isinstance(d.typ, BCArrayType):
+            atype = d.typ
+            inner_type = atype.inner
+            if atype.is_matrix:
+                inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
+                if inner_end.kind != "integer":
+                    raise BCError(
+                        f"cannot use type of {inner_end.kind} as array bound!"
+                    )
+
+                # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
+                get_inner_arr = lambda: [BCValue(inner_type) for _ in range(inner_end.integer)]  # type: ignore
+
+                outer_end = self.visit_expr(atype.matrix_bounds[1])  # type: ignore
+                if outer_end.kind != "integer":
+                    raise BCError(
+                        f"cannot use type of {outer_end.kind} as array bound!"
+                    )
+
+                outer_arr: BCValue = [get_inner_arr() for _ in range(outer_end.integer)]  # type: ignore
+
+                outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
+                if outer_begin.kind != "integer":
+                    raise BCError(
+                        f"cannot use type of {outer_begin.kind} as array bound!"
+                    )
+
+                inner_begin = self.visit_expr(atype.matrix_bounds[2])  # type: ignore
+                if inner_begin.kind != "integer":
+                    raise BCError(
+                        f"cannot use type of {inner_begin.kind} as array bound!"
+                    )
+
+                bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer)  # type: ignore
+                atype.is_matrix = True
+                res = BCArray(typ=atype, matrix=outer_arr, matrix_bounds=bounds)  # type: ignore
+            else:
+                begin = self.visit_expr(atype.flat_bounds[0])  # type: ignore
+                if begin.kind != "integer":
+                    raise BCError(f"cannot use type of {begin.kind} as array bound!")
+
+                end = self.visit_expr(atype.flat_bounds[1])  # type: ignore
+                if end.kind != "integer":
+                    raise BCError(f"cannot use type of {end.kind} as array bound!")
+
+                arr: BCValue = [BCValue(atype) for _ in range(end.integer)]  # type: ignore
+
+                bounds = (begin.integer, end.integer)  # type: ignore
+                atype.is_matrix = False
+                res = BCArray(typ=atype, flat=arr, flat_bounds=bounds)  # type: ignore
+
+            self.variables[key] = Variable(
+                BCValue(kind=d.typ, array=res), False, export=d.export
+            )
+        else:
+            self.variables[key] = Variable(BCValue(kind=d.typ), False, export=d.export)
+            if d.expr is not None:
+                expr = self.visit_expr(d.expr)
+                self.variables[key].val = expr
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
@@ -1277,134 +1410,11 @@ class Interpreter:
             case "fncall":
                 self.visit_fncall(stmt.fncall)  # type: ignore
             case "assign":
-                s: AssignStatement = stmt.assign  # type: ignore
-
-                if isinstance(s.ident, ArrayIndex):
-                    key = s.ident.ident.ident
-
-                    if self.variables[key].val.array is None:
-                        raise BCError(
-                            f"tried to index a variable of type {self.variables[key].val.kind} like an array"
-                        )
-
-                    tup = self._get_array_index(s.ident)
-                    if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore
-                        raise BCError(f"not enough indices for matrix")
-
-                    val = self.visit_expr(s.value)
-                    a: BCArray = self.variables[key].val.array  # type: ignore
-
-                    if a.typ.is_matrix:  # type: ignore
-                        if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
-                            raise BCError(
-                                f"tried to access out of bounds array index {tup[0]}"
-                            )
-
-                        if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
-                            raise BCError(
-                                f"tried to access out of bounds array index {tup[1]}"
-                            )
-
-                        a.matrix[tup[0] - 1][tup[1] - 1] = val  # type: ignore
-                    else:
-                        if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
-                            raise BCError(
-                                f"tried to access out of bounds array index {tup[0]}"
-                            )
-                        a.flat[tup[0] - 1] = val  # type: ignore
-                else:
-                    key = s.ident.ident
-
-                    if key not in self.variables:
-                        raise BCError(
-                            f"attempted to use variable {key} without declaring it"
-                        )
-
-                    if self.variables[key].const:
-                        raise BCError(f"attemped to write to constant {key}")
-                    self.variables[key].val = self.visit_expr(s.value)
+                self.visit_assign_stmt(stmt.assign)  # type: ignore
             case "constant":
-                c: ConstantStatement = stmt.constant  # type: ignore
-                key = c.ident.ident
-
-                if key in self.variables:
-                    raise BCError(f"variable {key} declared!")
-
-                self.variables[key] = Variable(
-                    c.value.to_bcvalue(), True, export=c.export
-                )
+                self.visit_constant_stmt(stmt.constant)  # type: ignore
             case "declare":
-                d: DeclareStatement = stmt.declare  # type: ignore
-                key = d.ident.ident
-
-                if key in self.variables:
-                    raise BCError(f"variable {key} declared!")
-
-                if isinstance(d.typ, BCArrayType):
-                    atype = d.typ
-                    inner_type = atype.inner
-                    if atype.is_matrix:
-                        inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
-                        if inner_end.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {inner_end.kind} as array bound!"
-                            )
-
-                        # directly setting the result of the comprehension results in multiple pointers pointing to the same list
-                        get_inner_arr = lambda: [BCValue(inner_type) for _ in range(inner_end.integer)]  # type: ignore
-
-                        outer_end = self.visit_expr(atype.matrix_bounds[1])  # type: ignore
-                        if outer_end.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {outer_end.kind} as array bound!"
-                            )
-
-                        outer_arr: BCValue = [get_inner_arr() for _ in range(outer_end.integer)]  # type: ignore
-
-                        outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
-                        if outer_begin.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {outer_begin.kind} as array bound!"
-                            )
-
-                        inner_begin = self.visit_expr(atype.matrix_bounds[2])  # type: ignore
-                        if inner_begin.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {inner_begin.kind} as array bound!"
-                            )
-
-                        bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer)  # type: ignore
-                        atype.is_matrix = True
-                        res = BCArray(typ=atype, matrix=outer_arr, matrix_bounds=bounds)  # type: ignore
-                    else:
-                        begin = self.visit_expr(atype.flat_bounds[0])  # type: ignore
-                        if begin.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {begin.kind} as array bound!"
-                            )
-
-                        end = self.visit_expr(atype.flat_bounds[1])  # type: ignore
-                        if end.kind != "integer":
-                            raise BCError(
-                                f"cannot use type of {end.kind} as array bound!"
-                            )
-
-                        arr: BCValue = [BCValue(atype) for _ in range(end.integer)]  # type: ignore
-
-                        bounds = (begin.integer, end.integer)  # type: ignore
-                        atype.is_matrix = False
-                        res = BCArray(typ=atype, flat=arr, flat_bounds=bounds)  # type: ignore
-
-                    self.variables[key] = Variable(
-                        BCValue(kind=d.typ, array=res), False, export=d.export
-                    )
-                else:
-                    self.variables[key] = Variable(
-                        BCValue(kind=d.typ), False, export=d.export
-                    )
-                    if d.expr is not None:
-                        expr = self.visit_expr(d.expr)
-                        self.variables[key].val = expr
+                self.visit_declare_stmt(stmt.declare)  # type: ignore
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

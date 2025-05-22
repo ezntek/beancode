@@ -4,7 +4,7 @@ from codegen import LuaCodegen
 from interpreter import Interpreter
 from lexer import *
 from parser import Parser
-from util import BCError, BCWarning
+from util import BCError, BCWarning, panic
 
 from tap import Tap
 
@@ -23,7 +23,7 @@ def main():
     args = Args().parse_args()
 
     if not os.path.exists(args.file):
-        util.panic(f"file {args.file} does not exist!")
+        panic(f"file {args.file} does not exist!")
 
     with open(args.file, "r+") as f:
         file_content = f.read()

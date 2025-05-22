@@ -251,11 +251,18 @@ class Lexer:
                 return False
         return True
 
+    def is_case_consistent(self, s: str) -> bool:
+        return s.isupper() or s.islower()
+
     def is_keyword(self, s: str) -> bool:
-        return s.lower() in self.keywords
+        if self.is_case_consistent(s):
+            return s.lower() in self.keywords
+        return False
 
     def is_type(self, s: str) -> bool:
-        return s.lower() in self.types
+        if self.is_case_consistent(s):
+            return s.lower() in self.types
+        return False
 
     def trim_left(self):
         if self.cur >= len(self.file):
@@ -291,7 +298,7 @@ class Lexer:
                     self.bol = self.cur + 1
                 self.cur += 1
 
-            # when we find */, we must skip 2 past to avoid pasing it
+            # when we find */, we must skip 2 past to avoid parsing it
             self.cur += 2
 
             return self.trim_left()
@@ -410,13 +417,13 @@ class Lexer:
         return res
 
     def next_keyword(self, word: str) -> Token | None:
-        if self.is_keyword(word.lower()):
+        if self.is_keyword(word):
             return Token("keyword", (self.row, self.cur - self.bol - len(word), self.bol), keyword=word.lower())  # type: ignore
         else:
             return None
 
     def next_type(self, typ: str) -> Token | None:
-        if typ.lower() in ["integer", "string", "boolean", "real", "array", "char"]:
+        if self.is_type(typ):
             return Token("type", (self.row, self.cur - self.bol - len(typ), self.bol), typ=typ.lower())  # type: ignore
         else:
             return None
