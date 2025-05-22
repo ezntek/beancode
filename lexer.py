@@ -44,8 +44,8 @@ Keyword = t.Literal[
     # extra feachur™
     "include",
     "export",
-    "hi",
-    "bye",
+    "scope",
+    "endscope",
 ]
 
 # lexer types
@@ -222,8 +222,8 @@ class Lexer:
             "writefile",
             "closefile",
             # extra feature
-            "hi",
-            "bye",
+            "scope",
+            "endscope",
             "include",
             "export",
         ]

@@ -1093,7 +1093,7 @@ class Interpreter:
             if self.visit_expr(cond).boolean:
                 break
 
-    def visit_hi_stmt(self, stmt: HiStatement):
+    def visit_scope_stmt(self, stmt: ScopeStatement):
         intp = self.new(stmt.block, loop=False)
         intp.calls.append("hi")
         intp.variables = dict(self.variables)
@@ -1136,8 +1136,8 @@ class Interpreter:
                 self.visit_procedure(stmt.procedure)  # type: ignore
             case "function":
                 self.visit_function(stmt.function)  # type: ignore
-            case "hi":
-                self.visit_hi_stmt(stmt.hi) # type: ignore
+            case "scope":
+                self.visit_scope_stmt(stmt.scope) # type: ignore
             case "include":
                 self.visit_include_stmt(stmt.include) # type: ignore
             case "call":

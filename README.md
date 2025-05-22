@@ -65,7 +65,6 @@ there are many extra features, which are not standard to IGCSE Pseudocode.
  * `BOOLEAN -> INTEGER`
 1. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
  * You can also declare variables without types and directly assign them: `DECLARE Num <- 5`
-1. 
 
 ## quirks
 

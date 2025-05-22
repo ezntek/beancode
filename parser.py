@@ -235,7 +235,7 @@ StatementKind = t.Literal[
     "call",
     "fncall",
     "return",
-    "hi",
+    "scope",
     "include",
 ]
 
@@ -352,7 +352,7 @@ class ReturnStatement:
 
 
 @dataclass
-class HiStatement:
+class ScopeStatement:
     block: list["Statement"]
 
 @dataclass
@@ -377,7 +377,7 @@ class Statement:
     call: CallStatement | None = None
     fncall: FunctionCall | None = None  # Impostor! expr as statement?!
     return_s: ReturnStatement | None = None
-    hi: HiStatement | None = None
+    scope: ScopeStatement | None = None
     include: IncludeStatement | None = None
 
     def __repr__(self) -> str:
@@ -412,8 +412,8 @@ class Statement:
                 return self.return_s.__repr__()
             case "fncall":
                 return self.fncall.__repr__()
-            case "hi":
-                return self.hi.__repr__()
+            case "scope":
+                return self.scope.__repr__()
             case "include":
                 return self.include.__repr__()
 
@@ -1533,9 +1533,9 @@ class Parser:
         )
         return Statement("function", function=res)
 
-    def hi_stmt(self) -> Statement | None:
-        hi = self.peek()
-        if hi.keyword != "hi":
+    def scope_stmt(self) -> Statement | None:
+        scope = self.peek()
+        if scope.keyword != "scope":
             return
         self.advance()
 
@@ -1544,13 +1544,13 @@ class Parser:
         self.clean_newlines()
 
         stmts = []
-        while self.peek().keyword != "bye":
+        while self.peek().keyword != "endscope":
             stmts.append(self.scan_one_statement())
 
         self.advance()
         self.check_newline("after scope declaration end")
-        res = HiStatement(stmts)
-        return Statement("hi", hi=res)
+        res = ScopeStatement(stmts)
+        return Statement("scope", scope=res)
 
     def include_stmt(self) -> Statement | None:
         include = self.peek()
@@ -1637,9 +1637,9 @@ class Parser:
         if function is not None:
             return function
 
-        hi = self.hi_stmt()
-        if hi is not None:
-            return hi
+        scope = self.scope_stmt()
+        if scope is not None:
+            return scope
 
         cur = self.peek()
         expr = self.expression()
