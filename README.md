@@ -18,8 +18,6 @@ This is my foray into compiler engineering; through this project I have finally 
 
 this is a tree-walker for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) (pseudocode was this way for literal millenia).
 
-lowercase keywords are supported. you may also pass arrays into functions. you may also declare functions inside functions.
-
 ## installation
 
 why
@@ -30,28 +28,50 @@ why
 
 ## xtra feachurse™
 
-there are many extra features:
+there are many extra features, which are not standard to IGCSE Pseudocode.
 
-1. Includes can be done with `include "file.bean"`, relative to the file. Mark a declaration, constant, procedure or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`
-2. You can declare a manual scope with:
+1. Lowercase keywords are supported; all keywords are case-insensitive, along with all library routines.
+1. Includes can be done with `include "file.bean"`, relative to the file.
+ * Mark a declaration, constant, procedure, or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`.
+ * Symbols marked as export will be present in whichever scope the include was called.
+1. You can declare a manual scope with:
    ```
-   HI
+   SCOPE
        OUTPUT "Hallo, Welt."
-   BYE
+   ENDSCOPE
    ```
-3. There are many custom library routines:
+
+   Exporting form a custom scope also works:
+
+   ```
+   SCOPE
+       EXPORT CONSTANT Age <- 5
+   ENDSCOPE
+   OUTPUT Age
+   ```
+1. There are many custom library routines:
  * `FUNCTION ASCHAR(code: INTEGER) RETURNS CHAR`
  * `FUNCTION GETCHAR() RETURNS CHAR`
  * `PROCEDURE PUTCHAR(ch: CHAR)`
  * `PROCEDURE EXIT(code: INTEGER)`
  * `PROCEDURE PRINT(txt: STRING)`
+1. Type casting is supported:
+ * `Any Type -> STRING`
+ * `STRING -> INTEGER` (returns `null` on failure)
+ * `STRING -> REAL` (returns `null` on failure)
+ * `INTEGER -> REAL`
+ * `REAL -> INTEGER`
+ * `INTEGER -> BOOLEAN` (`0` is false, `1` is true)
+ * `BOOLEAN -> INTEGER`
+1. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
+ * You can also declare variables without types and directly assign them: `DECLARE Num <- 5`
+1. 
 
 ## quirks
 
 * ***the errors are complete unintelligible dogfeces***. I will not fix them. I do not want to fix them.
 * Lowercase keywords are supported.
 * ***TODO: allow arrays of unknown size to be parsed and passed into functions/procs***
-* ***TODO: case of***
 * ***TODO: else if if i feel freaky***
 * ***a fecesload of testing***
 * the code is horrible (unidiomatic. i miss C. i miss tagged unions from rust. i _strongly dislike_ oop.)
