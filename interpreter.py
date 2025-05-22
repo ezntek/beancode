@@ -20,7 +20,9 @@ class Variable:
         return self.val.is_null()
 
 
-BlockType = t.Literal["if", "while", "for", "repeatuntil", "function", "procedure", "hi"]
+BlockType = t.Literal[
+    "if", "while", "for", "repeatuntil", "function", "procedure", "hi"
+]
 
 LIBROUTINES = {
     "ucase": 1,
@@ -28,16 +30,13 @@ LIBROUTINES = {
     "div": 2,
     "mod": 2,
     "substring": 3,
+    "round": 2,
     "length": 1,
-    "aschar": 1,
     "getchar": 0,
 }
 
-LIBROUTINES_NORETURN = {
-    "putchar": 1,
-    "exit": 1,
-    "print": 1
-}
+LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1, "print": 1}
+
 
 class Interpreter:
     block: list[Statement]
@@ -325,17 +324,21 @@ class Interpreter:
                         lhs_str_or_char = lhs.get_string()
                     elif lhs.kind == "char":
                         lhs_str_or_char = lhs.get_char()
-                    
+
                     if rhs.kind == "string":
                         rhs_str_or_char = rhs.get_string()
                     elif rhs.kind == "char":
                         rhs_str_or_char = rhs.get_char()
-                    
+
                     if lhs_str_or_char == None:
-                        raise BCError("left hand side in string/char concatenation is null!")
+                        raise BCError(
+                            "left hand side in string/char concatenation is null!"
+                        )
 
                     if rhs_str_or_char == None:
-                        raise BCError("right hand side in string/char concatenation is null!")
+                        raise BCError(
+                            "right hand side in string/char concatenation is null!"
+                        )
 
                     res = str(lhs_str_or_char + rhs_str_or_char)
                     return BCValue("string", string=res)
@@ -500,15 +503,23 @@ class Interpreter:
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
-                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                        raise BCError(
+                            "attemped to access the 0th array element, which is disallowed in pseudocode"
+                        )
                     else:
-                        raise BCError(f"attempted to access out of bounds array element `{tup[0]}`")
+                        raise BCError(
+                            f"attempted to access out of bounds array element `{tup[0]}`"
+                        )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     if tup[1] == 0:
-                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                        raise BCError(
+                            "attemped to access the 0th array element, which is disallowed in pseudocode"
+                        )
                     else:
-                        raise BCError(f"attempted to access out of bounds array element `{tup[1]}`")
+                        raise BCError(
+                            f"attempted to access out of bounds array element `{tup[1]}`"
+                        )
 
                 res = a.matrix[tup[0] - 1][inner - 1]  # type: ignore
 
@@ -517,12 +528,16 @@ class Interpreter:
                 else:
                     return res
             else:
-                    
+
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
-                        raise BCError("attemped to access the 0th array element, which is disallowed in pseudocode")
+                        raise BCError(
+                            "attemped to access the 0th array element, which is disallowed in pseudocode"
+                        )
                     else:
-                        raise BCError(f"attempted to access out of bounds array element {tup[0]}")
+                        raise BCError(
+                            f"attempted to access out of bounds array element {tup[0]}"
+                        )
 
                 res = a.flat[tup[0] - 1]  # type: ignore
                 if res.is_uninitialized():
@@ -551,11 +566,11 @@ class Interpreter:
     def visit_length(self, txt: str) -> BCValue:
         return BCValue("integer", integer=len(txt))
 
-    def visit_aschar(self, val: int) -> BCValue:
-        return BCValue("char", char=chr(val))
+    def visit_round(self, val: float, places: int) -> BCValue:
+        return BCValue("real", real=round(val, places))
 
     def visit_getchar(self) -> BCValue:
-        s = sys.stdin.read(1)[0] # get ONE character
+        s = sys.stdin.read(1)[0]  # get ONE character
         return BCValue("char", char=s)
 
     def visit_putchar(self, ch: str):
@@ -632,15 +647,15 @@ class Interpreter:
             case "length":
                 [txt, *_] = evargs
                 return self.visit_length(txt.get_string())
-            case "aschar":
-                [val, *_] = evargs
-                return self.visit_aschar(val.get_integer()) 
+            case "round":
+                [val_r, places, *_] = evargs
+                return self.visit_round(val_r.get_real(), places.get_integer())
             case "getchar":
-                return self.visit_getchar() 
+                return self.visit_getchar()
 
     def visit_libroutine_noreturn(self, name: str, args: list[Expr]):
         nargs = LIBROUTINES_NORETURN[name.lower()]
-     
+
         if len(args) < nargs:
             raise BCError(
                 f"expected {nargs} args, but got {len(args)} in call to library routine {name}"
@@ -649,7 +664,7 @@ class Interpreter:
         evargs: list[BCValue] = []
         for _, arg in zip(range(nargs), args):
             evargs.append(self.visit_expr(arg))
-    
+
         match name:
             case "putchar":
                 [ch, *_] = evargs
@@ -660,7 +675,6 @@ class Interpreter:
             case "print":
                 [s, *_] = evargs
                 print(s)
-       
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
@@ -686,7 +700,7 @@ class Interpreter:
             vars[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.variables = dict(vars)
-        intp.functions = (self.functions)
+        intp.functions = self.functions
 
         intp.visit_block(func.block)
         if intp._returned is False:
@@ -696,9 +710,12 @@ class Interpreter:
             raise BCError(f"function's return value is None!")
         else:
             return intp.retval  # type: ignore
-        
+
     def visit_call(self, stmt: CallStatement):
-        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES_NORETURN:
+        if (
+            stmt.ident not in self.functions
+            and stmt.ident.lower() in LIBROUTINES_NORETURN
+        ):
             return self.visit_libroutine_noreturn(stmt.ident, stmt.args)
 
         proc = self.functions[stmt.ident]
@@ -727,8 +744,123 @@ class Interpreter:
 
         intp.visit_block(proc.block)
 
+    def _typecast_string(self, inner: BCValue) -> BCValue:
+        s = ""
+        match inner.kind:
+            case "null":
+                s = "(null)"
+            case "boolean":
+                if inner.get_boolean():
+                    s = "true"
+                else:
+                    s = "false"
+            case "integer":
+                s = str(inner.get_integer())
+            case "real":
+                s = str(inner.get_real())
+            case "char":
+                s = str(inner.get_char()[0])
+            case "string":
+                return inner
+
+        return BCValue("string", string=s)
+
+    def _typecast_integer(self, inner: BCValue) -> BCValue:
+        i = 0
+        match inner.kind:
+            case "string":
+                s = inner.get_string()
+                try:
+                    i = int(s.strip())
+                except ValueError:
+                    raise BCError(f"impossible to convert `{s}` to an INTEGER!")
+            case "integer":
+                return inner
+            case "real":
+                i = int(inner.get_real())
+            case "char":
+                i = ord(inner.get_char()[0])
+            case "boolean":
+                i = 1 if inner.get_boolean() else 0
+
+        return BCValue("integer", integer=i)
+
+    def _typecast_real(self, inner: BCValue) -> BCValue:
+        r = 0.0
+        
+        match inner.kind:
+            case "string":
+                s = inner.get_string()
+                try:
+                    r = float(s.strip())
+                except ValueError:
+                    raise BCError(f"impossible to convert `{s}` to a REAL!")
+            case "integer":
+                r = float(inner.get_integer())
+            case "real":
+                return inner
+            case "char":
+                raise BCError(f"impossible to convert a REAL to a CHAR!")
+            case "boolean":
+                r = 1.0 if inner.get_boolean() else 0.0
+
+        return BCValue("real", real=r)
+
+    def _typecast_char(self, inner: BCValue) -> BCValue:
+        c = ''
+
+        match inner.kind:
+            case "string":
+                raise BCError(f"cannot convert a STRING to a CHAR! use SUBSTRING(yourstring, begin, 1) to get a character.")
+            case "integer":
+                c = chr(inner.get_integer())
+            case "real":
+                raise BCError(f"impossible to convert a CHAR to a REAL!")
+            case "char":
+                return inner
+            case "boolean":
+                raise BCError(f"impossible to convert a BOOLEAN to a CHAR!")
+
+        return BCValue("char", char=c)
+
+    def _typecast_boolean(self, inner: BCValue) -> BCValue:
+        b = False
+
+        match inner.kind:
+            case "string":
+                b = (inner.get_string() != "")
+            case "integer":
+                b = (inner.get_integer() != 0)
+            case "real":
+                b = (inner.get_real() != 0.0)
+            case "char":
+                b = (ord(inner.get_char()) != 0)
+            case "boolean":
+                return inner
+
+        return BCValue("boolean", boolean=b)
+
+    def visit_typecast(self, tc: Typecast) -> BCValue: # type: ignore
+        inner = self.visit_expr(tc.expr)
+
+        if inner.kind == "null":
+            raise BCError("cannot cast anything to NULL!")
+
+        match tc.typ:
+            case "string":
+                return self._typecast_string(inner)
+            case "integer":
+                return self._typecast_integer(inner)
+            case "real":
+                return self._typecast_real(inner)
+            case "char":
+                return self._typecast_char(inner)
+            case "boolean":
+                return self._typecast_boolean(inner)
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
+        if isinstance(expr, Typecast):
+            return self.visit_typecast(expr)
         if isinstance(expr, Grouping):
             return self.visit_expr(expr.inner)
         elif isinstance(expr, Negation):
@@ -1022,7 +1154,7 @@ class Interpreter:
         intp.functions = self.functions.copy()
 
         counter = begin
-    
+
         var_existed = stmt.counter.ident in intp.variables
         if var_existed:
             var_prev_value = intp.variables[stmt.counter.ident]
@@ -1062,11 +1194,11 @@ class Interpreter:
                     return
 
                 counter.integer = counter.integer + step  # type: ignore
-        
+
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)
         else:
-            intp.variables[stmt.counter.ident] = var_prev_value # type: ignore
+            intp.variables[stmt.counter.ident] = var_prev_value  # type: ignore
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond  # type: ignore
@@ -1137,9 +1269,9 @@ class Interpreter:
             case "function":
                 self.visit_function(stmt.function)  # type: ignore
             case "scope":
-                self.visit_scope_stmt(stmt.scope) # type: ignore
+                self.visit_scope_stmt(stmt.scope)  # type: ignore
             case "include":
-                self.visit_include_stmt(stmt.include) # type: ignore
+                self.visit_include_stmt(stmt.include)  # type: ignore
             case "call":
                 self.visit_call(stmt.call)  # type: ignore
             case "fncall":
@@ -1198,7 +1330,9 @@ class Interpreter:
                 if key in self.variables:
                     raise BCError(f"variable {key} declared!")
 
-                self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
+                self.variables[key] = Variable(
+                    c.value.to_bcvalue(), True, export=c.export
+                )
             case "declare":
                 d: DeclareStatement = stmt.declare  # type: ignore
                 key = d.ident.ident
@@ -1265,7 +1399,9 @@ class Interpreter:
                         BCValue(kind=d.typ, array=res), False, export=d.export
                     )
                 else:
-                    self.variables[key] = Variable(BCValue(kind=d.typ), False, export=d.export)
+                    self.variables[key] = Variable(
+                        BCValue(kind=d.typ), False, export=d.export
+                    )
                     if d.expr is not None:
                         expr = self.visit_expr(d.expr)
                         self.variables[key].val = expr

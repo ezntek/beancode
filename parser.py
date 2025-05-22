@@ -165,6 +165,10 @@ class Grouping(Expr):
 class Identifier(Expr):
     ident: str
 
+@dataclass
+class Typecast(Expr):
+    typ: BCPrimitiveType
+    expr: Expr
 
 Operator = t.Literal[
     "assign",
@@ -429,6 +433,7 @@ class Parser:
     def __init__(self, tokens: list[l.Token]) -> None:
         self.cur = 0
         self.tokens = tokens
+        self.PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
 
     def check(self, tok: tuple[l.TokenType, str]) -> bool:
         if self.cur == len(self.tokens):
@@ -577,15 +582,13 @@ class Parser:
 
                     return Literal("integer", integer=res)
                 else:
-                    raise BCError(f"invalid number literal `{val}`", c)
+                    raise BCError(f"invalid numb476.9Ger literal `{val}`", c)
 
     def typ(self) -> BCType | None:
-        PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
-
         adv = self.advance()
 
         if adv.kind == "type" and adv.typ != "array":
-            if adv.typ not in PRIM_TYPES:
+            if adv.typ not in self.PRIM_TYPES:
                 return None
 
             t: BCPrimitiveType = adv.typ  # type: ignore
@@ -783,6 +786,28 @@ class Parser:
 
         return FunctionCall(ident=ident.ident, args=args)  # type: ignore
 
+    def typecast(self) -> Typecast | None:
+        typ = self.advance()
+        if typ.typ is None:
+            raise BCError("invalid type supplied for type cast", typ)
+
+        if typ.typ not in self.PRIM_TYPES:
+            raise BCError("array type supplied for type cast", typ)
+
+        t: BCPrimitiveType = typ.typ # type: ignore
+
+        self.advance() # checked already
+
+        expr = self.expression()
+        if expr is None:
+            raise BCError("invalid expression supplied for type cast", expr)
+
+        rbracket = self.advance()
+        if rbracket.separator != "right_paren":
+            raise BCError("expected right paren after type cast expression", rbracket)
+
+        return Typecast(t, expr)
+
     def unary(self) -> Expr | None:
         p = self.peek()
         if p.kind == "literal":
@@ -796,6 +821,10 @@ class Parser:
                 return self.function_call()
 
             return self.ident()
+        elif p.kind == "type":
+            pn = self.peek_next()
+            if pn.kind == "separator" and pn.separator == "left_paren":
+                return self.typecast()
         elif p.kind == "separator" and p.separator == "left_paren":
             self.advance()
             e = self.expression()
@@ -1079,7 +1108,6 @@ class Parser:
         typ = None
         expr = None
 
-        print(self.peek())
         if self.peek().separator == "colon":
             self.advance()
             
@@ -1087,7 +1115,6 @@ class Parser:
             if typ is None:
                 raise BCError("invalid type after DECLARE", self.peek())
         
-        print(self.peek())
         if self.peek().operator == "assign":
             self.advance()
 
@@ -1095,7 +1122,6 @@ class Parser:
             if expr is None:
                 raise BCError("invalid expression after assign in declare", self.peek())
         
-        print(f"{typ} {expr}")
         if typ is None and expr is None:
             raise BCError("must have either a type declaration, expression to assign as, or both")
 

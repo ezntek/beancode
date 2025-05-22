@@ -31,10 +31,10 @@ why
 there are many extra features, which are not standard to IGCSE Pseudocode.
 
 1. Lowercase keywords are supported; all keywords are case-insensitive, along with all library routines.
-1. Includes can be done with `include "file.bean"`, relative to the file.
+2. Includes can be done with `include "file.bean"`, relative to the file.
  * Mark a declaration, constant, procedure, or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`.
  * Symbols marked as export will be present in whichever scope the include was called.
-1. You can declare a manual scope with:
+3. You can declare a manual scope with:
    ```
    SCOPE
        OUTPUT "Hallo, Welt."
@@ -49,13 +49,13 @@ there are many extra features, which are not standard to IGCSE Pseudocode.
    ENDSCOPE
    OUTPUT Age
    ```
-1. There are many custom library routines:
+4. There are many custom library routines:
  * `FUNCTION ASCHAR(code: INTEGER) RETURNS CHAR`
  * `FUNCTION GETCHAR() RETURNS CHAR`
  * `PROCEDURE PUTCHAR(ch: CHAR)`
  * `PROCEDURE EXIT(code: INTEGER)`
  * `PROCEDURE PRINT(txt: STRING)`
-1. Type casting is supported:
+5. Type casting is supported:
  * `Any Type -> STRING`
  * `STRING -> INTEGER` (returns `null` on failure)
  * `STRING -> REAL` (returns `null` on failure)
@@ -63,7 +63,7 @@ there are many extra features, which are not standard to IGCSE Pseudocode.
  * `REAL -> INTEGER`
  * `INTEGER -> BOOLEAN` (`0` is false, `1` is true)
  * `BOOLEAN -> INTEGER`
-1. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
+6. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
  * You can also declare variables without types and directly assign them: `DECLARE Num <- 5`
 
 ## quirks
