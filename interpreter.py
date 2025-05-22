@@ -1266,6 +1266,9 @@ class Interpreter:
                     )
                 else:
                     self.variables[key] = Variable(BCValue(kind=d.typ), False, export=d.export)
+                    if d.expr is not None:
+                        expr = self.visit_expr(d.expr)
+                        self.variables[key].val = expr
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

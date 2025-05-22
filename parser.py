@@ -274,7 +274,7 @@ class DeclareStatement:
     ident: Identifier
     typ: BCType
     export: bool = False
-
+    expr: Expr | None = None
 
 @dataclass
 class AssignStatement:
@@ -579,7 +579,7 @@ class Parser:
                 else:
                     raise BCError(f"invalid number literal `{val}`", c)
 
-    def type(self) -> BCType | None:
+    def typ(self) -> BCType | None:
         PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
 
         adv = self.advance()
@@ -1076,17 +1076,32 @@ class Parser:
         if ident.ident is None:
             raise BCError("expected ident after declare stmt", self.peek())
 
-        colon = self.advance()
-        if colon.kind != "separator" and colon.separator != "colon":
-            raise BCError("expected colon `:` after ident in declare", self.peek())
+        typ = None
+        expr = None
 
-        typ = self.type()
-        if typ is None:
-            raise BCError("invalid type after DECLARE", self.peek())
+        print(self.peek())
+        if self.peek().separator == "colon":
+            self.advance()
+            
+            typ = self.typ()
+            if typ is None:
+                raise BCError("invalid type after DECLARE", self.peek())
+        
+        print(self.peek())
+        if self.peek().operator == "assign":
+            self.advance()
+
+            expr = self.expression()
+            if expr is None:
+                raise BCError("invalid expression after assign in declare", self.peek())
+        
+        print(f"{typ} {expr}")
+        if typ is None and expr is None:
+            raise BCError("must have either a type declaration, expression to assign as, or both")
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ, export=export)  # type: ignore
+        res = DeclareStatement(ident=Identifier(ident.ident), typ=typ, expr=expr, export=export)  # type: ignore
         return Statement("declare", declare=res)
 
     def constant_stmt(self) -> Statement | None:
@@ -1396,7 +1411,7 @@ class Parser:
                 "expected colon after ident in function argument", self.peek()
             )
 
-        typ = self.type()
+        typ = self.typ()
         if typ is None:
             raise BCError("invalid type after colon in function argument", self.peek())
 
@@ -1513,7 +1528,7 @@ class Parser:
         if returns.keyword != "returns":
             raise BCError("expected RETURNS after function arguments", self.peek())
 
-        typ = self.type()
+        typ = self.typ()
         if typ is None:
             raise BCError(
                 "invalid type after RETURNS for function return value", self.peek()
