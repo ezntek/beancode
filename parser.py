@@ -530,18 +530,37 @@ class Parser:
         exprs = []
         while self.peek().separator != "right_curly":
             # TODO: allow for matrix literals too
-            expr = self.expression()
-            if expr is None:
-                raise BCError("invalid expression supplied as argument to array literal")
-            exprs.append(expr)
+            self.clean_newlines()
 
+            if self.peek().separator == "left_curly":
+                if nested:
+                    raise BCError("cannot nest array literals over 2 dimensions!")
+                arrlit = self.array_literal(nested=True)
+                exprs.append(arrlit)
+            else:
+                expr = self.expression()
+                if expr is None:
+                    raise BCError("invalid expression supplied as argument to array literal")
+                exprs.append(expr)
+
+            self.clean_newlines() 
             comma = self.consume()
+
             if comma.separator == "right_curly":
                 break
             elif comma.separator != "comma":
                 raise BCError(f"expected comma after expression in array literal, found {comma.kind}", comma) 
 
-        self.consume() # byebye right_curly
+            self.clean_newlines() # allow newlines
+
+        if len(exprs) == 0:
+            raise BCError(
+                f"array literals may not have no elements, as the resulting array has no space",
+                self.peek(),
+            )
+
+        if not nested:
+            self.consume() # byebye right_curly
 
         return ArrayLiteral(exprs)
 
@@ -1008,10 +1027,7 @@ class Parser:
         exprs = []
         begin = self.peek()
 
-        if begin.kind != "keyword":
-            return None
-
-        if begin.keyword != "output":
+        if begin.keyword != "output" and begin.keyword != "print":
             return None
 
         self.consume()

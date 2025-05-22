@@ -35,7 +35,7 @@ LIBROUTINES = {
     "getchar": 0,
 }
 
-LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1, "print": 1}
+LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1}
 
 
 class Interpreter:
@@ -672,9 +672,6 @@ class Interpreter:
             case "exit":
                 [code, *_] = evargs
                 self.visit_exit(code.get_integer())
-            case "print":
-                [s, *_] = evargs
-                print(s)
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
@@ -860,7 +857,36 @@ class Interpreter:
             case "boolean":
                 return self._typecast_boolean(inner)
 
+    def visit_matrix_literal(self, expr: ArrayLiteral) -> BCValue:
+        first_matrix_elem: Expr = expr.items[0].items[0] # type: ignore
+        matrix = []
+        typ = self.visit_expr(first_matrix_elem).kind
+        inner_arr_len = len(expr.items[0].items) # type: ignore
+
+        outer_arr: list[ArrayLiteral] = expr.items # type: ignore
+        for arr_lit in outer_arr:
+            arr = []
+            if len(arr_lit.items) != inner_arr_len:
+                raise BCError("all matrix row lengths must be consistent")
+            
+            for val in arr_lit.items:
+                newval = self.visit_expr(val)
+                if newval.kind != typ:
+                    raise BCError("matrix literal may not contain items of multiple types!")
+                arr.append(newval)
+
+            matrix.append(arr)
+
+        bounds = (1, len(matrix), 1, inner_arr_len)
+        arrtyp = BCArrayType(inner=typ, is_matrix=True, matrix_bounds=None) # type: ignore
+        return BCValue(
+            kind=arrtyp, array=BCArray(typ=arrtyp, matrix=matrix, matrix_bounds=bounds)
+        )
+
     def visit_array_literal(self, expr: ArrayLiteral) -> BCValue:
+        if isinstance(expr.items[0], ArrayLiteral):
+            return self.visit_matrix_literal(expr)
+
         vals = [self.visit_expr(expr.items[0])]
         typ = vals[0].kind
 
@@ -874,7 +900,7 @@ class Interpreter:
 
         arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=None)  # type: ignore
         return BCValue(
-            kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)
+            kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)   
         )
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore

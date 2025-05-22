@@ -30,7 +30,7 @@ why
 
 there are many extra features, which are not standard to IGCSE Pseudocode.
 
-1. Lowercase keywords are supported; all keywords are case-insensitive, along with all library routines.
+1. Lowercase keywords are supported; but cases may not be mixed. All library routines are fully case-insensitive.
 2. Includes can be done with `include "file.bean"`, relative to the file.
  * Mark a declaration, constant, procedure, or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`.
  * Symbols marked as export will be present in whichever scope the include was called.
@@ -50,11 +50,9 @@ there are many extra features, which are not standard to IGCSE Pseudocode.
    OUTPUT Age
    ```
 4. There are many custom library routines:
- * `FUNCTION ASCHAR(code: INTEGER) RETURNS CHAR`
  * `FUNCTION GETCHAR() RETURNS CHAR`
  * `PROCEDURE PUTCHAR(ch: CHAR)`
  * `PROCEDURE EXIT(code: INTEGER)`
- * `PROCEDURE PRINT(txt: STRING)`
 5. Type casting is supported:
  * `Any Type -> STRING`
  * `STRING -> INTEGER` (returns `null` on failure)

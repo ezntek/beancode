@@ -44,6 +44,7 @@ Keyword = t.Literal[
     "export",
     "scope",
     "endscope",
+    "print",
 ]
 
 # lexer types
@@ -223,6 +224,7 @@ class Lexer:
             "endscope",
             "include",
             "export",
+            "print",
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
 
