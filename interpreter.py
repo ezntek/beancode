@@ -858,27 +858,29 @@ class Interpreter:
                 return self._typecast_boolean(inner)
 
     def visit_matrix_literal(self, expr: ArrayLiteral) -> BCValue:
-        first_matrix_elem: Expr = expr.items[0].items[0] # type: ignore
+        first_matrix_elem: Expr = expr.items[0].items[0]  # type: ignore
         matrix = []
         typ = self.visit_expr(first_matrix_elem).kind
-        inner_arr_len = len(expr.items[0].items) # type: ignore
+        inner_arr_len = len(expr.items[0].items)  # type: ignore
 
-        outer_arr: list[ArrayLiteral] = expr.items # type: ignore
+        outer_arr: list[ArrayLiteral] = expr.items  # type: ignore
         for arr_lit in outer_arr:
             arr = []
             if len(arr_lit.items) != inner_arr_len:
                 raise BCError("all matrix row lengths must be consistent")
-            
+
             for val in arr_lit.items:
                 newval = self.visit_expr(val)
                 if newval.kind != typ:
-                    raise BCError("matrix literal may not contain items of multiple types!")
+                    raise BCError(
+                        "matrix literal may not contain items of multiple types!"
+                    )
                 arr.append(newval)
 
             matrix.append(arr)
 
         bounds = (1, len(matrix), 1, inner_arr_len)
-        arrtyp = BCArrayType(inner=typ, is_matrix=True, matrix_bounds=None) # type: ignore
+        arrtyp = BCArrayType(inner=typ, is_matrix=True, matrix_bounds=None)  # type: ignore
         return BCValue(
             kind=arrtyp, array=BCArray(typ=arrtyp, matrix=matrix, matrix_bounds=bounds)
         )
@@ -900,7 +902,7 @@ class Interpreter:
 
         arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=None)  # type: ignore
         return BCValue(
-            kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)   
+            kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)
         )
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
@@ -1329,7 +1331,22 @@ class Interpreter:
 
             if self.variables[key].const:
                 raise BCError(f"attemped to write to constant {key}")
-            self.variables[key].val = self.visit_expr(s.value)
+
+            exp = self.visit_expr(s.value)
+            var = self.variables[key].val
+
+            if isinstance(exp.kind, BCArrayType):
+                if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.array.matrix_bounds:  # type: ignore
+                    raise BCError(f"mismatched matrix sizes in matrix assignment")
+
+                elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.array.flat_bounds:  # type: ignore
+                    raise BCError(f"mismatched array sizes in array assignment")
+            elif var.kind != exp.kind:
+                raise BCError(
+                    f"cannot assign {exp.kind} to {var.kind}"
+                )
+
+            self.variables[key].val = exp
 
     def visit_constant_stmt(self, c: ConstantStatement):
         key = c.ident.ident

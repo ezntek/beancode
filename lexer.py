@@ -100,8 +100,9 @@ _OPERATORS = {
     "mul": "*",
     "add": "+",
     "sub": "-",
-    "div": "/"
+    "div": "/",
 }
+
 
 @dataclass
 class Literal:
@@ -142,7 +143,7 @@ class Token:
         elif self.kind == "newline":
             return ("\n", "newline")
         else:
-            raise Exception() # TODO: fix
+            raise Exception()  # TODO: fix
 
     # content, kind
     def get_raw(self) -> tuple[str, TokenType]:
@@ -161,12 +162,13 @@ class Token:
         elif self.kind == "newline":
             return ("\n", "newline")
         else:
-            raise Exception() # TODO: fix
+            raise Exception()  # TODO: fix
 
     def __repr__(self) -> str:
         s, kind = self.get()
         s = s if s != "\n" else ""
         return f"token({kind}): {s}"
+
 
 class Lexer:
     file: str
@@ -489,7 +491,11 @@ class Lexer:
                 return Token("operator", self.get_pos(), operator="sub")
 
         if self.is_numeral(word):
-            return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("number", word))
+            return Token(
+                "literal",
+                (self.row, self.cur - self.bol - len(word) + 1, self.bol),
+                literal=Literal("number", word),
+            )
         elif word[0] == "-" and not word[1].isdigit():  # scuffed
             self.cur += 1
             return Token("operator", self.get_pos(), operator="sub")
@@ -505,7 +511,11 @@ class Lexer:
         if (b := self.next_boolean(word)) is not None:
             return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("boolean", b))  # type: ignore
 
-        return Token("ident", (self.row, self.cur - self.bol - len(word) + 1, self.bol), ident=word)
+        return Token(
+            "ident",
+            (self.row, self.cur - self.bol - len(word) + 1, self.bol),
+            ident=word,
+        )
 
     def tokenize(self) -> list[Token]:
         self.res = []

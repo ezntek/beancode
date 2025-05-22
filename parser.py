@@ -171,9 +171,11 @@ class Typecast(Expr):
     typ: BCPrimitiveType
     expr: Expr
 
+
 @dataclass
 class ArrayLiteral(Expr):
     items: list[Expr]
+
 
 Operator = t.Literal[
     "assign",
@@ -523,13 +525,12 @@ class Parser:
         return found_decimal
 
     def array_literal(self, nested=False) -> Expr | None:
-        lbrace = self.consume() # TODO: allow other braced literals later
+        lbrace = self.consume()  # TODO: allow other braced literals later
         if lbrace.separator != "left_curly":
             raise BCError("expected left curly brace for array or matrix literal!")
-       
+
         exprs = []
         while self.peek().separator != "right_curly":
-            # TODO: allow for matrix literals too
             self.clean_newlines()
 
             if self.peek().separator == "left_curly":
@@ -540,18 +541,23 @@ class Parser:
             else:
                 expr = self.expression()
                 if expr is None:
-                    raise BCError("invalid expression supplied as argument to array literal")
+                    raise BCError(
+                        "invalid expression supplied as argument to array literal"
+                    )
                 exprs.append(expr)
 
-            self.clean_newlines() 
+            self.clean_newlines()
             comma = self.consume()
 
             if comma.separator == "right_curly":
                 break
             elif comma.separator != "comma":
-                raise BCError(f"expected comma after expression in array literal, found {comma.kind}", comma) 
+                raise BCError(
+                    f"expected comma after expression in array literal, found {comma.kind}",
+                    comma,
+                )
 
-            self.clean_newlines() # allow newlines
+            self.clean_newlines()  # allow newlines
 
         if len(exprs) == 0:
             raise BCError(
@@ -559,8 +565,11 @@ class Parser:
                 self.peek(),
             )
 
-        if not nested:
-            self.consume() # byebye right_curly
+        # FIXME:i dont know why consuming this shit doesnt work 
+        #if not nested:
+        #    self.consume()  # byebye right_curly
+
+        print(self.peek())
 
         return ArrayLiteral(exprs)
 
@@ -1153,7 +1162,10 @@ class Parser:
 
         ident = self.consume()
         if ident.ident is None:
-            raise BCError(f"expected ident after declare stmt, found `{ident.__repr__()}`", self.peek())
+            raise BCError(
+                f"expected ident after declare stmt, found `{ident.__repr__()}`",
+                self.peek(),
+            )
 
         typ = None
         expr = None

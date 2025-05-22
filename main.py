@@ -77,7 +77,7 @@ def main():
                 with open(args.out_file) as f:
                     f.write(code)
 
-        case "none":         
+        case "none":
             if args.print:
                 print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
                 for stmt in program.stmts:
@@ -85,7 +85,7 @@ def main():
                     print()
                 print("\033[0m\033[1m----- END OF AST -----\033[0m")
             print("\033[0m")
-                    
+
 
 if __name__ == "__main__":
     main()
