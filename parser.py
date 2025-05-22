@@ -500,15 +500,15 @@ class Parser:
         return True
 
     def is_real(self, val: str) -> bool:
-        if not self.is_integer(val):
+        if self.is_integer(val):
             return False
 
         found_decimal = False
 
         for ch in val:
-            if ch == "." and found_decimal:
-                return False
-            elif ch == ".":
+            if ch == ".":
+                if found_decimal:
+                    return False
                 found_decimal = True
 
         return found_decimal
@@ -582,7 +582,7 @@ class Parser:
 
                     return Literal("integer", integer=res)
                 else:
-                    raise BCError(f"invalid numb476.9Ger literal `{val}`", c)
+                    raise BCError(f"invalid number literal `{val}`", c)
 
     def typ(self) -> BCType | None:
         adv = self.advance()

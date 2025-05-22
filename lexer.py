@@ -1,8 +1,6 @@
 import typing as t
 from dataclasses import dataclass
 
-import util
-
 Keyword = t.Literal[
     "declare",
     "constant",
@@ -88,7 +86,6 @@ _SEPARATORS = {
     "right_paren": ")",
     "colon": ":",
     "comma": ",",
-    "dot": "."
 }
 
 _OPERATORS = {
@@ -235,7 +232,7 @@ class Lexer:
         return (row, col + 1 - back, self.bol)
 
     def is_separator(self, ch: str) -> bool:
-        return ch in "{}[]():,."
+        return ch in "{}[]():,"
 
     def is_operator_start(self, ch: str) -> bool:
         return ch in "+-*/=<>"
@@ -380,7 +377,7 @@ class Lexer:
 
             while (
                 not curr_ch.isspace()
-                and not self.is_separator(curr_ch)
+                and (not self.is_separator(curr_ch))
                 and not self.is_operator_start(curr_ch)
             ):
                 self.cur += 1
