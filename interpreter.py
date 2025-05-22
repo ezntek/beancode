@@ -3,7 +3,7 @@ import sys
 from lexer import Lexer
 from parser import *
 import typing as t
-
+import importlib
 import util
 
 
@@ -1087,9 +1087,15 @@ class Interpreter:
 
             self._returned = True
 
+    def visit_include_ffi_stmt(self, stmt: IncludeStatement):
+        pass
+
     def visit_include_stmt(self, stmt: IncludeStatement):
         filename = stmt.file
         path = os.path.join(__file__, filename)
+
+        if stmt.ffi:
+            return self.visit_include_ffi_stmt(stmt)
 
         # FIXME: abstract this stuff into another file
         if not os.path.exists(path):

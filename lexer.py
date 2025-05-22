@@ -41,6 +41,7 @@ Keyword = t.Literal[
     "mod",
     # extra feachur™
     "include",
+    "include_ffi",
     "export",
     "scope",
     "endscope",
@@ -225,6 +226,7 @@ class Lexer:
             "scope",
             "endscope",
             "include",
+            "include_ffi", 
             "export",
             "print",
         ]
