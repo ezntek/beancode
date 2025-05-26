@@ -1,5 +1,6 @@
 import os
 import sys
+from bean_ffi import BCFunction, BCProcedure, Exports
 from lexer import Lexer
 from parser import *
 import typing as t
@@ -21,7 +22,7 @@ class Variable:
 
 
 BlockType = t.Literal[
-    "if", "while", "for", "repeatuntil", "function", "procedure", "hi"
+    "if", "while", "for", "repeatuntil", "function", "procedure", "scope"
 ]
 
 LIBROUTINES = {
@@ -37,11 +38,10 @@ LIBROUTINES = {
 
 LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1}
 
-
 class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]
-    functions: dict[str, ProcedureStatement | FunctionStatement]
+    functions: dict[str, ProcedureStatement | FunctionStatement | BCProcedure | BCFunction]
     calls: list[BlockType]
     func: bool
     proc: bool
@@ -673,6 +673,24 @@ class Interpreter:
                 [code, *_] = evargs
                 self.visit_exit(code.get_integer())
 
+    def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
+        if len(func.params) != len(stmt.args):
+            raise BCError(
+                # TODO: better error msg
+                f"FFI function {func.name} declares {len(func.params)} variables but only found {len(stmt.args)} in function call"
+            )
+
+        args = {}
+        for param, arg in zip(func.params, stmt.args):
+            args[param] = self.visit_expr(arg) 
+
+        retval = func.fn(args)
+    
+        if retval.is_null() or retval.is_uninitialized():
+            raise BCError(f"FFI function {func.name} returns {func.returns.upper()} but returned a null/uninitialized value.")
+
+        return retval
+
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
             return self.visit_libroutine(stmt.ident, stmt.args)
@@ -681,6 +699,12 @@ class Interpreter:
 
         if isinstance(func, ProcedureStatement):
             raise BCError("cannot call procedure without CALL!")
+
+        if isinstance(func, BCProcedure):
+            raise BCError("cannot call FFI procedure without CALL!")
+
+        if isinstance(func, BCFunction):
+            return self.visit_ffi_fncall(func, stmt)
 
         intp = self.new(func.block, func=True)
         intp.calls = self.calls
@@ -708,6 +732,19 @@ class Interpreter:
         else:
             return intp.retval  # type: ignore
 
+    def visit_ffi_call(self, proc: BCProcedure, stmt: CallStatement):
+        if len(proc.params) != len(stmt.args):
+            raise BCError(
+                # TODO: better error msg
+                f"FFI procedure {proc.name} declares {len(proc.params)} variables but only found {len(stmt.args)} in procedure call"
+            )
+
+        args = {}
+        for param, arg in zip(proc.params, stmt.args):
+            args[param] = self.visit_expr(arg) 
+
+        proc.fn(args)
+
     def visit_call(self, stmt: CallStatement):
         if (
             stmt.ident not in self.functions
@@ -721,6 +758,12 @@ class Interpreter:
             raise BCError(
                 "cannot run CALL on a function! please call the function without the CALL keyword instead."
             )
+
+        if isinstance(proc, BCFunction):
+            raise BCError("cannot run CALL on an FFI function! please call the function without the CALL keyword instaed.")
+
+        if isinstance(proc, BCProcedure):
+            return self.visit_ffi_call(proc, stmt)
 
         intp = self.new(proc.block, proc=True)
         intp.calls = self.calls
@@ -1088,7 +1131,25 @@ class Interpreter:
             self._returned = True
 
     def visit_include_ffi_stmt(self, stmt: IncludeStatement):
-        pass
+        mod: Exports = importlib.import_module(stmt.file).EXPORTS
+
+        for const in mod["constants"]:
+            self.variables[const.name] = Variable(val=const.value, const=True)
+        
+        for var in mod["variables"]:
+            val = var.value
+            if val is not None:
+                self.variables[var.name] = Variable(val=val, const=False)
+            else:
+                if var.typ is None:
+                    raise BCError("must have either typ, value or both be set in ffi export")
+                self.variables[var.name] = Variable(BCValue(kind=var.typ), const=False)
+
+        for proc in mod["procs"]:
+            self.functions[proc.name] = proc
+
+        for func in mod["funcs"]:
+            self.functions[func.name] = func
 
     def visit_include_stmt(self, stmt: IncludeStatement):
         filename = stmt.file
@@ -1097,7 +1158,7 @@ class Interpreter:
         if stmt.ffi:
             return self.visit_include_ffi_stmt(stmt)
 
-        # FIXME: abstract this stuff into another file
+        # TODO: abstract this stuff into another file
         if not os.path.exists(path):
             util.panic(f"file {filename} does not exist!")
         with open(filename, "r+") as f:
@@ -1282,7 +1343,7 @@ class Interpreter:
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         intp = self.new(stmt.block, loop=False)
-        intp.calls.append("hi")
+        intp.calls.append("scope")
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.visit_block(None)

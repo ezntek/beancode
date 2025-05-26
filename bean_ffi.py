@@ -1,4 +1,3 @@
-from _typeshed import DataclassInstance
 from dataclasses import dataclass
 from typing import Callable, TypedDict
 from bean_ast import BCArrayType, BCPrimitiveType, BCType, BCValue, Literal
@@ -25,23 +24,26 @@ def matrix(
     )
     return BCArrayType(inner, is_matrix=True, matrix_bounds=b)
 
+BCParamSpec = dict[str, BCType]
 BCArgsList = dict[str, BCValue]
 
 @dataclass
-class BCFunction:
-    args: BCArgsList
+class BCFunction: # ffi variant of a function
+    name: str
     returns: BCPrimitiveType
-    fn: Callable[[BCArgsList], BCPrimitiveType]
+    params: BCParamSpec
+    fn: Callable[[BCArgsList], BCValue]
 
 @dataclass
-class BCProcedure:
-    args: BCArgsList
-    fn: Callable[[BCArgsList],]
+class BCProcedure: # ffi variant of a function
+    name: str
+    params: BCParamSpec # spec of arg names and types
+    fn: Callable[[BCArgsList], None]
 
 @dataclass
 class BCDeclare:
     name: str
-    typ: BCType
+    typ: BCType | None = None # either typ, value or both must be set
     value: BCValue | None = None
 
 @dataclass

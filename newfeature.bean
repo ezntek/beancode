@@ -1,3 +1,0 @@
-include_ffi "demo_ffimod"
-
-output Name
