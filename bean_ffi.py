@@ -30,8 +30,8 @@ BCArgsList = dict[str, BCValue]
 @dataclass
 class BCFunction: # ffi variant of a function
     name: str
-    returns: BCPrimitiveType
     params: BCParamSpec
+    returns: BCPrimitiveType
     fn: Callable[[BCArgsList], BCValue]
 
 @dataclass

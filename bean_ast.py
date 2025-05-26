@@ -47,6 +47,15 @@ class BCArray:
         else:
             return str(self.matrix)
 
+    def get_flat(self) -> list["BCValue"]:
+        if self.flat is None:
+            raise BCError("tried to access flat array from a matrix array")
+        return self.flat
+
+    def get_matrix(self) -> list[list["BCValue"]]:
+        if self.matrix is None:
+            raise BCError("tried to access matrix array from a flat array")
+        return self.matrix
 
 BCType = BCArrayType | BCPrimitiveType
 
@@ -139,7 +148,7 @@ class BCValue:
         return self.boolean  # type: ignore
 
     def get_array(self) -> BCArray:
-        if self.kind != "array":
+        if not isinstance(self.kind, BCArrayType):
             raise BCError(f"tried to access array value from BCValue of {self.kind}")
 
         return self.array  # type: ignore
