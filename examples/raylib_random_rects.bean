@@ -1,0 +1,34 @@
+include_ffi "beanray"
+
+declare rec: array[1:4] of inteegr
+declare color: array[1:4] of integer
+
+function random_between(low: integer, high: integer) returns integer
+    return round(random() * (high - low)) + low
+endfunction
+
+procedure update
+    
+endprocedure
+
+procedure draw
+    call ClearBackground(RAYWHITE)
+    call DrawFPS(15, 15)
+    call DrawRectangleRec(rec, color)
+endprocedure
+
+procedure main
+    call InitWindow(1024, 768, "good morning")
+    call SetTargetFPS(60)
+
+    while not WindowShouldClose() do
+        call update
+        call BeginDrawing
+        call draw
+        call EndDrawing
+    end
+
+    call CloseWindow
+endprocedure
+
+call main

@@ -1,0 +1,13 @@
+DECLARE Low: INTEGER
+DECLARE High: INTEGER
+
+OUTPUT "enter a lower bound:"
+INPUT Low
+OUTPUT "enter a higher bound:"
+INPUT High
+
+FOR i <- 1 TO 10
+    DECLARE Result: INTEGER
+    Result <- integer(random() * (High - Low + 1)) + Low
+    OUTPUT "-> ", Result
+NEXT i

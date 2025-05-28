@@ -1,12 +1,13 @@
 import os
 import sys
-from bean_ffi import BCFunction, BCProcedure, Exports
-from lexer import Lexer
-from parser import *
 import typing as t
 import importlib
 import util
+import random
 
+from bean_ffi import BCFunction, BCProcedure, Exports
+from lexer import Lexer
+from parser import *
 
 @dataclass
 class Variable:
@@ -34,6 +35,7 @@ LIBROUTINES = {
     "round": 2,
     "length": 1,
     "getchar": 0,
+    "random": 0,
 }
 
 LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1}
@@ -588,6 +590,9 @@ class Interpreter:
         else:
             return BCValue("integer", integer=int(lhs % rhs))
 
+    def visit_random(self) -> BCValue:
+        return BCValue("real", real=random.random())
+
     def visit_libroutine(self, name: str, args: list[Expr]) -> BCValue:  # type: ignore
         nargs = LIBROUTINES[name.lower()]
 
@@ -652,6 +657,8 @@ class Interpreter:
                 return self.visit_round(val_r.get_real(), places.get_integer())
             case "getchar":
                 return self.visit_getchar()
+            case "random":
+                return self.visit_random()
 
     def visit_libroutine_noreturn(self, name: str, args: list[Expr]):
         nargs = LIBROUTINES_NORETURN[name.lower()]
@@ -1235,6 +1242,8 @@ class Interpreter:
 
         while self.visit_expr(cond).boolean:
             intp.visit_block(block)
+            # FIXME: barbaric aah
+            intp.variables = self.variables.copy()
             if intp._returned:
                 proc, func = self.can_return()
 
@@ -1280,6 +1289,11 @@ class Interpreter:
         if step > 0:
             while counter.get_integer() <= end.get_integer():
                 intp.visit_block(None)
+                # FIXME: actually retarded bullshit
+                # clear declared variables (barbaric)
+                c = intp.variables[stmt.counter.ident]
+                intp.variables = self.variables.copy()
+                intp.variables[stmt.counter.ident] = c
                 if intp._returned:
                     proc, func = self.can_return()
 
@@ -1296,7 +1310,11 @@ class Interpreter:
         elif step < 0:
             while counter.get_integer() >= end.get_integer():
                 intp.visit_block(None)
-
+                # FIXME: actually retarded bullshit
+                # clear declared variables (barbaric)
+                c = intp.variables[stmt.counter.ident]
+                intp.variables = self.variables.copy()
+                intp.variables[stmt.counter.ident] = c
                 if intp._returned:
                     proc, func = self.can_return()
 
@@ -1326,6 +1344,8 @@ class Interpreter:
 
         while True:
             intp.visit_block(None)
+            # FIXME: barbaric
+            intp.variables = self.variables.copy()
             if intp._returned:
                 proc, func = self.can_return()
 

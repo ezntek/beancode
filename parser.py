@@ -1252,6 +1252,8 @@ class Parser:
             self.consume()
 
     def stmt(self) -> Statement | None:
+        self.clean_newlines()
+
         assign = self.assign_stmt()
         if assign is not None:
             return assign
