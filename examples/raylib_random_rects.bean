@@ -1,32 +1,66 @@
 include_ffi "beanray"
 
-declare rec: array[1:4] of inteegr
-declare color: array[1:4] of integer
+// max rectangles present on screen at once
+constant max <- 150
+
+declare recs: array[1:max,1:7] of integer
+
+for i <- 1 to max
+    for j <- 1 to 7
+        recs[i,j] <- 0
+    next j
+next i
+
+// will be incremented first things first
+declare cur <- 0
+
+declare timer <- -1
+constant winwidth <- 1024
+constant winheight <- 768
 
 function random_between(low: integer, high: integer) returns integer
-    return round(random() * (high - low)) + low
+    return integer(random() * (high - low)) + low
 endfunction
 
 procedure update
-    
+    timer <- timer + 1
+
+    if mod(timer, 2) = 0 then
+        cur <- mod(cur, max)
+        cur <- cur + 1
+
+        recs[cur, 1] <- random_between(0, winwidth)
+        recs[cur, 2] <- random_between(0, winheight)
+        recs[cur, 3] <- random_between(100, 225)
+        recs[cur, 4] <- random_between(100, 225)
+
+        recs[cur, 5] <- random_between(0, 255)
+        recs[cur, 6] <- random_between(0, 255)
+        recs[cur, 7] <- random_between(0, 255)
+    endif
 endprocedure
 
 procedure draw
     call ClearBackground(RAYWHITE)
-    call DrawFPS(15, 15)
-    call DrawRectangleRec(rec, color)
+    call DrawFPS(20, 20)
+
+    for i <- 1 to max
+        declare rec <- { recs[i, 1], recs[i, 2], recs[i, 3], recs[i, 4] }
+        declare color <- { recs[i, 5], recs[i, 6], recs[i, 7], 255 }
+        call DrawRectangleRec(rec, color)
+    next i
 endprocedure
 
 procedure main
-    call InitWindow(1024, 768, "good morning")
-    call SetTargetFPS(60)
-
+    call InitWindow(winwidth, winheight, "good morning")
+    //call SetTargetFPS(60)
+    
     while not WindowShouldClose() do
         call update
         call BeginDrawing
         call draw
         call EndDrawing
-    end
+    endwhile
 
     call CloseWindow
 endprocedure

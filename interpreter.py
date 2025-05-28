@@ -4,6 +4,7 @@ import typing as t
 import importlib
 import util
 import random
+import time
 
 from bean_ffi import BCFunction, BCProcedure, Exports
 from lexer import Lexer
@@ -36,6 +37,7 @@ LIBROUTINES = {
     "length": 1,
     "getchar": 0,
     "random": 0,
+    "sleep": 1,
 }
 
 LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1}
@@ -592,6 +594,9 @@ class Interpreter:
 
     def visit_random(self) -> BCValue:
         return BCValue("real", real=random.random())
+    
+    def visit_sleep(self, duration: float):
+        time.sleep(duration)
 
     def visit_libroutine(self, name: str, args: list[Expr]) -> BCValue:  # type: ignore
         nargs = LIBROUTINES[name.lower()]
@@ -679,6 +684,9 @@ class Interpreter:
             case "exit":
                 [code, *_] = evargs
                 self.visit_exit(code.get_integer())
+            case "sleep":
+                [duration, *_] = evargs
+                self.visit_sleep(duration.get_real())
 
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):
