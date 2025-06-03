@@ -20,3 +20,21 @@ pub fn fatal(location: []const u8, comptime msg: []const u8, fmtargs: anytype) n
 
     std.process.exit(1);
 }
+
+pub fn isUppercase(s: []const u8) bool {
+    for (s) |c| {
+        if (std.ascii.isLower(c))
+            return false;
+    }
+
+    return true;
+}
+
+pub fn isLowercase(s: []const u8) bool {
+    for (s) |c| {
+        if (std.ascii.isUpper(c))
+            return false;
+    }
+
+    return true;
+}

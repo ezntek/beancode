@@ -79,26 +79,28 @@ pub const Literal = union(LiteralKind) {
 
 pub const TokenKind = enum {
     keyword,
-    identifier,
+    ident,
     literal,
     operator,
     separator,
     _type,
+    newline,
 };
 
 // All strings are owned slices on the heap
 pub const Token = union(TokenKind) {
     keyword: Keyword,
-    identifier: []const u8,
+    ident: []const u8,
     literal: Literal,
     operator: Operator,
     separator: Separator,
     // undescore to avoid clash with zig compiler
     _type: Type,
+    newline,
 
     pub fn printToken(self: Token) void {
         switch (self) {
-            .identifier => |ident| std.debug.print("token(ident): {s}\n", .{ident}),
+            .ident => |ident| std.debug.print("token(ident): {s}\n", .{ident}),
             .keyword => |kw| std.debug.print("token(keyword): {any}\n", .{kw}),
             .literal => |lit| switch (lit) {
                 .string => |str| std.debug.print("token(literal): \"{s}\"\n", .{str}),
@@ -109,27 +111,7 @@ pub const Token = union(TokenKind) {
             .operator => |op| std.debug.print("token(operator): {any}\n", .{op}),
             .separator => |sep| std.debug.print("token(separator): {any}\n", .{sep}),
             ._type => |typ| std.debug.print("token(type): {any}\n", .{typ}),
-        }
-    }
-};
-
-pub const Tokens = struct {
-    alloc: std.mem.Allocator,
-    array_list: std.ArrayList(Token),
-
-    pub fn init(alloc: std.mem.Allocator) !Tokens {
-        return Tokens{
-            .alloc = alloc,
-            .array_list = std.ArrayList(Token).init(alloc),
-        };
-    }
-
-    pub fn deinit(self: *Tokens) void {
-        for (self.array_list.items) |token| {
-            switch (token) {
-                .keyword, .identifier, .literal => |kw| self.alloc.free(kw),
-                else => continue,
-            }
+            .newline => std.debug.print("token(newline)\n", .{}),
         }
     }
 };
@@ -142,7 +124,7 @@ pub const Lexer = struct {
     row: u32, // row
     keywords: std.StringHashMap(Keyword),
     types: std.StringHashMap(Type),
-
+    res: std.ArrayList(Token),
     pub fn init(alloc: std.mem.Allocator, file: []const u8) Lexer {
         var keywords = std.StringHashMap(Keyword).init(alloc);
 
@@ -198,18 +180,21 @@ pub const Lexer = struct {
             .row = 1,
             .keywords = keywords,
             .types = types,
+            .res = std.ArrayList(Token).init(alloc),
         };
     }
 
     pub fn deinit(self: *Lexer) void {
         self.keywords.deinit();
         self.types.deinit();
+        // we do not deinit the res
     }
 
     const isWhitespace = std.ascii.isWhitespace;
 
     fn isSeparator(ch: u8) bool {
-        return std.mem.count(u8, "{}[]():,.", &[_]u8{ch}) > 0;
+        // we don't need . because its not in the language
+        return std.mem.count(u8, "{}[]():,", &[_]u8{ch}) > 0;
     }
 
     fn isOperatorStart(ch: u8) bool {
@@ -217,22 +202,41 @@ pub const Lexer = struct {
     }
 
     fn isNumeral(potentialNum: []const u8) bool {
-        for (potentialNum) |ch| {
+        if (potentialNum.len == 1 and potentialNum[0] == '-') {
+            return false;
+        }
+
+        var slc = potentialNum;
+        if (potentialNum[0] == '-') {
+            if (!std.ascii.isDigit(potentialNum[1])) {
+                return false;
+            }
+            slc = potentialNum[1..potentialNum.len];
+        }
+
+        for (slc) |ch| {
             if (!std.ascii.isDigit(ch) and ch != '_' and ch != '.') {
                 return false;
             }
         }
+
         return true;
     }
 
+    fn isCaseConsistent(s: []const u8) bool {
+        return util.isLowercase(s) or util.isUppercase(s);
+    }
+
     fn isKeyword(self: *Lexer, word: []const u8) bool {
+        if (!isCaseConsistent(word)) return false;
         const haystack = self.keywords.keyIterator().items;
-        std.mem.count([]const u8, haystack, word);
+        return std.mem.count([]const u8, haystack, word) > 0;
     }
 
     fn isType(self: *Lexer, word: []const u8) bool {
+        if (!isCaseConsistent(word)) return false;
         const haystack = self.types.keyIterator().items;
-        std.mem.count([]const u8, haystack, word);
+        return std.mem.count([]const u8, haystack, word) > 0;
     }
 
     fn trimLeft(self: *Lexer) void {
@@ -240,14 +244,8 @@ pub const Lexer = struct {
             return;
         }
 
-        while (self.cur < self.file.len and std.ascii.isWhitespace(self.file[self.cur])) {
-            if (self.file[self.cur] == '\n') {
-                self.row += 1;
-                self.bol = self.cur + 1;
-            }
-
+        while (self.cur < self.file.len and std.ascii.isWhitespace(self.file[self.cur]) and self.file[self.cur] != '\n')
             self.cur += 1;
-        }
 
         self.trimComment();
     }
@@ -262,14 +260,15 @@ pub const Lexer = struct {
             while (self.cur < self.file.len and self.file[self.cur] != '\n') {
                 self.cur += 1;
             }
+            self.cur += 1; // get rid of newline
 
-            self.trimLeft();
+            return self.trimLeft();
         }
 
         if (std.mem.eql(u8, self.file[self.cur .. self.cur + 2], "/*")) {
             self.cur += 2;
             // account for 2 characters
-            while (self.cur + 1 < self.file.len and !std.mem.eql(u8, self.file[self.cur .. self.cur + 2], "*/")) {
+            while (self.cur < self.file.len and !std.mem.eql(u8, self.file[self.cur .. self.cur + 2], "*/")) {
                 if (self.file[self.cur] == '\n') {
                     self.row += 1;
                     self.bol = self.cur + 1;
@@ -279,7 +278,7 @@ pub const Lexer = struct {
             // when we find */, we have to skip 2 past to avoid parsing it
             self.cur += 2;
 
-            self.trimLeft();
+            return self.trimLeft();
         }
     }
 
@@ -302,8 +301,7 @@ pub const Lexer = struct {
             }
         }
 
-        var operator: Operator = undefined;
-        operator = switch (self.file[self.cur]) {
+        const operator: Operator = switch (self.file[self.cur]) {
             '>' => Operator.greater_than,
             '<' => Operator.less_than,
             '=' => Operator.equal,
@@ -315,8 +313,12 @@ pub const Lexer = struct {
                 return null;
             },
         };
-        self.cur += 1;
 
+        // operator is not null
+        if (operator == .sub and std.ascii.isDigit(self.file[self.cur + 1]))
+            return null; // force rescanning as a word
+
+        self.cur += 1;
         return Token{ .operator = operator };
     }
 
@@ -330,7 +332,6 @@ pub const Lexer = struct {
             ')' => Separator.right_paren,
             ':' => Separator.colon,
             ',' => Separator.comma,
-            '.' => Separator.dot,
             else => {
                 return null;
             },
@@ -339,6 +340,7 @@ pub const Lexer = struct {
         return Token{ .separator = sym };
     }
 
+    // this is an absoluteCinema™ function. do not question why this works. ths is absolute sorcery from december 2024. bruh.
     fn nextWord(self: *Lexer) []const u8 {
         const begin = self.cur;
         var currChar = self.file[self.cur];
@@ -348,17 +350,41 @@ pub const Lexer = struct {
 
         // TODO: cleaner stuff with comptime?
         if (!stringOrCharLiteral) {
-            // we increment cur by 1 in the loop so account for that (see last component of condition)
-            while (!isWhitespace(currChar) and !isSeparator(currChar) and !isOperatorStart(currChar)) {
-                self.cur += 1;
+            var shouldSliceNow = false;
+            if (currChar == '-') {
+                // i love negative number
+                self.cur += 1; // skip past -
                 end += 1;
-
-                // post condition this shit cos its fucking sorcery
-                if (self.cur >= self.file.len) {
-                    break;
-                }
-
                 currChar = self.file[self.cur];
+
+                // sorcery from the python era
+                const prevToken = self.res.getLastOrNull();
+                if (prevToken) |tok| {
+                    shouldSliceNow = switch (tok) {
+                        .ident, .literal => true,
+                        .separator => |sep| switch (sep) {
+                            .right_bracket, .right_paren, .right_curly => true,
+                            else => false,
+                        },
+                        else => false,
+                    };
+                }
+            }
+
+            // we increment cur by 1 in the loop so account for that (see last component of condition)
+            if (!shouldSliceNow) {
+                while (!isWhitespace(currChar) and !isSeparator(currChar) and !isOperatorStart(currChar)) {
+                    // scan the word
+                    self.cur += 1;
+                    end += 1;
+
+                    // post condition this shit cos its fucking sorcery
+                    if (self.cur >= self.file.len) {
+                        break;
+                    }
+
+                    currChar = self.file[self.cur];
+                }
             }
         } else {
             // skip past the initial "
@@ -404,8 +430,9 @@ pub const Lexer = struct {
     }
 
     fn nextStringOrCharLiteral(self: *Lexer, word: []const u8) ?Token {
+        const slc = word[1 .. word.len - 1];
+        //const pos = ()
         if (word[0] == '"' and word[word.len - 1] == '"') {
-            const slc = word[1 .. word.len - 1];
             return Token{ .literal = Literal{ .string = slc } };
         }
 
@@ -423,9 +450,13 @@ pub const Lexer = struct {
     }
 
     fn nextBoolean(word: []const u8) ?bool {
-        if (std.mem.eql(u8, "TRUE", word)) {
+        if (!isCaseConsistent(word)) {
+            return null;
+        }
+
+        if (std.ascii.eqlIgnoreCase("TRUE", word)) {
             return true;
-        } else if (std.mem.eql(u8, "FALSE", word)) {
+        } else if (std.ascii.eqlIgnoreCase("FALSE", word)) {
             return false;
         } else return null;
     }
@@ -438,13 +469,42 @@ pub const Lexer = struct {
             return null;
         }
 
+        const currChar = self.file[self.cur];
+        if (currChar == '\n') {
+            self.row += 1;
+            self.bol = self.cur + 1;
+            self.cur += 1;
+            return .newline;
+        }
+
         if (self.nextOperator()) |tok| return tok;
         if (self.nextSeparator()) |tok| return tok;
 
         const word = self.nextWord();
 
+        if (self.res.items.len != 0) {
+            // kill false positive case ?
+            const last = self.res.getLast();
+            const shouldBeSub = switch (last) {
+                .ident, .literal => true,
+                .separator => |sep| switch (sep) {
+                    .right_bracket, .right_paren, .right_curly => true,
+                    else => false,
+                },
+                else => false,
+            };
+            if (word.len == 1 and shouldBeSub and word[0] == '-') {
+                return Token{ .operator = .sub };
+            }
+        }
+
         if (isNumeral(word)) {
             return Token{ .literal = Literal{ .number = word } };
+        } else if (word[0] == '-' and !std.ascii.isDigit(word[1])) {
+            // why is this even here :skull:
+            // scuffed but even more scuffed cos i rewrote tis from the python version
+            self.cur += 1;
+            return Token{ .operator = .sub };
         }
 
         if (self.nextKeyword(word)) |tok| return tok;
@@ -456,19 +516,18 @@ pub const Lexer = struct {
         }
 
         // return ident by default
-        return Token{ .identifier = word };
+        return Token{ .ident = word };
     }
 
     pub fn tokenize(self: *Lexer) !std.ArrayList(Token) {
-        var res = std.ArrayList(Token).init(self.alloc);
-
+        // i hate putting res in self but oh well python sorcery
         while (self.cur < self.file.len) {
             if (self.nextToken()) |tok| {
-                try res.append(tok);
+                try self.res.append(tok);
                 tok.printToken();
             } else break;
         }
 
-        return res;
+        return self.res;
     }
 };
