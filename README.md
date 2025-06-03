@@ -2,7 +2,7 @@
 
 ## information
 
-***if you want the working python version, head over to the `py` branch. this is the cursed C version.***
+***if you want the working python version, head over to the `py` branch. this is the cursed zig version.***
 
 ## standard
 
