@@ -2,35 +2,30 @@
  * Class Totalling Program
  *
  * Pulled from the CSRGv2
+ * Adapted to Beancode2
  */
 
-DECLARE StudentNames: ARRAY[1:5] OF STRING
-DECLARE StudentAttendance: ARRAY[1:5] OF BOOLEAN
-DECLARE CurrentAttendance: STRING
+var student_names = { "John", "James", "Jimmy", "Jack", "Joseph" }
+var student_attendance: [5]bool
+var current_attendance: string
 
-StudentNames[1] <- "John"
-StudentNames[2] <- "James"
-StudentNames[3] <- "Jimmy"
-StudentNames[4] <- "Jack"
-StudentNames[5] <- "Joseph"
+for counter = 1 to 5
+    print "is ", student_names[counter], "here?"
+    read current_attendance
 
-FOR Counter <- 1 TO 5
-    OUTPUT "Is ", StudentNames[Counter], " Here?"
-    INPUT CurrentAttendance
+    if current_attendance == "yes" or current_attendance == "here" then
+        student_attendance[counter] = true
+    else
+        student_attendance[counter] = false
+    end
+end
 
-    IF CurrentAttendance = "yes" OR CurrentAttendance = "here"
-        THEN
-            StudentAttendance[Counter] <- TRUE
-    ELSE
-        StudentAttendance[Counter] <- FALSE
-    ENDIF
-NEXT Counter
+for counter = 1 to 5
+    if student_attendance[counter] then
+        print student_names[counter], "is here"
+    else
+        print student_names[counter], "is not here"
+    end
+end
 
-FOR Counter <- 1 TO 5
-    IF StudentAttendance[Counter]
-        THEN
-            OUTPUT StudentNames[Counter], " is Here"
-    ELSE
-        OUTPUT StudentNames[Counter], " is not Here"
-    ENDIF
-NEXT Counter
+

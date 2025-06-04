@@ -1,9 +1,9 @@
-function factorial(num: integer) returns integer
+fn factorial(num: int): int
     if num <= 1 then
         return 1
     else
         return num * factorial( num - 1 )
-    endif
-endfunction
+    end
+end
 
-output factorial(5)
+print factorial(5)

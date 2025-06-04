@@ -17,50 +17,36 @@ pub const Separator = enum {
 
 // all prefixed with kw_ to avoid clashes
 pub const Keyword = enum {
-    kw_declare,
-    kw_constant,
-    kw_output,
-    kw_input,
+    kw_var,
+    kw_const,
+    kw_print,
+    kw_read,
     kw_and,
     kw_or,
     kw_not,
     kw_if,
     kw_then,
     kw_else,
-    kw_endif,
-    kw_case,
-    kw_of,
+    kw_end,
+    kw_switch,
     kw_otherwise,
-    kw_endcase,
     kw_while,
     kw_do,
-    kw_endwhile,
     kw_repeat,
     kw_until,
     kw_for,
     kw_to,
-    kw_next,
-    kw_procedure,
-    kw_endprocedure,
-    kw_call,
-    kw_function,
-    kw_returns,
-    kw_endfunction,
-    kw_openfile,
-    kw_readfile,
-    kw_writefile,
-    kw_closefile,
-    kw_div,
-    kw_mod,
+    kw_fn,
+    kw_break,
+    kw_continue,
 };
 
 pub const Type = enum {
-    integer,
-    real,
-    boolean,
+    int,
+    float,
+    bool,
     string,
     char,
-    array,
 };
 
 pub const LiteralKind = enum {
@@ -128,49 +114,36 @@ pub const Lexer = struct {
     pub fn init(alloc: std.mem.Allocator, file: []const u8) Lexer {
         var keywords = std.StringHashMap(Keyword).init(alloc);
 
-        keywords.put("DECLARE", Keyword.kw_declare) catch |err| util.panic(err);
-        keywords.put("CONSTANT", Keyword.kw_constant) catch |err| util.panic(err);
-        keywords.put("OUTPUT", Keyword.kw_output) catch |err| util.panic(err);
-        keywords.put("INPUT", Keyword.kw_input) catch |err| util.panic(err);
+        keywords.put("VAR", Keyword.kw_var) catch |err| util.panic(err);
+        keywords.put("CONST", Keyword.kw_const) catch |err| util.panic(err);
+        keywords.put("PRINT", Keyword.kw_print) catch |err| util.panic(err);
+        keywords.put("READ", Keyword.kw_read) catch |err| util.panic(err);
         keywords.put("AND", Keyword.kw_and) catch |err| util.panic(err);
         keywords.put("OR", Keyword.kw_or) catch |err| util.panic(err);
         keywords.put("NOT", Keyword.kw_not) catch |err| util.panic(err);
         keywords.put("IF", Keyword.kw_if) catch |err| util.panic(err);
         keywords.put("THEN", Keyword.kw_then) catch |err| util.panic(err);
-        keywords.put("ENDIF", Keyword.kw_endif) catch |err| util.panic(err);
-        keywords.put("CASE", Keyword.kw_case) catch |err| util.panic(err);
-        keywords.put("OF", Keyword.kw_of) catch |err| util.panic(err);
-        keywords.put("ENDCASE", Keyword.kw_endcase) catch |err| util.panic(err);
+        keywords.put("ELSE", Keyword.kw_else) catch |err| util.panic(err);
+        keywords.put("END", Keyword.kw_end) catch |err| util.panic(err);
+        keywords.put("SWITCH", Keyword.kw_switch) catch |err| util.panic(err);
         keywords.put("WHILE", Keyword.kw_while) catch |err| util.panic(err);
         keywords.put("DO", Keyword.kw_do) catch |err| util.panic(err);
-        keywords.put("ENDWHILE", Keyword.kw_endwhile) catch |err| util.panic(err);
         keywords.put("REPEAT", Keyword.kw_repeat) catch |err| util.panic(err);
         keywords.put("UNTIL", Keyword.kw_until) catch |err| util.panic(err);
         keywords.put("FOR", Keyword.kw_for) catch |err| util.panic(err);
         keywords.put("TO", Keyword.kw_to) catch |err| util.panic(err);
-        keywords.put("NEXT", Keyword.kw_next) catch |err| util.panic(err);
-        keywords.put("PROCEDURE", Keyword.kw_procedure) catch |err| util.panic(err);
-        keywords.put("CALL", Keyword.kw_call) catch |err| util.panic(err);
-        keywords.put("ENDPROCEDURE", Keyword.kw_endprocedure) catch |err| util.panic(err);
-        keywords.put("CASE", Keyword.kw_case) catch |err| util.panic(err);
-        keywords.put("FUNCTION", Keyword.kw_function) catch |err| util.panic(err);
-        keywords.put("RETURNS", Keyword.kw_returns) catch |err| util.panic(err);
-        keywords.put("ENDFUNCTION", Keyword.kw_endfunction) catch |err| util.panic(err);
-        keywords.put("OPENFILE", Keyword.kw_openfile) catch |err| util.panic(err);
-        keywords.put("CLOSEFILE", Keyword.kw_closefile) catch |err| util.panic(err);
-        keywords.put("WRITEFILE", Keyword.kw_writefile) catch |err| util.panic(err);
-        keywords.put("READFILE", Keyword.kw_readfile) catch |err| util.panic(err);
-        keywords.put("DIV", Keyword.kw_div) catch |err| util.panic(err);
-        keywords.put("MOD", Keyword.kw_mod) catch |err| util.panic(err);
+        keywords.put("CASE", Keyword.kw_switch) catch |err| util.panic(err);
+        keywords.put("FN", Keyword.kw_fn) catch |err| util.panic(err);
+        keywords.put("BREAK", Keyword.kw_break) catch |err| util.panic(err);
+        keywords.put("CONTINUE", Keyword.kw_continue) catch |err| util.panic(err);
 
         var types = std.StringHashMap(Type).init(alloc);
 
-        types.put("INTEGER", Type.integer) catch |err| util.panic(err);
-        types.put("REAL", Type.real) catch |err| util.panic(err);
+        types.put("INT", Type.int) catch |err| util.panic(err);
+        types.put("FLOAT", Type.float) catch |err| util.panic(err);
         types.put("STRING", Type.string) catch |err| util.panic(err);
         types.put("CHAR", Type.char) catch |err| util.panic(err);
-        types.put("BOOLEAN", Type.boolean) catch |err| util.panic(err);
-        types.put("ARRAY", Type.array) catch |err| util.panic(err);
+        types.put("BOOLEAN", Type.bool) catch |err| util.panic(err);
 
         return Lexer{
             .alloc = alloc,
@@ -286,16 +259,16 @@ pub const Lexer = struct {
         if (self.cur + 2 < self.file.len) {
             const curPair = self.file[self.cur .. self.cur + 2];
 
-            if (std.mem.eql(u8, curPair, "<-")) {
+            if (std.mem.eql(u8, curPair, "==")) {
                 self.cur += 2;
-                return Token{ .operator = Operator.assign };
+                return Token{ .operator = Operator.equal };
             } else if (std.mem.eql(u8, curPair, "<=")) {
                 self.cur += 2;
                 return Token{ .operator = Operator.less_than_or_equal };
             } else if (std.mem.eql(u8, curPair, ">=")) {
                 self.cur += 2;
                 return Token{ .operator = Operator.greater_than_or_equal };
-            } else if (std.mem.eql(u8, curPair, "<>")) {
+            } else if (std.mem.eql(u8, curPair, "!=")) {
                 self.cur += 2;
                 return Token{ .operator = Operator.not_equal };
             }
@@ -304,7 +277,7 @@ pub const Lexer = struct {
         const operator: Operator = switch (self.file[self.cur]) {
             '>' => Operator.greater_than,
             '<' => Operator.less_than,
-            '=' => Operator.equal,
+            '=' => Operator.assign,
             '*' => Operator.mul,
             '/' => Operator.div,
             '+' => Operator.add,
@@ -414,7 +387,12 @@ pub const Lexer = struct {
     }
 
     fn nextKeyword(self: *Lexer, word: []const u8) ?Token {
-        if (self.keywords.get(word)) |kw| {
+        if (!isCaseConsistent(word)) return null;
+
+        const w_upper = std.ascii.allocUpperString(self.alloc, word) catch |err| util.panic(err);
+        defer self.alloc.free(w_upper);
+
+        if (self.keywords.get(w_upper)) |kw| {
             return Token{ .keyword = kw };
         }
 
@@ -422,7 +400,12 @@ pub const Lexer = struct {
     }
 
     fn nextType(self: *Lexer, word: []const u8) ?Token {
-        if (self.types.get(word)) |typ| {
+        if (!isCaseConsistent(word)) return null;
+
+        const w_upper = std.ascii.allocUpperString(self.alloc, word) catch |err| util.panic(err);
+        defer self.alloc.free(w_upper);
+
+        if (self.types.get(w_upper)) |typ| {
             return Token{ ._type = typ };
         }
 
@@ -524,7 +507,6 @@ pub const Lexer = struct {
         while (self.cur < self.file.len) {
             if (self.nextToken()) |tok| {
                 try self.res.append(tok);
-                tok.printToken();
             } else break;
         }
 
