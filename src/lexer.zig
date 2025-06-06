@@ -1,19 +1,6 @@
 const std = @import("std");
 const util = @import("./util.zig");
-
-pub const Operator = enum { assign, equal, less_than, greater_than, less_than_or_equal, greater_than_or_equal, not_equal, mul, div, add, sub };
-
-pub const Separator = enum {
-    left_paren,
-    right_paren,
-    left_bracket,
-    right_bracket,
-    left_curly,
-    right_curly,
-    colon,
-    comma,
-    dot,
-};
+const ast = @import("./ast_types.zig");
 
 // all prefixed with kw_ to avoid clashes
 pub const Keyword = enum {
@@ -78,8 +65,8 @@ pub const Token = union(TokenKind) {
     keyword: Keyword,
     ident: []const u8,
     literal: Literal,
-    operator: Operator,
-    separator: Separator,
+    operator: ast.Operator,
+    separator: ast.Separator,
     // undescore to avoid clash with zig compiler
     _type: Type,
     newline,
@@ -111,6 +98,7 @@ pub const Lexer = struct {
     keywords: std.StringHashMap(Keyword),
     types: std.StringHashMap(Type),
     res: std.ArrayList(Token),
+
     pub fn init(alloc: std.mem.Allocator, file: []const u8) Lexer {
         var keywords = std.StringHashMap(Keyword).init(alloc);
 
@@ -200,13 +188,13 @@ pub const Lexer = struct {
         return util.isLowercase(s) or util.isUppercase(s);
     }
 
-    fn isKeyword(self: *Lexer, word: []const u8) bool {
+    fn isKeyword(self: *const Lexer, word: []const u8) bool {
         if (!isCaseConsistent(word)) return false;
         const haystack = self.keywords.keyIterator().items;
         return std.mem.count([]const u8, haystack, word) > 0;
     }
 
-    fn isType(self: *Lexer, word: []const u8) bool {
+    fn isType(self: *const Lexer, word: []const u8) bool {
         if (!isCaseConsistent(word)) return false;
         const haystack = self.types.keyIterator().items;
         return std.mem.count([]const u8, haystack, word) > 0;
@@ -261,27 +249,27 @@ pub const Lexer = struct {
 
             if (std.mem.eql(u8, curPair, "==")) {
                 self.cur += 2;
-                return Token{ .operator = Operator.equal };
+                return Token{ .operator = .equal };
             } else if (std.mem.eql(u8, curPair, "<=")) {
                 self.cur += 2;
-                return Token{ .operator = Operator.less_than_or_equal };
+                return Token{ .operator = .less_than_or_equal };
             } else if (std.mem.eql(u8, curPair, ">=")) {
                 self.cur += 2;
-                return Token{ .operator = Operator.greater_than_or_equal };
+                return Token{ .operator = .greater_than_or_equal };
             } else if (std.mem.eql(u8, curPair, "!=")) {
                 self.cur += 2;
-                return Token{ .operator = Operator.not_equal };
+                return Token{ .operator = .not_equal };
             }
         }
 
-        const operator: Operator = switch (self.file[self.cur]) {
-            '>' => Operator.greater_than,
-            '<' => Operator.less_than,
-            '=' => Operator.assign,
-            '*' => Operator.mul,
-            '/' => Operator.div,
-            '+' => Operator.add,
-            '-' => Operator.sub,
+        const operator = switch (self.file[self.cur]) {
+            '>' => .greater_than,
+            '<' => .less_than,
+            '=' => .assign,
+            '*' => .mul,
+            '/' => .div,
+            '+' => .add,
+            '-' => .sub,
             else => {
                 return null;
             },
@@ -297,14 +285,14 @@ pub const Lexer = struct {
 
     pub fn nextSeparator(self: *Lexer) ?Token {
         const sym = switch (self.file[self.cur]) {
-            '{' => Separator.left_curly,
-            '}' => Separator.right_curly,
-            '[' => Separator.left_bracket,
-            ']' => Separator.right_bracket,
-            '(' => Separator.left_paren,
-            ')' => Separator.right_paren,
-            ':' => Separator.colon,
-            ',' => Separator.comma,
+            '{' => .left_curly,
+            '}' => .right_curly,
+            '[' => .left_bracket,
+            ']' => .right_bracket,
+            '(' => .left_paren,
+            ')' => .right_paren,
+            ':' => .colon,
+            ',' => .comma,
             else => {
                 return null;
             },
