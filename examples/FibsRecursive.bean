@@ -1,0 +1,10 @@
+FUNCTION Fib(Num: INTEGER) RETURNS INTEGER
+    IF Num < 2
+      THEN
+        RETURN Num
+      ELSE
+        RETURN Fib(Num - 1) + Fib(Num - 2)
+    ENDIF
+ENDFUNCTION
+
+OUTPUT Fib(40)

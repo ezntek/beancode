@@ -1,7 +1,7 @@
 include_ffi "beanray"
 
 // max rectangles present on screen at once
-constant max <- 150
+constant max <- 100
 
 declare recs: array[1:max,1:7] of integer
 
@@ -42,13 +42,19 @@ endprocedure
 
 procedure draw
     call ClearBackground(RAYWHITE)
-    call DrawFPS(20, 20)
 
-    for i <- 1 to max
+    for i <- 1 to cur
         declare rec <- { recs[i, 1], recs[i, 2], recs[i, 3], recs[i, 4] }
         declare color <- { recs[i, 5], recs[i, 6], recs[i, 7], 255 }
         call DrawRectangleRec(rec, color)
     next i
+
+    call DrawText("Pseudocode Random Rectangles", 20, 20, 20, GRAY)
+    call DrawFPS(20, 50)
+    
+    declare txt <- "number of rects: " + string(cur)
+
+    call DrawText(txt, 20, 80, 20, RED)
 endprocedure
 
 procedure main
