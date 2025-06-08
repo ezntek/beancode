@@ -19,15 +19,7 @@ pub const AstPrinter = struct {
     }
 
     pub fn visitPrimitiveType(self: *const Self, typ: *const ast.BCPrimitiveType) void {
-        var s = undefined;
-        switch (typ.*) {
-            .int => s = "int",
-            .float => s = "float",
-            .char => s = "char",
-            .string => s = "string",
-            .bool => s = "bool",
-        }
-        self.write(s);
+        self.write(@tagName(typ));
     }
 
     pub fn visitValue(self: *const Self, val: *const ast.BCValue) void {
@@ -73,19 +65,32 @@ pub const AstPrinter = struct {
         self.visitExpr(tc.expr);
     }
 
-    pub fn visitArrayLiteral(self: *const Self, exprs: []const ast.Expr) void {
-        _ = self;
-        _ = exprs;
+    pub fn visitArrayLiteral(self: *const Self, lit: *const ast.BCArrayLiteral) void {
+        self.write("{ ");
+        for (lit.items, 0..) |item, i| {
+            self.visitExpr(item);
+            if (i < lit.items.len - 1) {
+                self.write(", ");
+            }
+        }
+        self.write(" }");
     }
 
     pub fn visitBinaryExpr(self: *const Self, bin: *const ast.BinaryExpr) void {
-        _ = self;
-        _ = bin;
+        self.write(@tagName(bin.op));
+        self.write("(");
+        self.visitExpr(bin.lhs);
+        self.write(", ");
+        self.visitExpr(bin.rhs);
+        self.write(")");
     }
 
     pub fn visitArrayIndex(self: *const Self, index: *const ast.ArrayIndex) void {
-        _ = self;
-        _ = index;
+        self.write("arrayindex(");
+        self.visitIdent(index.ident);
+        self.write(", ");
+        self.write(index.idx);
+        self.write(")");
     }
 
     pub fn visitExpr(self: *const Self, expr: ast.Expr) void {

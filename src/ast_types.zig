@@ -35,7 +35,7 @@ pub const BCType = union(enum) {
 
 // array literal
 pub const BCArrayLiteral = struct {
-    items: []BCValue,
+    items: []Expr,
     len: Expr,
 };
 
@@ -60,7 +60,7 @@ pub const BinaryExpr = struct {
 
 pub const ArrayIndex = struct {
     ident: []const u8, // owned slice
-    idx: i32,
+    idx: u32,
 };
 
 pub const Expr = union(enum) {
