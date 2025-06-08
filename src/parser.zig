@@ -2,7 +2,7 @@ const std = @import("std");
 const lexer = @import("lexer.zig");
 const ast = @import("ast_types.zig");
 
-const Parser = struct {
+pub const Parser = struct {
     alloc: std.mem.Allocator,
     tokens: []lexer.Token,
     cur: u32,

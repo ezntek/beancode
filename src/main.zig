@@ -2,6 +2,9 @@ const std = @import("std");
 const util = @import("./util.zig");
 const lexer = @import("./lexer.zig");
 
+const ast = @import("./ast_types.zig");
+const ast_printer = @import("./ast_printer.zig");
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
@@ -25,6 +28,10 @@ pub fn main() !void {
     for (tokens.items) |item| {
         item.printToken();
     }
+
+    // TODO: get rid of this. forces compiler to check errs
+    const printer = ast_printer.AstPrinter.init(alloc, std.io.getStdErr().writer().any());
+    printer.visitProgram(ast.Program{ .stmts = &.{} });
 
     defer tokens.deinit();
 }

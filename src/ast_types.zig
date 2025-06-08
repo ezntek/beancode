@@ -15,43 +15,40 @@ pub const Separator = enum {
     dot,
 };
 
-pub const BCType = enum {
-    v_int,
-    v_float,
-    v_char,
-    v_string,
-    v_bool,
-    v_array,
+pub const BCPrimitiveType = enum {
+    int,
+    float,
+    char,
+    string,
+    bool,
 };
 
-pub const BCArray = struct {
+pub const BCArrayType = struct {
+    type: *const BCType, // allow for nested arrays
+    len: u32,
+};
+
+pub const BCType = union(enum) {
+    primitive: BCPrimitiveType,
+    v_array: BCArrayType,
+};
+
+// array literal
+pub const BCArrayLiteral = struct {
     items: []BCValue,
     len: Expr,
 };
 
-pub const BCValue = union(BCType) {
-    v_int: i32,
-    v_float: f64,
-    v_char: u8,
-    v_string: []const u8, // owned slice
-    v_bool: bool,
-    v_array: BCArray,
-};
-
-pub const ExprKind = enum {
-    e_literal,
-    e_negration,
-    e_not,
-    e_grouping,
-    e_ident,
-    e_typecast,
-    e_array_literal,
-    e_binary,
-    e_array_index,
+pub const BCValue = union(BCPrimitiveType) {
+    int: i32,
+    float: f64,
+    char: u8,
+    string: []const u8, // owned slice
+    bool: bool,
 };
 
 pub const Typecast = struct {
-    typ: BCType,
+    typ: BCPrimitiveType,
     expr: Expr,
 };
 
@@ -66,29 +63,20 @@ pub const ArrayIndex = struct {
     idx: i32,
 };
 
-pub const Expr = union(ExprKind) {
-    e_literal: Expr,
-    e_not: Expr,
-    e_grouping: Expr,
-    e_ident: []const u8, // owned slice
-    e_typecast: Typecast,
-    e_array_literal: []Expr,
-    e_binary: BinaryExpr,
-    e_array_index: ArrayIndex,
-};
-
-pub const StatementKind = enum {
-    s_print,
-    s_read,
-    s_const,
-    s_var,
-    s_assign,
-
-    s_program,
+pub const Expr = union(enum) {
+    e_literal: *const BCValue,
+    e_negation: *const Expr,
+    e_not: *const Expr,
+    e_grouping: *const Expr,
+    e_ident: []const u8,
+    e_typecast: *const Typecast,
+    e_array_literal: *const BCArrayLiteral,
+    e_binary: *const BinaryExpr,
+    e_array_index: *const ArrayIndex,
 };
 
 pub const PrintStmt = struct {
-    items: []Expr, // owned
+    items: []const Expr, // owned
 };
 
 pub const ReadStmt = struct {
@@ -122,7 +110,7 @@ pub const Program = struct {
     stmts: []Statement, // owned
 };
 
-pub const Statement = struct {
+pub const Statement = union(enum) {
     s_print: PrintStmt,
     s_read: ReadStmt,
     s_const: ConstStmt,

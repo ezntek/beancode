@@ -262,7 +262,7 @@ pub const Lexer = struct {
             }
         }
 
-        const operator = switch (self.file[self.cur]) {
+        const operator: ast.Operator = switch (self.file[self.cur]) {
             '>' => .greater_than,
             '<' => .less_than,
             '=' => .assign,
@@ -284,7 +284,7 @@ pub const Lexer = struct {
     }
 
     pub fn nextSeparator(self: *Lexer) ?Token {
-        const sym = switch (self.file[self.cur]) {
+        const sym: ast.Separator = switch (self.file[self.cur]) {
             '{' => .left_curly,
             '}' => .right_curly,
             '[' => .left_bracket,
