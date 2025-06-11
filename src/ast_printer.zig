@@ -84,7 +84,7 @@ pub const AstPrinter = struct {
 
     pub fn visitTypecast(self: *const Self, tc: *const ast.Typecast) void {
         self.write("typecast(");
-        self.visitPrimitiveType(&tc.typ);
+        self.visitPrimitiveType(&tc.type);
         self.write(", ");
         self.visitExpr(tc.expr);
     }
@@ -122,6 +122,14 @@ pub const AstPrinter = struct {
         self.write(")");
     }
 
+    pub fn visitArrayIndex(self: *const Self, index: *const ast.ArrayIndex) void {
+        self.write("arrayindex(");
+        self.visitExpr(index.expr);
+        self.write(", ");
+        self.writer.print("{}", .{index.idx}) catch |err| util.panic(err);
+        self.write(")");
+    }
+
     pub fn visitArrayIndexIdentifier(self: *const Self, index: *const ast.ArrayIndexIdentifier) void {
         self.write("arrayindex(");
         self.visitIdent(index.ident);
@@ -139,7 +147,8 @@ pub const AstPrinter = struct {
             .e_ident => |id| self.visitIdent(id),
             .e_typecast => |tc| self.visitTypecast(tc),
             .e_array_literal => |arrlit| self.visitArrayLiteral(arrlit),
-            .e_array_index => |arridx| self.visitArrayIndexIdentifier(arridx),
+            .e_array_index => |arridx| self.visitArrayIndex(arridx),
+            .e_array_index_identifier => |arridx| self.visitArrayIndexIdentifier(arridx),
             .e_function_call => |fncall| self.visitFunctionCall(fncall),
             .e_binary => |bin| self.visitBinaryExpr(bin),
         }
@@ -158,7 +167,7 @@ pub const AstPrinter = struct {
 
     pub fn visitReadStmt(self: *const Self, s_read: *const ast.ReadStmt) void {
         self.write("read(");
-        self.visitIdent(&.{ .name = s_read.ident });
+        self.visitIdent(&s_read.ident);
         self.write(")");
     }
 
@@ -186,10 +195,10 @@ pub const AstPrinter = struct {
 
         if (s_var.typ) |typ| {
             self.write(", ");
-            self.visitType(typ);
+            self.visitType(&typ);
         }
 
-        if (s_var.expr) |exp| {
+        if (s_var.value) |exp| {
             self.write(", ");
             self.visitExpr(exp);
         }
@@ -202,7 +211,7 @@ pub const AstPrinter = struct {
         self.write("assign(");
         self.visitIdent(&s_assign.ident);
         self.write(", ");
-        self.visitExpr(&s_assign.value);
+        self.visitExpr(s_assign.value);
         self.write(")");
     }
 
@@ -220,6 +229,7 @@ pub const AstPrinter = struct {
     pub fn visitProgram(self: *const Self, p: ast.Program) void {
         for (p.stmts) |*stmt| {
             self.visitStmt(stmt);
+            self.write("\n");
         }
     }
 };

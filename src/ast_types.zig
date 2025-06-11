@@ -93,6 +93,7 @@ pub const Expr = union(enum) {
     e_typecast: *const Typecast,
     e_array_literal: *const ArrayLiteral,
     e_array_index: *const ArrayIndex,
+    e_array_index_identifier: *const ArrayIndexIdentifier,
     e_function_call: *const FunctionCall,
     e_binary: *const BinaryExpr,
 };
@@ -113,9 +114,9 @@ pub const ConstStmt = struct {
 
 pub const VarStmt = struct {
     ident: []const u8,
-    typ: Type,
+    typ: ?Type,
     exp: bool,
-    expr: ?Expr,
+    value: ?Expr,
 };
 
 pub const AssignStmt = struct {
@@ -124,7 +125,7 @@ pub const AssignStmt = struct {
 };
 
 pub const Program = struct {
-    stmts: []Statement, // owned
+    stmts: []const Statement, // owned
 };
 
 pub const Statement = union(enum) {
