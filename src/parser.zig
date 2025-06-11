@@ -17,5 +17,9 @@ pub const Parser = struct {
 
     pub fn program(self: *const Parser) ast.Program {
         _ = self;
+        return ast.Program{
+            // slay
+            .stmts = &.{},
+        };
     }
 };

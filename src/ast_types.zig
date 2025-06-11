@@ -15,7 +15,7 @@ pub const Separator = enum {
     dot,
 };
 
-pub const BCPrimitiveType = enum {
+pub const PrimitiveType = enum {
     int,
     float,
     char,
@@ -23,23 +23,22 @@ pub const BCPrimitiveType = enum {
     bool,
 };
 
-pub const BCArrayType = struct {
-    type: *const BCType, // allow for nested arrays
+pub const ArrayType = struct {
+    type: *const Type, // allow for nested arrays
     len: u32,
 };
 
-pub const BCType = union(enum) {
-    primitive: BCPrimitiveType,
-    v_array: BCArrayType,
+pub const Type = union(enum) {
+    primitive: PrimitiveType,
+    array: ArrayType,
 };
 
-// array literal
-pub const BCArrayLiteral = struct {
+pub const ArrayLiteral = struct {
     items: []Expr,
     len: Expr,
 };
 
-pub const BCValue = union(BCPrimitiveType) {
+pub const Primitive = union(PrimitiveType) {
     int: i32,
     float: f64,
     char: u8,
@@ -48,7 +47,7 @@ pub const BCValue = union(BCPrimitiveType) {
 };
 
 pub const Typecast = struct {
-    typ: BCPrimitiveType,
+    type: PrimitiveType,
     expr: Expr,
 };
 
@@ -58,21 +57,44 @@ pub const BinaryExpr = struct {
     rhs: Expr,
 };
 
+pub const Literal = union(enum) {
+    primitive: Primitive,
+    array: ArrayLiteral,
+};
+
 pub const ArrayIndex = struct {
-    ident: []const u8, // owned slice
+    expr: Expr,
     idx: u32,
 };
 
+pub const FunctionCall = struct {
+    name: Expr, // just assume everything is callable
+    args: []Expr,
+};
+
+// array indices that can work as idents in all statements such as assignments
+pub const ArrayIndexIdentifier = struct {
+    ident: *const Identifier,
+    idx: u32,
+};
+
+pub const Identifier = union(enum) {
+    name: []const u8,
+    array_index: ArrayIndexIdentifier,
+    function_call: FunctionCall,
+};
+
 pub const Expr = union(enum) {
-    e_literal: *const BCValue,
+    e_literal: *const Literal, // union of ptrs
     e_negation: *const Expr,
     e_not: *const Expr,
     e_grouping: *const Expr,
-    e_ident: []const u8,
+    e_ident: *const Identifier, // union of ptrs
     e_typecast: *const Typecast,
-    e_array_literal: *const BCArrayLiteral,
-    e_binary: *const BinaryExpr,
+    e_array_literal: *const ArrayLiteral,
     e_array_index: *const ArrayIndex,
+    e_function_call: *const FunctionCall,
+    e_binary: *const BinaryExpr,
 };
 
 pub const PrintStmt = struct {
@@ -80,7 +102,7 @@ pub const PrintStmt = struct {
 };
 
 pub const ReadStmt = struct {
-    ident: []const u8,
+    ident: Identifier,
 };
 
 pub const ConstStmt = struct {
@@ -91,18 +113,13 @@ pub const ConstStmt = struct {
 
 pub const VarStmt = struct {
     ident: []const u8,
-    typ: BCType,
+    typ: Type,
     exp: bool,
     expr: ?Expr,
 };
 
 pub const AssignStmt = struct {
-    ident: []const u8,
-    value: Expr,
-};
-
-pub const ArrayIndexAssignStmt = struct {
-    lhs: ArrayIndex,
+    ident: Identifier,
     value: Expr,
 };
 
@@ -116,6 +133,5 @@ pub const Statement = union(enum) {
     s_const: ConstStmt,
     s_var: VarStmt,
     s_assign: AssignStmt,
-    s_array_index_assign: ArrayIndexAssignStmt,
     s_program: Program,
 };
