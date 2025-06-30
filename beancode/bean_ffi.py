@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable, TypedDict
-from bean_ast import BCArrayType, BCPrimitiveType, BCType, BCValue, Literal
+from .bean_ast import BCArrayType, BCPrimitiveType, BCType, BCValue, Literal
 
 def _int_literal(i: int) -> Literal:
     return Literal("integer", integer=i)

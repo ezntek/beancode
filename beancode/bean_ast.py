@@ -1,6 +1,6 @@
 import typing
 from dataclasses import dataclass
-from util import *
+from . import *
 
 @dataclass
 class Expr:
@@ -155,7 +155,7 @@ class BCValue:
 
     def __repr__(self) -> str:  # type: ignore
         if isinstance(self.kind, BCArrayType):
-            raise BCError("BCValue of array can only be represented at runtime")
+            return self.array.__repr__()
 
         if self.is_uninitialized():
             return "(null)"

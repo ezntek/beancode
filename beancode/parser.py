@@ -1,9 +1,7 @@
-import typing as t
-import lexer as l
-from dataclasses import dataclass
-from util import *
+from . import lexer as l
+from . import *
 
-from bean_ast import *
+from .bean_ast import *
 
 class Parser:
     tokens: list[l.Token]

@@ -2,13 +2,13 @@ import os
 import sys
 import typing as t
 import importlib
-import util
 import random
 import time
 
-from bean_ffi import BCFunction, BCProcedure, Exports
-from lexer import Lexer
-from parser import *
+from .bean_ffi import BCFunction, BCProcedure, Exports
+from .lexer import Lexer
+from .parser import *
+from . import *
 
 @dataclass
 class Variable:
@@ -1146,7 +1146,8 @@ class Interpreter:
             self._returned = True
 
     def visit_include_ffi_stmt(self, stmt: IncludeStatement):
-        mod: Exports = importlib.import_module(stmt.file).EXPORTS
+        # XXX: this is probably the most scuffed code in existence.
+        mod: Exports = importlib.import_module(f"beancode.modules.{stmt.file}").EXPORTS
 
         for const in mod["constants"]:
             self.variables[const.name] = Variable(val=const.value, const=True)
