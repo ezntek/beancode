@@ -24,7 +24,11 @@ why
 
 ## running
 
-`python main.py yourfile.bean` (the extension does not matter)
+note: the extension does not matter
+
+`python -m beancode --file yourfile.bean`
+`python main.py --file yourfile.bean` 
+
 
 ## xtra feachurse™
 

@@ -1,8 +1,5 @@
 /*
 --- NONSTANDARD LIBRARY ROUTINES: ---
-// treats an integer as a char
-FUNCTION ASCHAR(codepoint: INTEGER) RETURNS CHAR
-
 // outputs one character without a newline, and returns the input
 PROCEDURE PUTCHAR(ch: CHAR)
 
@@ -110,7 +107,7 @@ WHILE pc < srclen DO
         '-': cells[ptr] <- wrapdec(cells[ptr])
         '[': CALL loopbegin
         ']': CALL loopend
-        '.': CALL PUTCHAR(ASCHAR(cells[ptr]))
+        '.': CALL PUTCHAR(CHAR(cells[ptr]))
         ',': cells[ptr] <- GETCHAR()
         // otherwise not enforced
     ENDCASE

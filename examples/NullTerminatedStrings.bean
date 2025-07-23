@@ -10,7 +10,7 @@ procedure puts(txt: string)
     i <- 1
     ch <- substring(txt, 1, 1)
     while ch <> null do
-        putchar(ch)
+        call putchar(ch)
         i <- i + 1
         ch <- substring(txt, i, 1)
     endwhile

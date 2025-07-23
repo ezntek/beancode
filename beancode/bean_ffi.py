@@ -3,7 +3,7 @@ from typing import Callable, TypedDict
 from .bean_ast import BCArrayType, BCPrimitiveType, BCType, BCValue, Literal
 
 def _int_literal(i: int) -> Literal:
-    return Literal("integer", integer=i)
+    return Literal(None, "integer", integer=i)
 
 def array(inner: BCPrimitiveType, low: int, high: int) -> BCArrayType:
     b = (_int_literal(low), _int_literal(high))

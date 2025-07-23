@@ -4,9 +4,9 @@ procedure puts(txt: string)
     declare curChar: char
     for i <- 1 to length(txt)
         curChar <- substring(txt, i, 1)
-        putchar(curChar)
+        call putchar(curChar)
     next i
-    putchar('\n')
+    call putchar('\n')
 endprocedure
 
 call puts("hello, world!")

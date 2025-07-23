@@ -423,13 +423,13 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if self.is_keyword(word):
-            return Token("keyword", (self.row, self.cur - self.bol - len(word), self.bol), keyword=word.lower())  # type: ignore
+            return Token("keyword", (self.row, self.cur - self.bol - len(word) + 1, self.bol), keyword=word.lower())  # type: ignore
         else:
             return None
 
     def next_type(self, typ: str) -> Token | None:
         if self.is_type(typ):
-            return Token("type", (self.row, self.cur - self.bol - len(typ), self.bol), typ=typ.lower())  # type: ignore
+            return Token("type", (self.row, self.cur - self.bol - len(typ) + 1, self.bol), typ=typ.lower())  # type: ignore
         else:
             return None
 

@@ -4,7 +4,8 @@ from . import *
 
 @dataclass
 class Expr:
-    pass
+    # location of the token
+    pos: tuple[int, int, int] | None
 
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
@@ -279,6 +280,7 @@ StatementKind = typing.Literal[
 
 @dataclass
 class CallStatement:
+    pos: tuple[int, int, int]
     ident: str
     args: list[Expr]
 
@@ -291,16 +293,19 @@ class FunctionCall(Expr):
 
 @dataclass
 class OutputStatement:
+    pos: tuple[int, int, int]
     items: list[Expr]
 
 
 @dataclass
 class InputStatement:
+    pos: tuple[int, int, int]
     ident: Identifier
 
 
 @dataclass
 class ConstantStatement:
+    pos: tuple[int, int, int]
     ident: Identifier
     value: Literal
     export: bool = False
@@ -308,6 +313,7 @@ class ConstantStatement:
 
 @dataclass
 class DeclareStatement:
+    pos: tuple[int, int, int]
     ident: Identifier
     typ: BCType
     export: bool = False
@@ -316,12 +322,14 @@ class DeclareStatement:
 
 @dataclass
 class AssignStatement:
+    pos: tuple[int, int, int]
     ident: Identifier | ArrayIndex
     value: Expr
 
 
 @dataclass
 class IfStatement:
+    pos: tuple[int, int, int]
     cond: Expr
     if_block: list["Statement"]
     else_block: list["Statement"]
@@ -329,12 +337,14 @@ class IfStatement:
 
 @dataclass
 class CaseofBranch:
+    pos: tuple[int, int, int]
     expr: Expr
     stmt: "Statement"
 
 
 @dataclass
 class CaseofStatement:
+    pos: tuple[int, int, int]
     expr: Expr
     branches: list[CaseofBranch]
     otherwise: "Statement | None"
@@ -342,12 +352,14 @@ class CaseofStatement:
 
 @dataclass
 class WhileStatement:
+    pos: tuple[int, int, int]
     cond: Expr
     block: list["Statement"]
 
 
 @dataclass
 class ForStatement:
+    pos: tuple[int, int, int]
     counter: Identifier
     block: list["Statement"]
     begin: Expr
@@ -357,18 +369,21 @@ class ForStatement:
 
 @dataclass
 class RepeatUntilStatement:
+    pos: tuple[int, int, int]
     cond: Expr
     block: list["Statement"]
 
 
 @dataclass
 class FunctionArgument:
+    pos: tuple[int, int, int]
     name: str
     typ: BCType
 
 
 @dataclass
 class ProcedureStatement:
+    pos: tuple[int, int, int]
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
@@ -377,6 +392,7 @@ class ProcedureStatement:
 
 @dataclass
 class FunctionStatement:
+    pos: tuple[int, int, int]
     name: str
     args: list[FunctionArgument]
     returns: BCType
@@ -386,16 +402,19 @@ class FunctionStatement:
 
 @dataclass
 class ReturnStatement:
+    pos: tuple[int, int, int]
     expr: Expr | None
 
 
 @dataclass
 class ScopeStatement:
+    pos: tuple[int, int, int]
     block: list["Statement"]
 
 
 @dataclass
 class IncludeStatement:
+    pos: tuple[int, int, int]
     file: str
     ffi: bool
 

@@ -1,2 +1,2 @@
-DECLARE Array <- {1, 2, 3,}
+DECLARE Array <- {1, 2, 3, }
 OUTPUT Array
