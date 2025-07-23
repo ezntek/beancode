@@ -714,7 +714,10 @@ class Interpreter:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
             return self.visit_libroutine(stmt)
 
-        func = self.functions[stmt.ident]
+        try: 
+            func = self.functions[stmt.ident]
+        except KeyError:
+            raise BCError(f"no function named {stmt.ident} exists", stmt.pos)
 
         if isinstance(func, ProcedureStatement):
             raise BCError("cannot call procedure without CALL!", stmt.pos)
@@ -771,7 +774,10 @@ class Interpreter:
         ):
             return self.visit_libroutine_noreturn(stmt)
 
-        proc = self.functions[stmt.ident]
+        try:
+            proc = self.functions[stmt.ident]
+        except KeyError:
+            raise BCError(f"no procedure named {stmt.ident} exists", stmt.pos)
 
         if isinstance(proc, FunctionStatement):
             raise BCError(

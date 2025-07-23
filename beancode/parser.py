@@ -408,7 +408,6 @@ class Parser:
             raise BCError(
                 "expected right paren after arg list in function call", rightb
             )
-
         return FunctionCall(ident.pos, ident=ident.ident, args=args)  # type: ignore
 
     def typecast(self) -> Typecast | None:

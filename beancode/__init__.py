@@ -7,7 +7,7 @@ class BCError(Exception):
         if type(ctx).__name__ == "Token":
             self.pos = ctx.pos # type: ignore
             self.len = len(ctx.get_raw()[0]) # type: ignore
-        elif type(ctx) == tuple[int, int, int]:
+        elif type(ctx) == tuple:
             self.pos = ctx
         else:
             self.pos = (0, 0, 0) # type: ignore
