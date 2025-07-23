@@ -1176,7 +1176,7 @@ class Interpreter:
 
         # TODO: abstract this stuff into another file
         if not os.path.exists(path):
-            util.panic(f"file {filename} does not exist!")
+            error(f"file {filename} does not exist!")
         with open(filename, "r+") as f:
             file_content = f.read()
         lexer = Lexer(file_content)
@@ -1201,7 +1201,7 @@ class Interpreter:
                 self.variables[name] = var
 
         for name, fn in intp.functions.items():
-            if fn.export:
+            if fn.export: # type: ignore
                 self.functions[name] = fn
 
     def visit_if_stmt(self, stmt: IfStatement):
@@ -1382,7 +1382,7 @@ class Interpreter:
                 self.variables[name] = var
 
         for name, fn in intp.functions.items():
-            if fn.export:
+            if fn.export: # type: ignore
                 self.functions[name] = fn
 
     def visit_procedure(self, stmt: ProcedureStatement):
@@ -1437,7 +1437,7 @@ class Interpreter:
 
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.array.flat_bounds:  # type: ignore
                     raise BCError(f"mismatched array sizes in array assignment")
-            elif var.kind != exp.kind:
+            elif var.kind != exp.kind and exp.kind != "null":
                 raise BCError(
                     f"cannot assign {exp.kind} to {var.kind}"
                 )

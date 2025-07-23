@@ -91,6 +91,10 @@ class BCWarning(Exception):
         indicator = f"{spaces()}\033[35;1m∟ \033[0m\033[1mwarning at line {line} column {col}\033[0m"
         print(indicator)
 
+def error(msg: str):
+    print(f"\033[31;1merror: \033[0m{msg}")
+    exit(1)
+
 def panic(msg: str):
     print(f"\033[31;1mpanic! \033[0m{msg}")
     print("\033[31mplease report this error to the developers. A traceback is provided:\033[0m")

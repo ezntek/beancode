@@ -7,8 +7,7 @@ from . import BCError, BCWarning, panic
 
 from tap import Tap
 
-Backend = typing.Literal["interpreter", "lua", "none"]
-
+Backend = typing.Literal["interpreter", "none"]
 
 class Args(Tap):
     file: str  # filename

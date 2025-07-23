@@ -528,5 +528,6 @@ class Lexer:
             else:
                 break
 
+        # pad the end of the token stream
         self.res.append(Token("newline", self.get_pos()))
         return self.res

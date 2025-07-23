@@ -9,10 +9,12 @@ license = {text = "MPL-2.0"}
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "typed-argument-parser (>=1.10.1,<2.0.0)"
-    
+    "typed-argument-parser (>=1.10.1,<2.0.0)",
+    "raylib (>=5.5.0.2,<6.0.0.0)"
 ]
 
+[project.scripts]
+beancode = "beancode.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
