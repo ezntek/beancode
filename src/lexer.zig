@@ -2,6 +2,9 @@ const std = @import("std");
 const util = @import("./util.zig");
 const ast = @import("./ast_types.zig");
 
+const Location = util.Location;
+const diag = util.diag;
+
 // all prefixed with kw_ to avoid clashes
 pub const Keyword = enum {
     kw_var,
@@ -36,43 +39,39 @@ pub const Type = enum {
     char,
 };
 
-pub const LiteralKind = enum {
-    number,
-    string,
-    char,
-    boolean,
-};
-
-pub const Literal = union(LiteralKind) {
+pub const Primitive = union(enum) {
     number: []const u8,
     string: []const u8,
     char: u8,
     boolean: bool,
 };
 
-pub const TokenKind = enum {
-    keyword,
-    ident,
-    literal,
-    operator,
-    separator,
-    _type,
+// All strings are owned slices on the heap
+pub const TokenData = union(enum) {
+    ident: []const u8,
+    keyword: Keyword,
+    literal: Primitive,
+    operator: ast.Operator,
+    separator: ast.Separator,
+    type: Type,
     newline,
 };
 
-// All strings are owned slices on the heap
-pub const Token = union(TokenKind) {
-    keyword: Keyword,
-    ident: []const u8,
-    literal: Literal,
-    operator: ast.Operator,
-    separator: ast.Separator,
-    // undescore to avoid clash with zig compiler
-    _type: Type,
-    newline,
+pub const Token = struct {
+    data: TokenData,
+    loc: ?Location,
+
+    const Self = @This();
+
+    pub fn new(data: TokenData, loc: Location) void {
+        return Self{
+            .data = data,
+            .loc = loc,
+        };
+    }
 
     pub fn printToken(self: Token) void {
-        switch (self) {
+        switch (self.data) {
             .ident => |ident| std.debug.print("token(ident): {s}\n", .{ident}),
             .keyword => |kw| std.debug.print("token(keyword): {any}\n", .{kw}),
             .literal => |lit| switch (lit) {
@@ -83,7 +82,7 @@ pub const Token = union(TokenKind) {
             },
             .operator => |op| std.debug.print("token(operator): {any}\n", .{op}),
             .separator => |sep| std.debug.print("token(separator): {any}\n", .{sep}),
-            ._type => |typ| std.debug.print("token(type): {any}\n", .{typ}),
+            .type => |typ| std.debug.print("token(type): {any}", .{typ}),
             .newline => std.debug.print("token(newline)\n", .{}),
         }
     }
@@ -91,15 +90,22 @@ pub const Token = union(TokenKind) {
 
 pub const Lexer = struct {
     alloc: std.mem.Allocator,
+    file_name: []const u8,
     file: []const u8,
-    cur: u32, // current char
-    bol: u32, // begin of line
-    row: u32, // row
+    cur: u32,
+    bol: u32,
+    row: u32,
     keywords: std.StringHashMap(Keyword),
     types: std.StringHashMap(Type),
     res: std.ArrayList(Token),
 
-    pub fn init(alloc: std.mem.Allocator, file: []const u8) Lexer {
+    const Self = @This();
+
+    pub fn init(
+        alloc: std.mem.Allocator,
+        file: []const u8,
+        file_name: []const u8,
+    ) Lexer {
         var keywords = std.StringHashMap(Keyword).init(alloc);
 
         keywords.put("VAR", Keyword.kw_var) catch |err| util.panic(err);
@@ -136,6 +142,7 @@ pub const Lexer = struct {
         return Lexer{
             .alloc = alloc,
             .file = file,
+            .file_name = file_name,
             .cur = 0,
             .bol = 0,
             .row = 1,
@@ -145,7 +152,23 @@ pub const Lexer = struct {
         };
     }
 
-    pub fn deinit(self: *Lexer) void {
+    pub fn getLoc(self: *const Self) Location {
+        return Location{
+            .file_name = self.file_name,
+            .line = self.row,
+            .col = self.cur - self.bol,
+            .bol = self.bol,
+        };
+    }
+
+    pub fn newToken(self: *const Self, tok: TokenData) Token {
+        return Token{
+            .data = tok,
+            .loc = self.getLoc(),
+        };
+    }
+
+    pub fn deinit(self: *Self) void {
         self.keywords.deinit();
         self.types.deinit();
         // we do not deinit the res
@@ -188,13 +211,13 @@ pub const Lexer = struct {
         return util.isLowercase(s) or util.isUppercase(s);
     }
 
-    fn isKeyword(self: *const Lexer, word: []const u8) bool {
+    fn isKeyword(self: *const Self, word: []const u8) bool {
         if (!isCaseConsistent(word)) return false;
         const haystack = self.keywords.keyIterator().items;
         return std.mem.count([]const u8, haystack, word) > 0;
     }
 
-    fn isType(self: *const Lexer, word: []const u8) bool {
+    fn isType(self: *const Self, word: []const u8) bool {
         if (!isCaseConsistent(word)) return false;
         const haystack = self.types.keyIterator().items;
         return std.mem.count([]const u8, haystack, word) > 0;
@@ -244,21 +267,47 @@ pub const Lexer = struct {
     }
 
     pub fn nextOperator(self: *Lexer) ?Token {
+        if (self.cur + 3 < self.file.len) {
+            const curTriplet = self.file[self.cur .. self.cur + 3];
+
+            var op: ?ast.Operator = null;
+            if (std.mem.eql(u8, curTriplet, "**=")) {
+                op = .pow_assign;
+            }
+
+            if (op) |res| {
+                self.cur += 3;
+                return self.newToken(.{ .operator = res });
+            }
+        }
+
         if (self.cur + 2 < self.file.len) {
             const curPair = self.file[self.cur .. self.cur + 2];
 
+            var op: ?ast.Operator = null;
             if (std.mem.eql(u8, curPair, "==")) {
-                self.cur += 2;
-                return Token{ .operator = .equal };
+                op = .equal;
             } else if (std.mem.eql(u8, curPair, "<=")) {
-                self.cur += 2;
-                return Token{ .operator = .less_than_or_equal };
+                op = .less_than_or_equal;
             } else if (std.mem.eql(u8, curPair, ">=")) {
-                self.cur += 2;
-                return Token{ .operator = .greater_than_or_equal };
+                op = .greater_than_or_equal;
             } else if (std.mem.eql(u8, curPair, "!=")) {
+                op = .not_equal;
+            } else if (std.mem.eql(u8, curPair, "-=")) {
+                op = .sub_assign;
+            } else if (std.mem.eql(u8, curPair, "+=")) {
+                op = .add_assign;
+            } else if (std.mem.eql(u8, curPair, "*=")) {
+                op = .mul_assign;
+            } else if (std.mem.eql(u8, curPair, "/=")) {
+                op = .div_assign;
+            } else if (std.mem.eql(u8, curPair, "**")) {
+                op = .pow;
+            }
+
+            if (op) |res| {
                 self.cur += 2;
-                return Token{ .operator = .not_equal };
+                return self.newToken(.{ .operator = res });
             }
         }
 
@@ -280,7 +329,7 @@ pub const Lexer = struct {
             return null; // force rescanning as a word
 
         self.cur += 1;
-        return Token{ .operator = operator };
+        return self.newToken(.{ .operator = operator });
     }
 
     pub fn nextSeparator(self: *Lexer) ?Token {
@@ -298,7 +347,7 @@ pub const Lexer = struct {
             },
         };
         self.cur += 1;
-        return Token{ .separator = sym };
+        return self.newToken(.{ .separator = sym });
     }
 
     // this is an absoluteCinema™ function. do not question why this works. ths is absolute sorcery from december 2024. bruh.
@@ -321,7 +370,7 @@ pub const Lexer = struct {
                 // sorcery from the python era
                 const prevToken = self.res.getLastOrNull();
                 if (prevToken) |tok| {
-                    shouldSliceNow = switch (tok) {
+                    shouldSliceNow = switch (tok.data) {
                         .ident, .literal => true,
                         .separator => |sep| switch (sep) {
                             .right_bracket, .right_paren, .right_curly => true,
@@ -381,7 +430,7 @@ pub const Lexer = struct {
         defer self.alloc.free(w_upper);
 
         if (self.keywords.get(w_upper)) |kw| {
-            return Token{ .keyword = kw };
+            return self.newToken(.{ .keyword = kw });
         }
 
         return null;
@@ -394,7 +443,7 @@ pub const Lexer = struct {
         defer self.alloc.free(w_upper);
 
         if (self.types.get(w_upper)) |typ| {
-            return Token{ ._type = typ };
+            return self.newToken(.{ .type = typ });
         }
 
         return null;
@@ -404,7 +453,7 @@ pub const Lexer = struct {
         const slc = word[1 .. word.len - 1];
         //const pos = ()
         if (word[0] == '"' and word[word.len - 1] == '"') {
-            return Token{ .literal = Literal{ .string = slc } };
+            return self.newToken(.{ .literal = Primitive{ .string = slc } });
         }
 
         if (word[0] == '\'' and word[word.len - 1] == '\'') {
@@ -414,7 +463,7 @@ pub const Lexer = struct {
                 util.fatal("lexer", "char literal at {},{} cannot contain more than 1 char!", .{ row, col });
             }
 
-            return Token{ .literal = Literal{ .char = word[1] } };
+            return self.newToken(.{ .literal = Primitive{ .char = word[1] } });
         }
 
         return null;
@@ -445,7 +494,7 @@ pub const Lexer = struct {
             self.row += 1;
             self.bol = self.cur + 1;
             self.cur += 1;
-            return .newline;
+            return self.newToken(.newline);
         }
 
         if (self.nextOperator()) |tok| return tok;
@@ -456,7 +505,7 @@ pub const Lexer = struct {
         if (self.res.items.len != 0) {
             // kill false positive case ?
             const last = self.res.getLast();
-            const shouldBeSub = switch (last) {
+            const shouldBeSub = switch (last.data) {
                 .ident, .literal => true,
                 .separator => |sep| switch (sep) {
                     .right_bracket, .right_paren, .right_curly => true,
@@ -465,17 +514,17 @@ pub const Lexer = struct {
                 else => false,
             };
             if (word.len == 1 and shouldBeSub and word[0] == '-') {
-                return Token{ .operator = .sub };
+                return self.newToken(.{ .operator = .sub });
             }
         }
 
         if (isNumeral(word)) {
-            return Token{ .literal = Literal{ .number = word } };
+            return self.newToken(.{ .literal = Primitive{ .number = word } });
         } else if (word[0] == '-' and !std.ascii.isDigit(word[1])) {
             // why is this even here :skull:
             // scuffed but even more scuffed cos i rewrote tis from the python version
             self.cur += 1;
-            return Token{ .operator = .sub };
+            return self.newToken(.{ .operator = .sub });
         }
 
         if (self.nextKeyword(word)) |tok| return tok;
@@ -483,11 +532,11 @@ pub const Lexer = struct {
         if (self.nextStringOrCharLiteral(word)) |tok| return tok;
 
         if (nextBoolean(word)) |b| {
-            return Token{ .literal = Literal{ .boolean = b } };
+            return self.newToken(.{ .literal = Primitive{ .boolean = b } });
         }
 
         // return ident by default
-        return Token{ .ident = word };
+        return self.newToken(.{ .ident = word });
     }
 
     pub fn tokenize(self: *Lexer) !std.ArrayList(Token) {
@@ -497,6 +546,8 @@ pub const Lexer = struct {
                 try self.res.append(tok);
             } else break;
         }
+
+        try self.res.append(self.newToken(.newline));
 
         return self.res;
     }

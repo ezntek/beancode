@@ -1,7 +1,25 @@
 // unlike the cursed ultra hyper absolute cinema pro max™ python impl,
 // these types will only represent ast types.
 
-pub const Operator = enum { assign, equal, less_than, greater_than, less_than_or_equal, greater_than_or_equal, not_equal, mul, div, add, sub };
+pub const Operator = enum {
+    assign,
+    equal,
+    less_than,
+    greater_than,
+    less_than_or_equal,
+    greater_than_or_equal,
+    not_equal,
+    mul,
+    div,
+    add,
+    sub,
+    pow,
+    mul_assign,
+    div_assign,
+    add_assign,
+    sub_assign,
+    pow_assign,
+};
 
 pub const Separator = enum {
     left_paren,

@@ -21,7 +21,7 @@ pub fn main() !void {
     const content = try fp.readToEndAlloc(alloc, 262144);
     defer alloc.free(content);
 
-    var lx = lexer.Lexer.init(alloc, content);
+    var lx = lexer.Lexer.init(alloc, content, file);
     defer lx.deinit();
     const tokens = try lx.tokenize();
 
