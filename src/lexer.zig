@@ -4,6 +4,7 @@ const ast = @import("./ast_types.zig");
 
 const Location = util.Location;
 const diag = util.diag;
+const panic = util.panic;
 
 // all prefixed with kw_ to avoid clashes
 pub const Keyword = enum {
@@ -42,24 +43,59 @@ pub const Type = enum {
 pub const Primitive = union(enum) {
     number: []const u8,
     string: []const u8,
-    char: u8,
+    char: []const u8,
     boolean: bool,
 };
 
+pub const TokenKind = enum { ident, keyword, primitive, operator, separator, type, newline, eof };
+
 // All strings are owned slices on the heap
-pub const TokenData = union(enum) {
+pub const TokenData = union(TokenKind) {
     ident: []const u8,
     keyword: Keyword,
-    literal: Primitive,
+    primitive: Primitive,
     operator: ast.Operator,
     separator: ast.Separator,
     type: Type,
     newline,
+    eof,
+
+    const Self = @This();
+
+    pub fn printToken(self: *const Self) void {
+        std.debug.print("{s}\n", .{self});
+    }
+
+    pub fn getTokenStringAlloc(self: *const Self, alloc: std.mem.Allocator) []const u8 {
+        std.fmt.allocPrint(alloc, "{s}", .{self}) catch |err| panic(err);
+    }
+
+    pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+
+        _ = try switch (self) {
+            .ident => |ident| writer.print("ident({s})", .{ident}),
+            // slice the kw_ away
+            .keyword => |kw| writer.print("keyword({s})", .{@tagName(kw)[3..]}),
+            .primitive => |lit| switch (lit) {
+                .string => |s| writer.print("primitive(\"{s}\")", .{s}),
+                .number => |n| writer.print("primitive({s})", .{n}),
+                .boolean => |b| writer.print("primitive({any})", .{b}),
+                .char => |ch| writer.print("primitive('{c}')", .{ch}),
+            },
+            .operator => |op| writer.print("operator({s})", .{@tagName(op)}),
+            .separator => |sep| writer.print("separator({s})", .{@tagName(sep)}),
+            .type => |typ| writer.print("type({s})", .{@tagName(typ)}),
+            .newline => writer.print("newline", .{}),
+            .eof => writer.print("eof", .{}),
+        };
+    }
 };
 
 pub const Token = struct {
     data: TokenData,
-    loc: ?Location,
+    loc: Location,
 
     const Self = @This();
 
@@ -70,21 +106,16 @@ pub const Token = struct {
         };
     }
 
-    pub fn printToken(self: Token) void {
-        switch (self.data) {
-            .ident => |ident| std.debug.print("token(ident): {s}\n", .{ident}),
-            .keyword => |kw| std.debug.print("token(keyword): {any}\n", .{kw}),
-            .literal => |lit| switch (lit) {
-                .string => |str| std.debug.print("token(literal): \"{s}\"\n", .{str}),
-                .number => |num| std.debug.print("token(literal): {s}\n", .{num}),
-                .char => |thing| std.debug.print("token(literal): {c}\n", .{thing}),
-                .boolean => |thing| std.debug.print("token(literal): {}\n", .{thing}),
-            },
-            .operator => |op| std.debug.print("token(operator): {any}\n", .{op}),
-            .separator => |sep| std.debug.print("token(separator): {any}\n", .{sep}),
-            .type => |typ| std.debug.print("token(type): {any}", .{typ}),
-            .newline => std.debug.print("token(newline)\n", .{}),
-        }
+    pub fn printToken(self: *const Self) void {
+        return self.data.printToken();
+    }
+
+    pub fn getTokenStringAlloc(self: *const Self, alloc: std.mem.Allocator) []const u8 {
+        return self.data.getTokenStringAlloc(alloc);
+    }
+
+    pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        return self.data.format(fmt, options, writer);
     }
 };
 
@@ -356,7 +387,7 @@ pub const Lexer = struct {
         var currChar = self.file[self.cur];
         var end = self.cur;
         const stringOrCharLiteral = (currChar == '\'' or currChar == '"');
-        const beginChar = currChar; // for the literal stuff
+        const beginChar = currChar; // for the.primitive stuff
 
         // TODO: cleaner stuff with comptime?
         if (!stringOrCharLiteral) {
@@ -371,7 +402,7 @@ pub const Lexer = struct {
                 const prevToken = self.res.getLastOrNull();
                 if (prevToken) |tok| {
                     shouldSliceNow = switch (tok.data) {
-                        .ident, .literal => true,
+                        .ident, .primitive => true,
                         .separator => |sep| switch (sep) {
                             .right_bracket, .right_paren, .right_curly => true,
                             else => false,
@@ -453,17 +484,12 @@ pub const Lexer = struct {
         const slc = word[1 .. word.len - 1];
         //const pos = ()
         if (word[0] == '"' and word[word.len - 1] == '"') {
-            return self.newToken(.{ .literal = Primitive{ .string = slc } });
+            return self.newToken(.{ .primitive = Primitive{ .string = slc } });
         }
 
         if (word[0] == '\'' and word[word.len - 1] == '\'') {
-            if (word.len > 3) {
-                const row = self.row;
-                const col = self.cur - self.bol - word.len;
-                util.fatal("lexer", "char literal at {},{} cannot contain more than 1 char!", .{ row, col });
-            }
-
-            return self.newToken(.{ .literal = Primitive{ .char = word[1] } });
+            // we will check its validity later, to allow for escape sequences
+            return self.newToken(.{ .primitive = Primitive{ .char = word } });
         }
 
         return null;
@@ -506,7 +532,7 @@ pub const Lexer = struct {
             // kill false positive case ?
             const last = self.res.getLast();
             const shouldBeSub = switch (last.data) {
-                .ident, .literal => true,
+                .ident, .primitive => true,
                 .separator => |sep| switch (sep) {
                     .right_bracket, .right_paren, .right_curly => true,
                     else => false,
@@ -519,7 +545,7 @@ pub const Lexer = struct {
         }
 
         if (isNumeral(word)) {
-            return self.newToken(.{ .literal = Primitive{ .number = word } });
+            return self.newToken(.{ .primitive = Primitive{ .number = word } });
         } else if (word[0] == '-' and !std.ascii.isDigit(word[1])) {
             // why is this even here :skull:
             // scuffed but even more scuffed cos i rewrote tis from the python version
@@ -532,7 +558,7 @@ pub const Lexer = struct {
         if (self.nextStringOrCharLiteral(word)) |tok| return tok;
 
         if (nextBoolean(word)) |b| {
-            return self.newToken(.{ .literal = Primitive{ .boolean = b } });
+            return self.newToken(.{ .primitive = Primitive{ .boolean = b } });
         }
 
         // return ident by default
@@ -547,7 +573,7 @@ pub const Lexer = struct {
             } else break;
         }
 
-        try self.res.append(self.newToken(.newline));
+        try self.res.append(self.newToken(.eof));
 
         return self.res;
     }
