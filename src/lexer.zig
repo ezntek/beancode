@@ -2,7 +2,7 @@ const std = @import("std");
 const util = @import("./util.zig");
 const ast = @import("./ast_types.zig");
 
-const Location = util.Location;
+const SourceSpan = util.Location;
 const diag = util.diag;
 const panic = util.panic;
 
@@ -81,8 +81,8 @@ pub const TokenData = union(TokenKind) {
             .primitive => |lit| switch (lit) {
                 .string => |s| writer.print("primitive(\"{s}\")", .{s}),
                 .number => |n| writer.print("primitive({s})", .{n}),
-                .boolean => |b| writer.print("primitive({any})", .{b}),
-                .char => |ch| writer.print("primitive('{c}')", .{ch}),
+                .boolean => |b| writer.print("primitive({s})", .{b}),
+                .char => |ch| writer.print("primitive('{s}')", .{ch}),
             },
             .operator => |op| writer.print("operator({s})", .{@tagName(op)}),
             .separator => |sep| writer.print("separator({s})", .{@tagName(sep)}),
@@ -95,14 +95,14 @@ pub const TokenData = union(TokenKind) {
 
 pub const Token = struct {
     data: TokenData,
-    loc: Location,
+    span: SourceSpan,
 
     const Self = @This();
 
-    pub fn new(data: TokenData, loc: Location) void {
+    pub fn new(data: TokenData, span: SourceSpan) Self {
         return Self{
             .data = data,
-            .loc = loc,
+            .span = span,
         };
     }
 
@@ -123,9 +123,9 @@ pub const Lexer = struct {
     alloc: std.mem.Allocator,
     file_name: []const u8,
     file: []const u8,
+    row: u32,
     cur: u32,
     bol: u32,
-    row: u32,
     keywords: std.StringHashMap(Keyword),
     types: std.StringHashMap(Type),
     res: std.ArrayList(Token),
@@ -183,19 +183,18 @@ pub const Lexer = struct {
         };
     }
 
-    pub fn getLoc(self: *const Self) Location {
-        return Location{
-            .file_name = self.file_name,
+    pub fn getSpan(self: *const Self, len: u8) SourceSpan {
+        return SourceSpan{
             .line = self.row,
-            .col = self.cur - self.bol,
-            .bol = self.bol,
+            .col = self.cur - self.bol + 1 - len,
+            .len = len,
         };
     }
 
-    pub fn newToken(self: *const Self, tok: TokenData) Token {
+    pub fn newToken(self: *const Self, tok: TokenData, len: u8) Token {
         return Token{
             .data = tok,
-            .loc = self.getLoc(),
+            .span = self.getSpan(len),
         };
     }
 
@@ -308,7 +307,7 @@ pub const Lexer = struct {
 
             if (op) |res| {
                 self.cur += 3;
-                return self.newToken(.{ .operator = res });
+                return self.newToken(.{ .operator = res }, 3);
             }
         }
 
@@ -338,7 +337,7 @@ pub const Lexer = struct {
 
             if (op) |res| {
                 self.cur += 2;
-                return self.newToken(.{ .operator = res });
+                return self.newToken(.{ .operator = res }, 2);
             }
         }
 
@@ -360,7 +359,7 @@ pub const Lexer = struct {
             return null; // force rescanning as a word
 
         self.cur += 1;
-        return self.newToken(.{ .operator = operator });
+        return self.newToken(.{ .operator = operator }, 1);
     }
 
     pub fn nextSeparator(self: *Lexer) ?Token {
@@ -378,7 +377,7 @@ pub const Lexer = struct {
             },
         };
         self.cur += 1;
-        return self.newToken(.{ .separator = sym });
+        return self.newToken(.{ .separator = sym }, 1);
     }
 
     // this is an absoluteCinema™ function. do not question why this works. ths is absolute sorcery from december 2024. bruh.
@@ -461,7 +460,9 @@ pub const Lexer = struct {
         defer self.alloc.free(w_upper);
 
         if (self.keywords.get(w_upper)) |kw| {
-            return self.newToken(.{ .keyword = kw });
+            const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - self.bol - w_upper.len + 1), .len = @truncate(w_upper.len) };
+            const tok = Token.new(.{ .keyword = kw }, span);
+            return tok;
         }
 
         return null;
@@ -474,7 +475,9 @@ pub const Lexer = struct {
         defer self.alloc.free(w_upper);
 
         if (self.types.get(w_upper)) |typ| {
-            return self.newToken(.{ .type = typ });
+            const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - self.bol - w_upper.len + 1), .len = @truncate(w_upper.len) };
+            const tok = Token.new(.{ .type = typ }, span);
+            return tok;
         }
 
         return null;
@@ -482,28 +485,33 @@ pub const Lexer = struct {
 
     fn nextStringOrCharLiteral(self: *Lexer, word: []const u8) ?Token {
         const slc = word[1 .. word.len - 1];
-        //const pos = ()
+
+        // col is magical sorcery
+        const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - self.bol - (slc.len + 1)), .len = @truncate(word.len) };
+
         if (word[0] == '"' and word[word.len - 1] == '"') {
-            return self.newToken(.{ .primitive = Primitive{ .string = slc } });
+            // include chars around
+            return Token.new(.{ .primitive = Primitive{ .string = slc } }, span);
         }
 
         if (word[0] == '\'' and word[word.len - 1] == '\'') {
             // we will check its validity later, to allow for escape sequences
-            return self.newToken(.{ .primitive = Primitive{ .char = word } });
+            return Token.new(.{ .primitive = Primitive{ .char = slc } }, span);
         }
 
         return null;
     }
 
-    fn nextBoolean(word: []const u8) ?[]const u8 {
+    fn nextBoolean(self: *const Self, word: []const u8) ?Token {
         if (!isCaseConsistent(word)) {
             return null;
         }
 
-        return if (std.ascii.eqlIgnoreCase("TRUE", word) or std.ascii.eqlIgnoreCase("FALSE", word))
-            word
-        else
-            null;
+        if (!std.ascii.eqlIgnoreCase("TRUE", word) and !std.ascii.eqlIgnoreCase("FALSE", word))
+            return null;
+
+        const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - word.len + 1), .len = @truncate(word.len) };
+        return Token.new(.{ .primitive = .{ .boolean = word } }, span);
     }
 
     pub fn nextToken(self: *Lexer) ?Token {
@@ -519,7 +527,7 @@ pub const Lexer = struct {
             self.row += 1;
             self.bol = self.cur + 1;
             self.cur += 1;
-            return self.newToken(.newline);
+            return self.newToken(.newline, 1);
         }
 
         if (self.nextOperator()) |tok| return tok;
@@ -539,29 +547,26 @@ pub const Lexer = struct {
                 else => false,
             };
             if (word.len == 1 and shouldBeSub and word[0] == '-') {
-                return self.newToken(.{ .operator = .sub });
+                return self.newToken(.{ .operator = .sub }, 1);
             }
         }
 
         if (isNumeral(word)) {
-            return self.newToken(.{ .primitive = Primitive{ .number = word } });
+            return self.newToken(.{ .primitive = Primitive{ .number = word } }, @truncate(word.len));
         } else if (word[0] == '-' and !std.ascii.isDigit(word[1])) {
             // why is this even here :skull:
             // scuffed but even more scuffed cos i rewrote tis from the python version
             self.cur += 1;
-            return self.newToken(.{ .operator = .sub });
+            return self.newToken(.{ .operator = .sub }, 1);
         }
 
         if (self.nextKeyword(word)) |tok| return tok;
         if (self.nextType(word)) |tok| return tok;
         if (self.nextStringOrCharLiteral(word)) |tok| return tok;
-
-        if (nextBoolean(word)) |b| {
-            return self.newToken(.{ .primitive = Primitive{ .boolean = b } });
-        }
+        if (self.nextBoolean(word)) |tok| return tok;
 
         // return ident by default
-        return self.newToken(.{ .ident = word });
+        return self.newToken(.{ .ident = word }, @truncate(word.len));
     }
 
     pub fn tokenize(self: *Lexer) !std.ArrayList(Token) {
@@ -572,7 +577,7 @@ pub const Lexer = struct {
             } else break;
         }
 
-        try self.res.append(self.newToken(.eof));
+        try self.res.append(self.newToken(.eof, 1));
 
         return self.res;
     }

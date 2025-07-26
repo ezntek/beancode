@@ -17,39 +17,49 @@ const MAX_ERROR_COUNT = 20;
 
 pub const Parser = struct {
     alloc: std.mem.Allocator,
+    file_name: []const u8,
     tokens: []Token,
     cur: u32,
     error_count: u32,
 
     const Self = @This();
 
-    pub fn prev(self: *const Self) ?Token {
+    pub fn init(alloc: std.mem.Allocator, tokens: []lexer.Token) Parser {
+        return Parser{
+            .alloc = alloc,
+            .tokens = tokens,
+            .cur = 0,
+        };
+    }
+
+    fn prev(self: *const Self) ?Token {
         return if (self.cur - 1 < self.tokens.len) self.tokens[self.cur - 1] else null;
     }
 
-    pub fn peek(self: *const Self) ?Token {
+    fn peek(self: *const Self) ?Token {
         return if (self.cur < self.tokens.len) self.tokens[self.cur] else null;
     }
 
-    pub fn peek_next(self: *const Self) ?Token {
+    fn peek_next(self: *const Self) ?Token {
         return if (self.cur + 1 < self.tokens.len) self.tokens[self.cur + 1] else null;
     }
 
-    pub fn getLoc(self: *const Self) Location {
+    fn getLoc(self: *const Self) Location {
         return self.peek().?.loc; // FIXME: better null handling
     }
 
-    pub fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
-        util.diag(self.getLoc(), fmt, fmtargs);
+    fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
+        const fname = self.file_name orelse "(no file)";
+        util.diag(self.getLoc(), fname, fmt, fmtargs);
         self.bumpErrorCount();
     }
 
-    pub fn bumpErrorCount(self: *Self) bool {
+    fn bumpErrorCount(self: *Self) bool {
         self.error_count += 1;
         return self.error_count > MAX_ERROR_COUNT;
     }
 
-    pub fn consume(self: *Self) ?Token {
+    fn consume(self: *Self) ?Token {
         if (self.cur < self.tokens.len) {
             self.cur += 1;
         }
@@ -57,7 +67,7 @@ pub const Parser = struct {
         return self.prev();
     }
 
-    pub fn consumeAndExpect(self: *Self, expected: TokenKind) ?Token {
+    fn consumeAndExpect(self: *Self, expected: TokenKind) ?Token {
         if (self.consume()) |tok| {
             if (tok.data != expected) {
                 self.diag("expected token {s} but got {s}", .{ expected, tok });
@@ -69,7 +79,7 @@ pub const Parser = struct {
         }
     }
 
-    pub fn consumeAndCheck(self: *Self, expected: TokenKind) ?Token {
+    fn consumeAndCheck(self: *Self, expected: TokenKind) ?Token {
         if (self.consume()) |tok| {
             if (tok.data == expected) {
                 return tok;
@@ -78,27 +88,19 @@ pub const Parser = struct {
         return null;
     }
 
-    pub fn consumeNewlines(self: *Self) void {
+    fn consumeNewlines(self: *Self) void {
         while (self.peek() == .newline) {
             self.consume();
         }
     }
 
-    pub fn checkNewline(self: *const Self, ctx: []const u8) void {
+    fn checkNewline(self: *const Self, ctx: []const u8) void {
         const tok = self.consume();
         if (tok != .newline) {
             const ts = tok.getTokenString(self.alloc);
             defer self.alloc.free(ts);
             self.diag("expected newline after {s} but found `{s}`", .{ ctx, tok });
         }
-    }
-
-    pub fn init(alloc: std.mem.Allocator, tokens: []lexer.Token) Parser {
-        return Parser{
-            .alloc = alloc,
-            .tokens = tokens,
-            .cur = 0,
-        };
     }
 
     fn isInt(val: []const u8) bool {

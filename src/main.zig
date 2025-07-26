@@ -26,7 +26,7 @@ pub fn main() !void {
     const tokens = try lx.tokenize();
 
     for (tokens.items) |item| {
-        item.printToken();
+        std.debug.print("{s} {s}\n", .{ item, item.span });
     }
 
     defer tokens.deinit();

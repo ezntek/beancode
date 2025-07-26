@@ -1,7 +1,7 @@
 const std = @import("std");
 const common = @import("common.zig");
 
-pub const Location = common.Location;
+pub const Location = common.SourceSpan;
 
 pub fn panic(err: anyerror) noreturn {
     std.debug.panic("the program encountered a fatal error: {any}", .{err});
@@ -25,11 +25,11 @@ pub fn fatal(location: ?[]const u8, comptime msg: []const u8, fmtargs: anytype) 
     std.process.exit(1);
 }
 
-pub fn diag(loc: Location, comptime msg: []const u8, fmtargs: anytype) void {
+pub fn diag(loc: Location, file_name: []const u8, comptime msg: []const u8, fmtargs: anytype) void {
     const stderr = std.io.getStdErr().writer();
     var bw = std.io.bufferedWriter(stderr);
     const writer = bw.writer();
-    writer.print("{s}:{}:{}: ", .{ loc.file_name, loc.line, loc.col }) catch |err| panic(err);
+    writer.print("{s}:{}:{}: ", .{ file_name, loc.line, loc.col }) catch |err| panic(err);
     writer.print(msg, fmtargs) catch |err| panic(err);
     writer.writeByte('\n');
     bw.flush() catch |err| panic(err);

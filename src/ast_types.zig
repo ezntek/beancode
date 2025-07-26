@@ -4,7 +4,7 @@
 const std = @import("std");
 const util = @import("util.zig");
 const printer = @import("ast_printer.zig");
-const Location = @import("common.zig").Location;
+const Location = @import("common.zig").SourceSpan;
 
 const panic = util.panic;
 
