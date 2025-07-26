@@ -40,16 +40,16 @@ test "ast printing" {
     // print 69, "poopoo"
     const s_print = ast.PrintStmt{
         .items = &.{
-            ast.Expr{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .int = 69 } } },
-            ast.Expr{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .string = "poopoo" } } },
+            ast.ExprData{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .int = 69 } } },
+            ast.ExprData{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .string = "poopoo" } } },
         },
     };
 
     // read somevar
-    const s_read = ast.ReadStmt{ .ident = ast.Identifier{ .name = "somevar" } };
+    const s_read = ast.ReadStmt{ .ident = ast.Lvalue{ .name = "somevar" } };
 
     // const Foo = 5
-    const s_const = ast.ConstStmt{ .ident = "Foo", .value = ast.Expr{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .int = 5 } } }, .exp = false };
+    const s_const = ast.ConstStmt{ .ident = "Foo", .value = ast.ExprData{ .e_literal = &ast.Literal{ .primitive = ast.Primitive{ .int = 5 } } }, .exp = false };
 
     // var Bar: int
     const s_var = ast.VarStmt{ .ident = "Bar", .value = null, .typ = .{ .primitive = .int }, .exp = false };

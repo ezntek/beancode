@@ -4,6 +4,8 @@ const lexer = @import("lexer.zig");
 
 const util = @import("util.zig");
 
+// FIXME: update to new refactored ast
+
 // XXX: this is top tier scuffed shitcode.
 // do not judge even i dont like this
 pub const AstPrinter = struct {
@@ -54,25 +56,25 @@ pub const AstPrinter = struct {
         }
     }
 
-    pub fn visitNegation(self: *const Self, expr: ast.Expr) void {
+    pub fn visitNegation(self: *const Self, expr: ast.ExprData) void {
         self.write("negation(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitNot(self: *const Self, expr: ast.Expr) void {
+    pub fn visitNot(self: *const Self, expr: ast.ExprData) void {
         self.write("not(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitGrouping(self: *const Self, expr: ast.Expr) void {
+    pub fn visitGrouping(self: *const Self, expr: ast.ExprData) void {
         self.write("grouping(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitIdent(self: *const Self, ident: *const ast.Identifier) void {
+    pub fn visitIdent(self: *const Self, ident: *const ast.Lvalue) void {
         self.write("ident(");
         switch (ident.*) {
             .name => |s| self.write(s),
@@ -138,7 +140,7 @@ pub const AstPrinter = struct {
         self.write(")");
     }
 
-    pub fn visitExpr(self: *const Self, expr: ast.Expr) void {
+    pub fn visitExpr(self: *const Self, expr: ast.ExprData) void {
         switch (expr) {
             .e_literal => |lit| self.visitLiteral(lit),
             .e_negation => |inner| self.visitNegation(inner.*),

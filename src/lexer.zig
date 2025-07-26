@@ -44,7 +44,7 @@ pub const Primitive = union(enum) {
     number: []const u8,
     string: []const u8,
     char: []const u8,
-    boolean: bool,
+    boolean: []const u8,
 };
 
 pub const TokenKind = enum { ident, keyword, primitive, operator, separator, type, newline, eof };
@@ -495,16 +495,15 @@ pub const Lexer = struct {
         return null;
     }
 
-    fn nextBoolean(word: []const u8) ?bool {
+    fn nextBoolean(word: []const u8) ?[]const u8 {
         if (!isCaseConsistent(word)) {
             return null;
         }
 
-        if (std.ascii.eqlIgnoreCase("TRUE", word)) {
-            return true;
-        } else if (std.ascii.eqlIgnoreCase("FALSE", word)) {
-            return false;
-        } else return null;
+        return if (std.ascii.eqlIgnoreCase("TRUE", word) or std.ascii.eqlIgnoreCase("FALSE", word))
+            word
+        else
+            null;
     }
 
     pub fn nextToken(self: *Lexer) ?Token {

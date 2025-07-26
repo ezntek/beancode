@@ -4,6 +4,8 @@
 const std = @import("std");
 const util = @import("util.zig");
 const printer = @import("ast_printer.zig");
+const Location = @import("common.zig").Location;
+
 const panic = util.panic;
 
 pub const Operator = enum {
@@ -99,16 +101,16 @@ pub const FunctionCall = struct {
     args: []Expr,
 };
 
-// array indices that can work as idents in all statements such as assignments
-pub const ArrayIndexIdentifier = struct {
-    ident: *const Identifier,
+pub const LvalueArrayIndex = struct {
+    ident: *const Lvalue,
     idx: u32,
 };
 
-pub const Identifier = union(enum) {
-    name: []const u8,
-    array_index: ArrayIndexIdentifier,
-    function_call: FunctionCall,
+// values thatwork as the left hand side of assignments and definitely
+// have a location in memory
+pub const Lvalue = union(enum) {
+    ident: []const u8,
+    array_index: LvalueArrayIndex,
 };
 
 pub const ExprKind = enum {
@@ -116,7 +118,7 @@ pub const ExprKind = enum {
     e_negation,
     e_not,
     e_grouping,
-    e_ident, // union of ptrs
+    e_lvalue, // union of ptrs
     e_typecast,
     e_array_literal,
     e_array_index,
@@ -125,32 +127,32 @@ pub const ExprKind = enum {
     e_binary,
 };
 
-pub const Expr = union(ExprKind) {
+pub const ExprData = union(ExprKind) {
     e_literal: *const Literal, // union of ptrs
     e_negation: *const Expr,
     e_not: *const Expr,
     e_grouping: *const Expr,
-    e_ident: *const Identifier, // union of ptrs
+    e_lvalue: *const Lvalue, // union of ptrs
     e_typecast: *const Typecast,
     e_array_literal: *const ArrayLiteral,
     e_array_index: *const ArrayIndex,
-    e_array_index_identifier: *const ArrayIndexIdentifier,
+    e_array_index_identifier: *const LvalueArrayIndex,
     e_function_call: *const FunctionCall,
     e_binary: *const BinaryExpr,
 
-    pub fn make(comptime kind: ExprKind, alloc: std.mem.Allocator, v: anytype) Expr {
+    pub fn make(comptime kind: ExprKind, alloc: std.mem.Allocator, v: anytype) ExprData {
         const res = alloc.create(@TypeOf(v)) catch |err| panic(err);
         res.* = v;
-        return @unionInit(Expr, @tagName(kind), res);
+        return @unionInit(ExprData, @tagName(kind), res);
     }
 
-    pub fn destroy(self: *const Expr, alloc: std.mem.Allocator) void {
+    pub fn destroy(self: *const ExprData, alloc: std.mem.Allocator) void {
         switch (self.*) {
             .e_literal => |v| alloc.destroy(v),
             .e_negation => |v| alloc.destroy(v),
             .e_not => |v| alloc.destroy(v),
             .e_grouping => |v| alloc.destroy(v),
-            .e_ident => |v| alloc.destroy(v),
+            .e_lvalue => |v| alloc.destroy(v),
             .e_typecast => |v| alloc.destroy(v),
             .e_array_literal => |v| alloc.destroy(v),
             .e_array_index => |v| alloc.destroy(v),
@@ -159,10 +161,31 @@ pub const Expr = union(ExprKind) {
             .e_binary => |v| alloc.destroy(v),
         }
     }
+};
+
+pub const Expr = struct {
+    loc: Location,
+    data: ExprData,
+
+    pub fn make(comptime kind: ExprKind, alloc: std.mem.Allocator, v: anytype, loc: Location) Expr {
+        const data = ExprData.make(kind, alloc, v);
+        return Expr{ .loc = loc, .data = data };
+    }
+
+    pub fn destroy(self: *const Expr, alloc: std.mem.Allocator) void {
+        return self.data.destroy(alloc);
+    }
 
     // useful utility methods
-    pub fn makePrimitive(alloc: std.mem.Allocator, v: Primitive) Expr {
-        return Expr.make(.e_literal, alloc, Literal.makePrimitive(v));
+    pub fn makePrimitive(alloc: std.mem.Allocator, v: Primitive, loc: Location) Expr {
+        const data = ExprData.make(.e_literal, alloc, Literal.makePrimitive(v));
+        return Expr{ .loc = loc, .data = data };
+    }
+
+    pub fn makeIdent(alloc: std.mem.Allocator, v: []const u8, loc: Location) Expr {
+        const newv = alloc.dupe(u8, v) catch |err| panic(err);
+        const data = ExprData.make(.e_lvalue, alloc, .{ .ident = newv });
+        return Expr{ .loc = loc, .data = data };
     }
 };
 
@@ -171,7 +194,7 @@ pub const PrintStmt = struct {
 };
 
 pub const ReadStmt = struct {
-    ident: Identifier,
+    ident: Lvalue,
 };
 
 pub const ConstStmt = struct {
@@ -188,7 +211,7 @@ pub const VarStmt = struct {
 };
 
 pub const AssignStmt = struct {
-    ident: Identifier,
+    ident: Lvalue,
     value: Expr,
 };
 
@@ -196,7 +219,7 @@ pub const Program = struct {
     stmts: []const Statement, // owned
 };
 
-pub const Statement = union(enum) {
+pub const StatementData = union(enum) {
     s_print: PrintStmt,
     s_read: ReadStmt,
     s_const: ConstStmt,
@@ -205,9 +228,14 @@ pub const Statement = union(enum) {
     s_program: Program,
 };
 
+pub const Statement = struct {
+    loc: Location,
+    data: StatementData,
+};
+
 test "make expr" {
     const alloc = std.heap.page_allocator;
-    const expr = Expr.make(.e_literal, alloc, Literal.makePrimitive(.{ .int = 234 }));
+    const expr = ExprData.make(.e_literal, alloc, Literal.makePrimitive(.{ .int = 234 }));
     const w = std.io.getStdErr().writer().any();
     var p = printer.AstPrinter.init(alloc, w);
     p.visitExpr(expr);
