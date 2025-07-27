@@ -58,13 +58,13 @@ pub const Parser = struct {
         return if (self.cur + 1 < self.tokens.len) self.tokens[self.cur + 1] else null;
     }
 
-    fn getLoc(self: *const Self) *const SourceSpan {
+    fn getSpan(self: *const Self) *const SourceSpan {
         return &self.peek().?.span; // FIXME: better null handling
     }
 
     fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
         const fname = self.file_name orelse "(no file)";
-        util.diag(self.getLoc(), fname, fmt, fmtargs);
+        util.diag(self.getSpan(), fname, fmt, fmtargs);
         _ = self.bumpErrorCount();
         // TODO: proper error handlinG
     }
@@ -167,29 +167,29 @@ pub const Parser = struct {
                             return null;
                         },
                     };
-                    return Expr.initPrimitive(self.alloc, .{ .char = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .char, res, self.getSpan());
                 } else if (val.len > 1) {
                     self.diag("more than one character in char literal `{s}`", .{val});
                     return null;
                 } else {
-                    return Expr.initPrimitive(self.alloc, .{ .char = val[0] }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .char, val[0], self.getSpan());
                 }
             },
             .string => |val| {
-                const s = self.alloc.dupe(u8, val) catch |err| panic(err);
-                return Expr.initPrimitive(self.alloc, .{ .string = s }, self.getLoc());
+                const prim = ast.Literal.initPrimitiveString(self.alloc, val);
+                return Expr.init(self.alloc, .e_literal, prim, self.getSpan());
             },
             .bool => |val| {
-                var prim: ast.Primitive = undefined;
+                var res: bool = undefined;
                 if (std.ascii.eqlIgnoreCase(val, "true")) {
-                    prim = .{ .bool = true };
+                    res = true;
                 } else if (std.ascii.eqlIgnoreCase(val, "false")) {
-                    prim = .{ .bool = false };
+                    res = false;
                 } else {
                     self.diag("invalid boolean literal \"{s}\"", .{val});
                     return null;
                 }
-                return Expr.initPrimitive(self.alloc, prim, self.getLoc());
+                return Expr.initPrimitive(self.alloc, .bool, res, self.getSpan());
             },
             .number => |num| {
                 if (isFloat(num)) {
@@ -197,13 +197,13 @@ pub const Parser = struct {
                         self.diag("invalid float literal \"{s}\": \"{any}\"", .{ num, err });
                         return null;
                     };
-                    return Expr.initPrimitive(self.alloc, .{ .float = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .float, res, self.getSpan());
                 } else if (isInt(num)) {
                     const res = std.fmt.parseInt(i32, num, 10) catch |err| { // TODO: support other bases
                         self.diag("invalid int literal \"{s}\": \"{any}\"", .{ num, err });
                         return null;
                     };
-                    return Expr.initPrimitive(self.alloc, .{ .int = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .int, res, self.getSpan());
                 } else {
                     self.diag("found invalid number literal \"{s}\"", .{num});
                 }
@@ -217,7 +217,7 @@ pub const Parser = struct {
         // we know for sure this is an ident
         const p = self.consume().?;
 
-        return Expr.initIdent(self.alloc, p.data.ident, self.getLoc());
+        return Expr.initIdent(self.alloc, p.data.ident, self.getSpan());
     }
 
     fn functionCall(self: *Self) ?Expr {
@@ -300,7 +300,7 @@ pub const Parser = struct {
 
         const initial = self.expression();
         if (initial) |exp| {
-            return Statement.initPrintStmt(&.{exp}, self.alloc, self.getLoc());
+            return Statement.initPrintStmt(&.{exp}, self.alloc, self.getSpan());
         } else {
             self.diag("found invalid expression after print keyword", .{});
         }

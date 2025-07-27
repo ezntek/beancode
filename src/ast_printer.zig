@@ -224,11 +224,11 @@ pub const AstPrinter = struct {
             .s_const => |*s_const| self.visitConstStmt(s_const),
             .s_var => |*s_var| self.visitVarStmt(s_var),
             .s_assign => |*s_assign| self.visitAssignStmt(s_assign),
-            .s_program => |s_program| self.visitProgram(s_program),
+            .s_program => |*s_program| self.visitProgram(s_program),
         }
     }
 
-    pub fn visitProgram(self: *const Self, p: ast.Program) void {
+    pub fn visitProgram(self: *const Self, p: *const ast.Program) void {
         for (p.stmts) |*stmt| {
             self.visitStmt(stmt);
             self.write("\n");

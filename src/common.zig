@@ -9,7 +9,7 @@ pub const CompilerStage = enum {
 pub const SourceSpan = struct {
     line: u32,
     col: u32,
-    len: u8,
+    len: u16,
     // multiple files will exist later
 
     pub fn format(

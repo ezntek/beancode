@@ -69,6 +69,24 @@ pub const Primitive = union(PrimitiveType) {
     char: u8,
     string: []const u8, // owned slice
     bool: bool,
+
+    const Self = @This();
+
+    pub fn init(comptime kind: PrimitiveType, v: anytype) Self {
+        return @unionInit(Primitive, @tagName(kind), v);
+    }
+
+    pub fn initString(alloc: std.mem.Allocator, slc: []const u8) Self {
+        const s = alloc.dupe(u8, slc) catch |err| panic(err);
+        return init(.string, s);
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        switch (self.*) {
+            .string => alloc.free(self.string),
+            else => return,
+        }
+    }
 };
 
 pub const Typecast = struct {
@@ -82,12 +100,34 @@ pub const BinaryExpr = struct {
     rhs: Expr,
 };
 
-pub const Literal = union(enum) {
+pub const LiteralKind = enum {
+    primitive,
+    array,
+};
+
+pub const Literal = union(LiteralKind) {
     primitive: Primitive,
     array: ArrayLiteral,
 
-    pub fn makePrimitive(v: Primitive) Literal {
-        return Literal{ .primitive = v };
+    const Self = @This();
+
+    pub fn init(comptime kind: LiteralKind, v: anytype) Self {
+        return @unionInit(Literal, @tagName(kind), v);
+    }
+
+    pub fn initPrimitive(comptime kind: PrimitiveType, v: anytype) Self {
+        return init(.primitive, Primitive.init(kind, v));
+    }
+
+    pub fn initPrimitiveString(alloc: std.mem.Allocator, slc: []const u8) Self {
+        return init(.primitive, Primitive.initString(alloc, slc));
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        switch (self.*) {
+            .primitive => |p| p.deinit(alloc),
+            .array => unreachable, // FIXME:
+        }
     }
 };
 
@@ -113,8 +153,8 @@ pub const LvalueArrayIndex = struct {
         return LvalueArrayIndex{ .ident = mem, .idx = idx };
     }
 
-    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) Self {
-        self.ident.destroy(alloc);
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        self.ident.deinit(alloc);
         alloc.destroy(self.ident);
     }
 };
@@ -136,7 +176,7 @@ pub const Lvalue = union(enum) {
         return Lvalue{ .array_index = array_index };
     }
 
-    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) Self {
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
         switch (self.*) {
             .ident => |id| alloc.free(id),
             .array_index => |arridx| arridx.deinit(alloc),
@@ -171,7 +211,7 @@ pub const ExprData = union(ExprKind) {
     e_function_call: *const FunctionCall,
     e_binary: *const BinaryExpr,
 
-    pub fn init(comptime kind: ExprKind, alloc: std.mem.Allocator, v: anytype) ExprData {
+    pub fn init(alloc: std.mem.Allocator, comptime kind: ExprKind, v: anytype) ExprData {
         const res = alloc.create(@TypeOf(v)) catch |err| panic(err);
         res.* = v;
         return @unionInit(ExprData, @tagName(kind), res);
@@ -179,11 +219,17 @@ pub const ExprData = union(ExprKind) {
 
     pub fn deinit(self: *const ExprData, alloc: std.mem.Allocator) void {
         switch (self.*) {
-            .e_literal => |v| alloc.destroy(v),
+            .e_literal => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
             .e_negation => |v| alloc.destroy(v),
             .e_not => |v| alloc.destroy(v),
             .e_grouping => |v| alloc.destroy(v),
-            .e_lvalue => |v| alloc.destroy(v),
+            .e_lvalue => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
             .e_typecast => |v| alloc.destroy(v),
             .e_array_literal => |v| alloc.destroy(v),
             .e_array_index => |v| alloc.destroy(v),
@@ -198,8 +244,8 @@ pub const Expr = struct {
     span: *const SourceSpan,
     data: ExprData,
 
-    pub fn init(comptime kind: ExprKind, alloc: std.mem.Allocator, v: anytype, loc: SourceSpan) Expr {
-        const data = ExprData.init(kind, alloc, v);
+    pub fn init(alloc: std.mem.Allocator, comptime kind: ExprKind, v: anytype, loc: *const SourceSpan) Expr {
+        const data = ExprData.init(alloc, kind, v);
         return Expr{ .span = loc, .data = data };
     }
 
@@ -208,14 +254,14 @@ pub const Expr = struct {
     }
 
     // useful utility methods
-    pub fn initPrimitive(alloc: std.mem.Allocator, v: Primitive, span: *const SourceSpan) Expr {
-        const data = ExprData.init(.e_literal, alloc, Literal.makePrimitive(v));
+    pub fn initPrimitive(alloc: std.mem.Allocator, comptime kind: PrimitiveType, v: anytype, span: *const SourceSpan) Expr {
+        const data = ExprData.init(alloc, .e_literal, Literal.initPrimitive(kind, v));
         return Expr{ .span = span, .data = data };
     }
 
     pub fn initIdent(alloc: std.mem.Allocator, v: []const u8, span: *const SourceSpan) Expr {
         const newv = alloc.dupe(u8, v) catch |err| panic(err);
-        const data = ExprData.init(.e_lvalue, alloc, Lvalue{ .ident = newv });
+        const data = ExprData.init(alloc, .e_lvalue, Lvalue{ .ident = newv });
         return Expr{ .span = span, .data = data };
     }
 };
@@ -231,6 +277,9 @@ pub const PrintStmt = struct {
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        for (self.items) |itm| {
+            itm.destroy(alloc);
+        }
         alloc.free(self.items);
     }
 };
@@ -321,6 +370,7 @@ pub const Program = struct {
         for (self.stmts) |stmt| {
             stmt.deinit(alloc);
         }
+        alloc.free(self.stmts);
     }
 };
 
@@ -384,7 +434,7 @@ pub const Statement = struct {
 
 test "make expr" {
     const alloc = std.heap.page_allocator;
-    const expr = ExprData.init(.e_literal, alloc, Literal.makePrimitive(.{ .int = 234 }));
+    const expr = ExprData.init(.e_literal, alloc, Literal.initPrimitive(.{ .int = 234 }));
     const w = std.io.getStdErr().writer().any();
     var p = printer.AstPrinter.init(alloc, w);
     p.visitExpr(expr);

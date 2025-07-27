@@ -40,7 +40,9 @@ pub const Type = enum {
     char,
 };
 
-pub const Primitive = union(enum) {
+pub const PrimitiveKind = enum { number, string, char, bool };
+
+pub const Primitive = union(PrimitiveKind) {
     number: []const u8,
     string: []const u8,
     char: []const u8,
@@ -48,8 +50,14 @@ pub const Primitive = union(enum) {
 
     const Self = @This();
 
+    pub fn init(comptime kind: PrimitiveKind, alloc: std.mem.Allocator, slc: []const u8) Self {
+        const res = alloc.dupe(u8, slc) catch |err| panic(err);
+        return @unionInit(Primitive, @tagName(kind), res);
+    }
+
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
         switch (self.*) {
+            // FIXME: what the hell
             .number, .string, .char, .bool => |s| alloc.free(s),
         }
     }
@@ -69,6 +77,17 @@ pub const TokenData = union(TokenKind) {
     eof,
 
     const Self = @This();
+
+    pub fn init(comptime kind: TokenKind, v: anytype) TokenData {
+        return @unionInit(TokenData, @tagName(kind), v);
+    }
+
+    pub fn initIdent(alloc: std.mem.Allocator, ident: []const u8) TokenData {
+        const res = alloc.dupe(u8, ident) catch |err| panic(err);
+        return Self{
+            .ident = res,
+        };
+    }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
         switch (self.*) {
@@ -115,11 +134,17 @@ pub const Token = struct {
 
     const Self = @This();
 
-    pub fn new(data: TokenData, span: SourceSpan) Self {
+    pub fn init(comptime kind: TokenKind, v: anytype, span: SourceSpan) Self {
+        const data = @unionInit(TokenData, @tagName(kind), v);
         return Self{
             .data = data,
             .span = span,
         };
+    }
+
+    pub fn initIdent(alloc: std.mem.Allocator, ident: []const u8, span: SourceSpan) Self {
+        const data = TokenData.initIdent(alloc, ident);
+        return Self{ .data = data, .span = span };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
@@ -146,9 +171,9 @@ pub const Lexer = struct {
     row: u32,
     cur: u32,
     bol: u32,
-    keywords: std.StringHashMap(Keyword),
-    types: std.StringHashMap(Type),
-    res: std.ArrayList(Token),
+    keywords: std.StringHashMapUnmanaged(Keyword),
+    types: std.StringHashMapUnmanaged(Type),
+    res: std.ArrayListUnmanaged(Token),
 
     const Self = @This();
 
@@ -157,38 +182,39 @@ pub const Lexer = struct {
         file: []const u8,
         file_name: []const u8,
     ) Lexer {
-        var keywords = std.StringHashMap(Keyword).init(alloc);
+        var keywords: std.StringHashMapUnmanaged(Keyword) = .empty;
+        keywords.put(alloc, "VAR", Keyword.kw_var) catch |err| util.panic(err);
+        keywords.put(alloc, "CONST", Keyword.kw_const) catch |err| util.panic(err);
+        keywords.put(alloc, "PRINT", Keyword.kw_print) catch |err| util.panic(err);
+        keywords.put(alloc, "READ", Keyword.kw_read) catch |err| util.panic(err);
+        keywords.put(alloc, "AND", Keyword.kw_and) catch |err| util.panic(err);
+        keywords.put(alloc, "OR", Keyword.kw_or) catch |err| util.panic(err);
+        keywords.put(alloc, "NOT", Keyword.kw_not) catch |err| util.panic(err);
+        keywords.put(alloc, "IF", Keyword.kw_if) catch |err| util.panic(err);
+        keywords.put(alloc, "THEN", Keyword.kw_then) catch |err| util.panic(err);
+        keywords.put(alloc, "ELSE", Keyword.kw_else) catch |err| util.panic(err);
+        keywords.put(alloc, "END", Keyword.kw_end) catch |err| util.panic(err);
+        keywords.put(alloc, "SWITCH", Keyword.kw_switch) catch |err| util.panic(err);
+        keywords.put(alloc, "WHILE", Keyword.kw_while) catch |err| util.panic(err);
+        keywords.put(alloc, "DO", Keyword.kw_do) catch |err| util.panic(err);
+        keywords.put(alloc, "REPEAT", Keyword.kw_repeat) catch |err| util.panic(err);
+        keywords.put(alloc, "UNTIL", Keyword.kw_until) catch |err| util.panic(err);
+        keywords.put(alloc, "FOR", Keyword.kw_for) catch |err| util.panic(err);
+        keywords.put(alloc, "TO", Keyword.kw_to) catch |err| util.panic(err);
+        keywords.put(alloc, "CASE", Keyword.kw_switch) catch |err| util.panic(err);
+        keywords.put(alloc, "FN", Keyword.kw_fn) catch |err| util.panic(err);
+        keywords.put(alloc, "BREAK", Keyword.kw_break) catch |err| util.panic(err);
+        keywords.put(alloc, "CONTINUE", Keyword.kw_continue) catch |err| util.panic(err);
 
-        keywords.put("VAR", Keyword.kw_var) catch |err| util.panic(err);
-        keywords.put("CONST", Keyword.kw_const) catch |err| util.panic(err);
-        keywords.put("PRINT", Keyword.kw_print) catch |err| util.panic(err);
-        keywords.put("READ", Keyword.kw_read) catch |err| util.panic(err);
-        keywords.put("AND", Keyword.kw_and) catch |err| util.panic(err);
-        keywords.put("OR", Keyword.kw_or) catch |err| util.panic(err);
-        keywords.put("NOT", Keyword.kw_not) catch |err| util.panic(err);
-        keywords.put("IF", Keyword.kw_if) catch |err| util.panic(err);
-        keywords.put("THEN", Keyword.kw_then) catch |err| util.panic(err);
-        keywords.put("ELSE", Keyword.kw_else) catch |err| util.panic(err);
-        keywords.put("END", Keyword.kw_end) catch |err| util.panic(err);
-        keywords.put("SWITCH", Keyword.kw_switch) catch |err| util.panic(err);
-        keywords.put("WHILE", Keyword.kw_while) catch |err| util.panic(err);
-        keywords.put("DO", Keyword.kw_do) catch |err| util.panic(err);
-        keywords.put("REPEAT", Keyword.kw_repeat) catch |err| util.panic(err);
-        keywords.put("UNTIL", Keyword.kw_until) catch |err| util.panic(err);
-        keywords.put("FOR", Keyword.kw_for) catch |err| util.panic(err);
-        keywords.put("TO", Keyword.kw_to) catch |err| util.panic(err);
-        keywords.put("CASE", Keyword.kw_switch) catch |err| util.panic(err);
-        keywords.put("FN", Keyword.kw_fn) catch |err| util.panic(err);
-        keywords.put("BREAK", Keyword.kw_break) catch |err| util.panic(err);
-        keywords.put("CONTINUE", Keyword.kw_continue) catch |err| util.panic(err);
+        var types: std.StringHashMapUnmanaged(Type) = .empty;
 
-        var types = std.StringHashMap(Type).init(alloc);
+        types.put(alloc, "INT", Type.int) catch |err| util.panic(err);
+        types.put(alloc, "FLOAT", Type.float) catch |err| util.panic(err);
+        types.put(alloc, "STRING", Type.string) catch |err| util.panic(err);
+        types.put(alloc, "CHAR", Type.char) catch |err| util.panic(err);
+        types.put(alloc, "BOOLEAN", Type.bool) catch |err| util.panic(err);
 
-        types.put("INT", Type.int) catch |err| util.panic(err);
-        types.put("FLOAT", Type.float) catch |err| util.panic(err);
-        types.put("STRING", Type.string) catch |err| util.panic(err);
-        types.put("CHAR", Type.char) catch |err| util.panic(err);
-        types.put("BOOLEAN", Type.bool) catch |err| util.panic(err);
+        const al: std.ArrayListUnmanaged(Token) = .empty;
 
         return Lexer{
             .alloc = alloc,
@@ -199,7 +225,7 @@ pub const Lexer = struct {
             .row = 1,
             .keywords = keywords,
             .types = types,
-            .res = std.ArrayList(Token).init(alloc),
+            .res = al,
         };
     }
 
@@ -211,16 +237,13 @@ pub const Lexer = struct {
         };
     }
 
-    pub fn newToken(self: *const Self, tok: TokenData, len: u8) Token {
-        return Token{
-            .data = tok,
-            .span = self.getSpan(len),
-        };
+    pub fn newToken(self: *const Self, comptime kind: TokenKind, v: anytype, len: u8) Token {
+        return Token.init(kind, v, self.getSpan(len));
     }
 
     pub fn deinit(self: *Self) void {
-        self.keywords.deinit();
-        self.types.deinit();
+        self.keywords.deinit(self.alloc);
+        self.types.deinit(self.alloc);
         // we do not deinit the res
     }
 
@@ -327,7 +350,7 @@ pub const Lexer = struct {
 
             if (op) |res| {
                 self.cur += 3;
-                return self.newToken(.{ .operator = res }, 3);
+                return self.newToken(.operator, res, 3);
             }
         }
 
@@ -357,7 +380,7 @@ pub const Lexer = struct {
 
             if (op) |res| {
                 self.cur += 2;
-                return self.newToken(.{ .operator = res }, 2);
+                return self.newToken(.operator, res, 2);
             }
         }
 
@@ -379,7 +402,7 @@ pub const Lexer = struct {
             return null; // force rescanning as a word
 
         self.cur += 1;
-        return self.newToken(.{ .operator = operator }, 1);
+        return self.newToken(.operator, operator, 1);
     }
 
     pub fn nextSeparator(self: *Lexer) ?Token {
@@ -397,7 +420,7 @@ pub const Lexer = struct {
             },
         };
         self.cur += 1;
-        return self.newToken(.{ .separator = sym }, 1);
+        return self.newToken(.separator, sym, 1);
     }
 
     // this is an absoluteCinema™ function. do not question why this works. ths is absolute sorcery from december 2024. bruh.
@@ -481,7 +504,7 @@ pub const Lexer = struct {
 
         if (self.keywords.get(w_upper)) |kw| {
             const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - self.bol - w_upper.len + 1), .len = @truncate(w_upper.len) };
-            const tok = Token.new(.{ .keyword = kw }, span);
+            const tok = Token.init(.keyword, kw, span);
             return tok;
         }
 
@@ -496,7 +519,7 @@ pub const Lexer = struct {
 
         if (self.types.get(w_upper)) |typ| {
             const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - self.bol - w_upper.len + 1), .len = @truncate(w_upper.len) };
-            const tok = Token.new(.{ .type = typ }, span);
+            const tok = Token.init(.type, typ, span);
             return tok;
         }
 
@@ -511,12 +534,14 @@ pub const Lexer = struct {
 
         if (word[0] == '"' and word[word.len - 1] == '"') {
             // include chars around
-            return Token.new(.{ .primitive = Primitive{ .string = slc } }, span);
+            const p = Primitive.init(.string, self.alloc, word);
+            return Token.init(.primitive, p, span);
         }
 
         if (word[0] == '\'' and word[word.len - 1] == '\'') {
             // we will check its validity later, to allow for escape sequences
-            return Token.new(.{ .primitive = Primitive{ .char = slc } }, span);
+            const p = Primitive.init(.char, self.alloc, word);
+            return Token.init(.primitive, p, span);
         }
 
         return null;
@@ -531,7 +556,8 @@ pub const Lexer = struct {
             return null;
 
         const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - word.len + 1), .len = @truncate(word.len) };
-        return Token.new(.{ .primitive = .{ .bool = word } }, span);
+        const p = Primitive.init(.bool, self.alloc, word);
+        return Token.init(.primitive, p, span);
     }
 
     pub fn nextToken(self: *Lexer) ?Token {
@@ -547,7 +573,7 @@ pub const Lexer = struct {
             self.row += 1;
             self.bol = self.cur + 1;
             self.cur += 1;
-            return self.newToken(.newline, 1);
+            return self.newToken(.newline, {}, 1);
         }
 
         if (self.nextOperator()) |tok| return tok;
@@ -567,17 +593,20 @@ pub const Lexer = struct {
                 else => false,
             };
             if (word.len == 1 and shouldBeSub and word[0] == '-') {
-                return self.newToken(.{ .operator = .sub }, 1);
+                return self.newToken(.operator, .sub, 1);
             }
         }
 
+        defer self.alloc.free(word);
+
         if (isNumeral(word)) {
-            return self.newToken(.{ .primitive = Primitive{ .number = word } }, @truncate(word.len));
+            const p = Primitive.init(.number, self.alloc, word);
+            return self.newToken(.primitive, p, @truncate(word.len));
         } else if (word[0] == '-' and !std.ascii.isDigit(word[1])) {
             // why is this even here :skull:
             // scuffed but even more scuffed cos i rewrote tis from the python version
             self.cur += 1;
-            return self.newToken(.{ .operator = .sub }, 1);
+            return self.newToken(.operator, .sub, 1);
         }
 
         if (self.nextKeyword(word)) |tok| return tok;
@@ -586,18 +615,18 @@ pub const Lexer = struct {
         if (self.nextBoolean(word)) |tok| return tok;
 
         // return ident by default
-        return self.newToken(.{ .ident = word }, @truncate(word.len));
+        return Token.initIdent(self.alloc, word, self.getSpan(@truncate(word.len)));
     }
 
-    pub fn tokenize(self: *Lexer) !std.ArrayList(Token) {
+    pub fn tokenize(self: *Lexer) !std.ArrayListUnmanaged(Token) {
         // i hate putting res in self but oh well python sorcery
         while (self.cur < self.file.len) {
             if (self.nextToken()) |tok| {
-                try self.res.append(tok);
+                try self.res.append(self.alloc, tok);
             } else break;
         }
 
-        try self.res.append(self.newToken(.eof, 1));
+        try self.res.append(self.alloc, self.newToken(.eof, {}, 1));
 
         return self.res;
     }

@@ -1,0 +1,13 @@
+var nfac: int
+
+print "factorial of what number"
+input nfac
+
+var res = nfac
+nfac -= 1
+while nfac > 1
+    res *= nfac
+    nfac -= 1
+end
+
+print "result is ", nfac

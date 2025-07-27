@@ -9,6 +9,9 @@ const ast_printer = @import("ast_printer.zig");
 pub fn main() !void {
     var dba = std.heap.DebugAllocator(.{}){};
     const alloc = dba.allocator();
+    defer {
+        _ = dba.deinit();
+    }
 
     const argv = std.os.argv;
     if (argv.len == 1) {
@@ -24,10 +27,13 @@ pub fn main() !void {
 
     var lx = lexer.Lexer.init(alloc, content, file);
     defer lx.deinit();
-    const tokens = try lx.tokenize();
-    defer for (tokens.items) |tok| {
-        tok.deinit(alloc);
-    };
+    var tokens = try lx.tokenize();
+    defer {
+        for (tokens.items) |tok| {
+            tok.deinit(alloc);
+        }
+        tokens.deinit(alloc);
+    }
 
     std.debug.print("\u{001b}[1m===== beginning of token list =====\u{001b}[0m\n", .{});
 
@@ -44,10 +50,7 @@ pub fn main() !void {
     std.debug.print("\u{001b}[1m===== beginning of ast =====\u{001b}[0m\n", .{});
 
     const printer = ast_printer.AstPrinter.init(alloc, std.io.getStdErr().writer().any());
-    printer.visitProgram(program);
-
-    const alloc_res = dba.deinit();
-    std.debug.print("leaks: {any}", .{alloc_res});
+    printer.visitProgram(&program);
 }
 
 test "ast printing" {
