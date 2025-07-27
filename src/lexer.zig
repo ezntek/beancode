@@ -2,7 +2,7 @@ const std = @import("std");
 const util = @import("./util.zig");
 const ast = @import("./ast_types.zig");
 
-const SourceSpan = util.Location;
+const SourceSpan = util.SourceSpan;
 const diag = util.diag;
 const panic = util.panic;
 
@@ -44,7 +44,15 @@ pub const Primitive = union(enum) {
     number: []const u8,
     string: []const u8,
     char: []const u8,
-    boolean: []const u8,
+    bool: []const u8,
+
+    const Self = @This();
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        switch (self.*) {
+            .number, .string, .char, .bool => |s| alloc.free(s),
+        }
+    }
 };
 
 pub const TokenKind = enum { ident, keyword, primitive, operator, separator, type, newline, eof };
@@ -61,6 +69,14 @@ pub const TokenData = union(TokenKind) {
     eof,
 
     const Self = @This();
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        switch (self.*) {
+            .ident => |id| alloc.free(id),
+            .primitive => |prim| prim.deinit(alloc),
+            else => return,
+        }
+    }
 
     pub fn printToken(self: *const Self) void {
         std.debug.print("{s}\n", .{self});
@@ -81,7 +97,7 @@ pub const TokenData = union(TokenKind) {
             .primitive => |lit| switch (lit) {
                 .string => |s| writer.print("primitive(\"{s}\")", .{s}),
                 .number => |n| writer.print("primitive({s})", .{n}),
-                .boolean => |b| writer.print("primitive({s})", .{b}),
+                .bool => |b| writer.print("primitive({s})", .{b}),
                 .char => |ch| writer.print("primitive('{s}')", .{ch}),
             },
             .operator => |op| writer.print("operator({s})", .{@tagName(op)}),
@@ -104,6 +120,10 @@ pub const Token = struct {
             .data = data,
             .span = span,
         };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        return self.data.deinit(alloc);
     }
 
     pub fn printToken(self: *const Self) void {
@@ -511,7 +531,7 @@ pub const Lexer = struct {
             return null;
 
         const span = SourceSpan{ .line = self.row, .col = @truncate(self.cur - word.len + 1), .len = @truncate(word.len) };
-        return Token.new(.{ .primitive = .{ .boolean = word } }, span);
+        return Token.new(.{ .primitive = .{ .bool = word } }, span);
     }
 
     pub fn nextToken(self: *Lexer) ?Token {

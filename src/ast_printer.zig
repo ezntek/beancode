@@ -56,30 +56,30 @@ pub const AstPrinter = struct {
         }
     }
 
-    pub fn visitNegation(self: *const Self, expr: ast.ExprData) void {
+    pub fn visitNegation(self: *const Self, expr: ast.Expr) void {
         self.write("negation(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitNot(self: *const Self, expr: ast.ExprData) void {
+    pub fn visitNot(self: *const Self, expr: ast.Expr) void {
         self.write("not(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitGrouping(self: *const Self, expr: ast.ExprData) void {
+    pub fn visitGrouping(self: *const Self, expr: ast.Expr) void {
         self.write("grouping(");
         self.visitExpr(expr);
         self.write(")");
     }
 
-    pub fn visitIdent(self: *const Self, ident: *const ast.Lvalue) void {
+    // I'm using the C scheme of lvalue rvalue, where lvalues always have a memory address and rvalues might not
+    pub fn visitLvalue(self: *const Self, ident: *const ast.Lvalue) void {
         self.write("ident(");
         switch (ident.*) {
-            .name => |s| self.write(s),
-            .array_index => |*arridx| self.visitArrayIndexIdentifier(arridx),
-            .function_call => |*fncall| self.visitFunctionCall(fncall),
+            .ident => |id| self.write(id),
+            .array_index => |*arridx| self.visitLvalueArrayIndex(arridx),
         }
         self.write(")");
     }
@@ -132,25 +132,25 @@ pub const AstPrinter = struct {
         self.write(")");
     }
 
-    pub fn visitArrayIndexIdentifier(self: *const Self, index: *const ast.ArrayIndexIdentifier) void {
-        self.write("arrayindex(");
-        self.visitIdent(index.ident);
+    pub fn visitLvalueArrayIndex(self: *const Self, index: *const ast.LvalueArrayIndex) void {
+        self.write("lvarrindex(");
+        self.visitLvalue(index.ident);
         self.write(", ");
         self.writer.print("{}", .{index.idx}) catch |err| util.panic(err);
         self.write(")");
     }
 
-    pub fn visitExpr(self: *const Self, expr: ast.ExprData) void {
-        switch (expr) {
+    pub fn visitExpr(self: *const Self, expr: ast.Expr) void {
+        switch (expr.data) {
             .e_literal => |lit| self.visitLiteral(lit),
             .e_negation => |inner| self.visitNegation(inner.*),
             .e_not => |inner| self.visitNot(inner.*),
             .e_grouping => |inner| self.visitGrouping(inner.*),
-            .e_ident => |id| self.visitIdent(id),
+            .e_lvalue => |lv| self.visitLvalue(lv),
             .e_typecast => |tc| self.visitTypecast(tc),
             .e_array_literal => |arrlit| self.visitArrayLiteral(arrlit),
             .e_array_index => |arridx| self.visitArrayIndex(arridx),
-            .e_array_index_identifier => |arridx| self.visitArrayIndexIdentifier(arridx),
+            .e_array_index_identifier => |arridx| self.visitLvalueArrayIndex(arridx),
             .e_function_call => |fncall| self.visitFunctionCall(fncall),
             .e_binary => |bin| self.visitBinaryExpr(bin),
         }
@@ -169,7 +169,7 @@ pub const AstPrinter = struct {
 
     pub fn visitReadStmt(self: *const Self, s_read: *const ast.ReadStmt) void {
         self.write("read(");
-        self.visitIdent(&s_read.ident);
+        self.visitLvalue(&s_read.ident);
         self.write(")");
     }
 
@@ -180,7 +180,7 @@ pub const AstPrinter = struct {
         }
 
         self.write("const(");
-        self.visitIdent(&.{ .name = s_const.ident });
+        self.write(s_const.ident);
         self.write(", ");
         self.visitExpr(s_const.value);
         self.write(")");
@@ -193,7 +193,7 @@ pub const AstPrinter = struct {
         }
 
         self.write("var(");
-        self.visitIdent(&.{ .name = s_var.ident });
+        self.write(s_var.ident);
 
         if (s_var.typ) |typ| {
             self.write(", ");
@@ -211,14 +211,14 @@ pub const AstPrinter = struct {
     pub fn visitAssignStmt(self: *const Self, s_assign: *const ast.AssignStmt) void {
         // ident, value
         self.write("assign(");
-        self.visitIdent(&s_assign.ident);
+        self.visitLvalue(&s_assign.ident);
         self.write(", ");
         self.visitExpr(s_assign.value);
         self.write(")");
     }
 
     pub fn visitStmt(self: *const Self, stmt: *const ast.Statement) void {
-        switch (stmt.*) {
+        switch (stmt.*.data) {
             .s_print => |*s_print| self.visitPrintStmt(s_print),
             .s_read => |*s_read| self.visitReadStmt(s_read),
             .s_const => |*s_const| self.visitConstStmt(s_const),

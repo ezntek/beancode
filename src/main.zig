@@ -1,13 +1,14 @@
 const std = @import("std");
-const util = @import("./util.zig");
-const lexer = @import("./lexer.zig");
+const util = @import("util.zig");
+const lexer = @import("lexer.zig");
+const parser = @import("parser.zig");
 
-const ast = @import("./ast_types.zig");
-const ast_printer = @import("./ast_printer.zig");
+const ast = @import("ast_types.zig");
+const ast_printer = @import("ast_printer.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = gpa.allocator();
+    var dba = std.heap.DebugAllocator(.{}){};
+    const alloc = dba.allocator();
 
     const argv = std.os.argv;
     if (argv.len == 1) {
@@ -24,12 +25,29 @@ pub fn main() !void {
     var lx = lexer.Lexer.init(alloc, content, file);
     defer lx.deinit();
     const tokens = try lx.tokenize();
+    defer for (tokens.items) |tok| {
+        tok.deinit(alloc);
+    };
+
+    std.debug.print("\u{001b}[1m===== beginning of token list =====\u{001b}[0m\n", .{});
 
     for (tokens.items) |item| {
         std.debug.print("{s} {s}\n", .{ item, item.span });
     }
 
-    defer tokens.deinit();
+    var p = parser.Parser.init(alloc, file, tokens.items);
+    defer p.deinit(alloc);
+
+    const program = p.program();
+    defer program.deinit(alloc);
+
+    std.debug.print("\u{001b}[1m===== beginning of ast =====\u{001b}[0m\n", .{});
+
+    const printer = ast_printer.AstPrinter.init(alloc, std.io.getStdErr().writer().any());
+    printer.visitProgram(program);
+
+    const alloc_res = dba.deinit();
+    std.debug.print("leaks: {any}", .{alloc_res});
 }
 
 test "ast printing" {

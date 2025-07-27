@@ -7,29 +7,43 @@ const common = @import("common.zig");
 const Token = lexer.Token;
 const TokenData = lexer.TokenData;
 const TokenKind = lexer.TokenKind;
-const Location = util.Location;
+const SourceSpan = util.SourceSpan;
 const diag = util.diag;
 const panic = util.panic;
 
 const Expr = ast.Expr;
+const Statement = ast.Statement;
 
 const MAX_ERROR_COUNT = 20;
 
 pub const Parser = struct {
     alloc: std.mem.Allocator,
-    file_name: []const u8,
+    file_name: ?[]const u8,
     tokens: []Token,
     cur: u32,
     error_count: u32,
 
     const Self = @This();
 
-    pub fn init(alloc: std.mem.Allocator, tokens: []lexer.Token) Parser {
-        return Parser{
+    pub fn init(alloc: std.mem.Allocator, file_name: ?[]const u8, tokens: []lexer.Token) Parser {
+        var res = Parser{
             .alloc = alloc,
+            .file_name = null,
             .tokens = tokens,
             .cur = 0,
+            .error_count = 0,
         };
+        if (file_name) |name| {
+            const fname = alloc.dupe(u8, name) catch |err| panic(err);
+            res.file_name = fname;
+        }
+        return res;
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        if (self.file_name) |n| {
+            alloc.free(n);
+        }
     }
 
     fn prev(self: *const Self) ?Token {
@@ -44,14 +58,15 @@ pub const Parser = struct {
         return if (self.cur + 1 < self.tokens.len) self.tokens[self.cur + 1] else null;
     }
 
-    fn getLoc(self: *const Self) Location {
-        return self.peek().?.loc; // FIXME: better null handling
+    fn getLoc(self: *const Self) *const SourceSpan {
+        return &self.peek().?.span; // FIXME: better null handling
     }
 
     fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
         const fname = self.file_name orelse "(no file)";
         util.diag(self.getLoc(), fname, fmt, fmtargs);
-        self.bumpErrorCount();
+        _ = self.bumpErrorCount();
+        // TODO: proper error handlinG
     }
 
     fn bumpErrorCount(self: *Self) bool {
@@ -124,7 +139,8 @@ pub const Parser = struct {
         var found = false;
         for (val) |ch| {
             if (ch == '.') {
-                if (found) break false;
+                if (found)
+                    return false;
                 found = true;
             }
         }
@@ -151,20 +167,20 @@ pub const Parser = struct {
                             return null;
                         },
                     };
-                    return Expr.makePrimitive(self.alloc, .{ .char = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .{ .char = res }, self.getLoc());
                 } else if (val.len > 1) {
                     self.diag("more than one character in char literal `{s}`", .{val});
                     return null;
                 } else {
-                    return Expr.makePrimitive(self.alloc, .{ .char = val[0] }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .{ .char = val[0] }, self.getLoc());
                 }
             },
             .string => |val| {
                 const s = self.alloc.dupe(u8, val) catch |err| panic(err);
-                return Expr.makePrimitive(self.alloc, .{ .string = s }, self.getLoc());
+                return Expr.initPrimitive(self.alloc, .{ .string = s }, self.getLoc());
             },
             .bool => |val| {
-                var prim = undefined;
+                var prim: ast.Primitive = undefined;
                 if (std.ascii.eqlIgnoreCase(val, "true")) {
                     prim = .{ .bool = true };
                 } else if (std.ascii.eqlIgnoreCase(val, "false")) {
@@ -173,7 +189,7 @@ pub const Parser = struct {
                     self.diag("invalid boolean literal \"{s}\"", .{val});
                     return null;
                 }
-                return Expr.makePrimitive(self.alloc, prim, self.getLoc());
+                return Expr.initPrimitive(self.alloc, prim, self.getLoc());
             },
             .number => |num| {
                 if (isFloat(num)) {
@@ -181,45 +197,46 @@ pub const Parser = struct {
                         self.diag("invalid float literal \"{s}\": \"{any}\"", .{ num, err });
                         return null;
                     };
-                    return Expr.makePrimitive(self.alloc, .{ .float = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .{ .float = res }, self.getLoc());
                 } else if (isInt(num)) {
                     const res = std.fmt.parseInt(i32, num, 10) catch |err| { // TODO: support other bases
                         self.diag("invalid int literal \"{s}\": \"{any}\"", .{ num, err });
                         return null;
                     };
-                    return Expr.makePrimitive(self.alloc, .{ .int = res }, self.getLoc());
+                    return Expr.initPrimitive(self.alloc, .{ .int = res }, self.getLoc());
                 } else {
                     self.diag("found invalid number literal \"{s}\"", .{num});
                 }
             },
         }
+        return null;
     }
 
-    fn ident(self: *const Self) Expr {
+    fn ident(self: *Self) Expr {
         // ident checking logic was already done
         // we know for sure this is an ident
         const p = self.consume().?;
 
-        return Expr.makeIdent(self.alloc, p.data.ident, self.getLoc());
+        return Expr.initIdent(self.alloc, p.data.ident, self.getLoc());
     }
 
-    fn functionCall(self: *const Self) ?Expr {
+    fn functionCall(self: *Self) ?Expr {
         _ = self;
         unreachable;
     }
 
-    fn lvalueArrayIndex(self: *const Self) ?Expr {
+    fn lvalueArrayIndex(self: *Self) ?Expr {
         _ = self;
         unreachable;
     }
 
-    fn typecast(self: *const Self) ?Expr {
+    fn typecast(self: *Self) ?Expr {
         _ = self;
         unreachable;
     }
 
-    fn unary(self: *const Self) ?ast.Expr {
-        const p = self.peek();
+    fn unary(self: *Self) ?ast.Expr {
+        const p = self.peek() orelse return null;
         switch (p.data) {
             .primitive => |_| return self.primitive(),
             .ident => |_| {
@@ -244,37 +261,37 @@ pub const Parser = struct {
         return null;
     }
 
-    fn mathPow(self: *const Self) ?ast.Expr {
+    fn mathPow(self: *Self) ?ast.Expr {
         return self.unary();
     }
 
-    fn mathMulDiv(self: *const Self) ?ast.Expr {
+    fn mathMulDiv(self: *Self) ?ast.Expr {
         return self.mathPow();
     }
 
-    fn mathAddSub(self: *const Self) ?ast.Expr {
+    fn mathAddSub(self: *Self) ?ast.Expr {
         return self.mathMulDiv();
     }
 
-    fn comparison(self: *const Self) ?ast.Expr {
+    fn comparison(self: *Self) ?ast.Expr {
         return self.mathAddSub();
     }
 
-    fn equality(self: *const Self) ?ast.Expr {
+    fn equality(self: *Self) ?ast.Expr {
         const left = self.comparison();
         return left;
     }
 
-    fn logicalComparison(self: *const Self) ?ast.Expr {
+    fn logicalComparison(self: *Self) ?ast.Expr {
         const left = self.equality();
         return left;
     }
 
-    pub fn expression(self: *const Self) ?ast.Expr {
+    pub fn expression(self: *Self) ?ast.Expr {
         return self.logicalComparison();
     }
 
-    fn printStmt(self: *const Self) ?ast.Statement {
+    fn printStmt(self: *Self) ?ast.Statement {
         const begin = self.peek() orelse return null;
         if (begin.data != .keyword) return null;
         if (begin.data.keyword != .kw_print) return null;
@@ -283,15 +300,16 @@ pub const Parser = struct {
 
         const initial = self.expression();
         if (initial) |exp| {
-            _ = exp; // FIXME:
+            return Statement.initPrintStmt(&.{exp}, self.alloc, self.getLoc());
+        } else {
+            self.diag("found invalid expression after print keyword", .{});
         }
+        return null;
     }
 
-    pub fn program(self: *const Self) ast.Program {
-        _ = self;
-        return ast.Program{
-            // slay
-            .stmts = &.{},
-        };
+    pub fn program(self: *Self) ast.Program {
+        const print = self.printStmt().?;
+        const res = ast.Program.init(self.alloc, &.{print});
+        return res;
     }
 };
