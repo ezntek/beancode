@@ -534,13 +534,13 @@ pub const Lexer = struct {
 
         if (word[0] == '"' and word[word.len - 1] == '"') {
             // include chars around
-            const p = Primitive.init(.string, self.alloc, word);
+            const p = Primitive.init(.string, self.alloc, slc);
             return Token.init(.primitive, p, span);
         }
 
         if (word[0] == '\'' and word[word.len - 1] == '\'') {
             // we will check its validity later, to allow for escape sequences
-            const p = Primitive.init(.char, self.alloc, word);
+            const p = Primitive.init(.char, self.alloc, slc);
             return Token.init(.primitive, p, span);
         }
 

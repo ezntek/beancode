@@ -62,6 +62,27 @@ pub const Parser = struct {
         return &self.peek().?.span; // FIXME: better null handling
     }
 
+    fn check(self: *const Self, comptime tok: TokenData) bool {
+        const p = self.peek() orelse return false;
+        return p.data == tok;
+    }
+
+    fn checkTokenKind(self: *const Self, comptime kind: TokenKind) bool {
+        const p = self.peek() orelse return false;
+        return p.data == kind;
+    }
+
+    fn match(self: *const Self, comptime vals: []TokenData) bool {
+        for (vals) |val| {
+            if (self.check(val)) {
+                // we dont care about this value
+                _ = self.consume();
+                return true;
+            }
+        }
+        return false;
+    }
+
     fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
         const fname = self.file_name orelse "(no file)";
         util.diag(self.getSpan(), fname, fmt, fmtargs);
@@ -262,7 +283,7 @@ pub const Parser = struct {
     }
 
     fn mathPow(self: *Self) ?ast.Expr {
-        return self.unary();
+        const base = self.unary() orelse return null;
     }
 
     fn mathMulDiv(self: *Self) ?ast.Expr {
