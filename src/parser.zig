@@ -54,8 +54,49 @@ pub const Parser = struct {
         return if (self.cur < self.tokens.len) self.tokens[self.cur] else null;
     }
 
-    fn peek_next(self: *const Self) ?Token {
+    fn peekAndExpect(self: *const Self, comptime expected: TokenKind) ?Token {
+        if (self.peek()) |tok| {
+            if (tok.data != expected) {
+                self.diag("expected token {s} but got {s}", .{ expected, tok });
+            } else {
+                return tok;
+            }
+        } else {
+            self.diag("expected token {s} but reached the end of the token stream", .{expected});
+        }
+    }
+
+    fn peekAndCheck(self: *const Self, comptime wanted: TokenKind) bool {
+        if (self.peek()) |tok| {
+            return tok.data == wanted;
+        } else {
+            return false;
+        }
+    }
+
+    fn peekAndCheckThenConsume(self: *Self, comptime wanted: TokenKind) ?Token {
+        const res = self.peekAndCheck(wanted);
+        if (res) {
+            return self.consume();
+        } else {
+            return null;
+        }
+    }
+
+    fn peekNext(self: *const Self) ?Token {
         return if (self.cur + 1 < self.tokens.len) self.tokens[self.cur + 1] else null;
+    }
+
+    fn peekNextAndExpect(self: *const Self, comptime expected: TokenKind) ?Token {
+        if (self.peekNext()) |tok| {
+            if (tok.data != expected) {
+                self.diag("expected token {s} but got {s}", .{ expected, tok });
+            } else {
+                return tok;
+            }
+        } else {
+            self.diag("expected token {s} but reached the end of the token stream", .{expected});
+        }
     }
 
     fn getSpan(self: *const Self) *const SourceSpan {
@@ -70,6 +111,26 @@ pub const Parser = struct {
     fn checkTokenKind(self: *const Self, comptime kind: TokenKind) bool {
         const p = self.peek() orelse return false;
         return p.data == kind;
+    }
+
+    fn consume(self: *Self) ?Token {
+        if (self.cur < self.tokens.len) {
+            self.cur += 1;
+        }
+
+        return self.prev();
+    }
+
+    fn consumeAndExpect(self: *Self, expected: TokenKind) ?Token {
+        if (self.consume()) |tok| {
+            if (tok.data != expected) {
+                self.diag("expected token {s} but got {s}", .{ expected, tok });
+            } else {
+                return tok;
+            }
+        } else {
+            self.diag("expected token {s} but reached the end of the token stream", .{expected});
+        }
     }
 
     fn match(self: *const Self, comptime vals: []TokenData) bool {
@@ -93,26 +154,6 @@ pub const Parser = struct {
     fn bumpErrorCount(self: *Self) bool {
         self.error_count += 1;
         return self.error_count > MAX_ERROR_COUNT;
-    }
-
-    fn consume(self: *Self) ?Token {
-        if (self.cur < self.tokens.len) {
-            self.cur += 1;
-        }
-
-        return self.prev();
-    }
-
-    fn consumeAndExpect(self: *Self, expected: TokenKind) ?Token {
-        if (self.consume()) |tok| {
-            if (tok.data != expected) {
-                self.diag("expected token {s} but got {s}", .{ expected, tok });
-            } else {
-                return tok;
-            }
-        } else {
-            self.diag("expected token {s} but reached the end of the token stream", .{expected});
-        }
     }
 
     fn consumeAndCheck(self: *Self, expected: TokenKind) ?Token {
@@ -261,18 +302,18 @@ pub const Parser = struct {
         switch (p.data) {
             .primitive => |_| return self.primitive(),
             .ident => |_| {
-                const next = self.peek_next() orelse return self.ident();
-                if (next.data == .separator and next.data.separator == .left_paren) {
+                const next = self.peekNext() orelse return self.ident();
+                if (next.data == .left_paren) {
                     return self.functionCall();
-                } else if (next.data == .separator and next.data.separator == .left_bracket) {
+                } else if (next.data == .left_bracket) {
                     return self.lvalueArrayIndex();
                 } else {
                     return self.ident();
                 }
             },
-            .type => |_| {
-                const next = self.peek_next() orelse return null;
-                if (next.data == .separator and next.data.separator == .left_paren) {
+            .t_int, .t_float, .t_bool, .t_string, .t_char => {
+                const next = self.peekNext() orelse return null;
+                if (next.data == .left_paren) {
                     return self.typecast();
                 }
             },
@@ -283,7 +324,8 @@ pub const Parser = struct {
     }
 
     fn mathPow(self: *Self) ?ast.Expr {
-        const base = self.unary() orelse return null;
+        //const base = self.unary() orelse return null;
+        return self.unary();
     }
 
     fn mathMulDiv(self: *Self) ?ast.Expr {
@@ -313,11 +355,7 @@ pub const Parser = struct {
     }
 
     fn printStmt(self: *Self) ?ast.Statement {
-        const begin = self.peek() orelse return null;
-        if (begin.data != .keyword) return null;
-        if (begin.data.keyword != .kw_print) return null;
-
-        _ = self.consume().?;
+        _ = self.peekAndCheckThenConsume(.k_print) orelse return null;
 
         const initial = self.expression();
         if (initial) |exp| {
