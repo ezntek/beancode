@@ -5,8 +5,11 @@ const std = @import("std");
 const util = @import("util.zig");
 const printer = @import("ast_printer.zig");
 const SourceSpan = @import("common.zig").SourceSpan;
+const l = @import("lexer.zig");
 
 const panic = util.panic;
+
+// NOTE: since Expr is a union of pointers, no indirection is needed
 
 pub const Operator = enum {
     assign,
@@ -26,6 +29,35 @@ pub const Operator = enum {
     add_assign,
     sub_assign,
     pow_assign,
+    o_and,
+    o_or,
+
+    const Self = @This();
+
+    pub fn fromToken(data: l.TokenData) ?Self {
+        return switch (data) {
+            .assign => .assign,
+            .equal => .equal,
+            .less_than => .less_than,
+            .greater_than => .greater_than,
+            .less_than_or_equal => .less_than_or_equal,
+            .greater_than_or_equal => .greater_than_or_equal,
+            .not_equal => .not_equal,
+            .mul => .mul,
+            .div => .div,
+            .add => .add,
+            .sub => .sub,
+            .pow => .pow,
+            .mul_assign => .mul_assign,
+            .div_assign => .div_assign,
+            .add_assign => .add_assign,
+            .sub_assign => .sub_assign,
+            .pow_assign => .pow_assign,
+            .k_or => .o_or,
+            .k_and => .o_and,
+            else => null,
+        };
+    }
 };
 
 pub const Separator = enum {
@@ -38,6 +70,23 @@ pub const Separator = enum {
     colon,
     comma,
     dot,
+
+    const Self = @This();
+
+    pub fn fromToken(data: l.TokenData) ?Self {
+        return switch (data) {
+            .left_paren => .left_paren,
+            .right_paren => .right_paren,
+            .left_bracket => .left_bracket,
+            .right_bracket => .right_bracket,
+            .left_curly => .left_curly,
+            .right_curly => .right_curly,
+            .colon => .colon,
+            .comma => .comma,
+            .dot => .dot,
+            else => null,
+        };
+    }
 };
 
 pub const PrimitiveType = enum {
@@ -46,6 +95,19 @@ pub const PrimitiveType = enum {
     char,
     string,
     bool,
+
+    const Self = @This();
+
+    pub fn fromToken(data: l.TokenData) ?Self {
+        return switch (data) {
+            .int => .int,
+            .float => .float,
+            .char => .char,
+            .string => .string,
+            .bool => .bool,
+            else => null,
+        };
+    }
 };
 
 pub const ArrayType = struct {
@@ -235,7 +297,11 @@ pub const ExprData = union(ExprKind) {
             .e_array_index => |v| alloc.destroy(v),
             .e_array_index_identifier => |v| alloc.destroy(v),
             .e_function_call => |v| alloc.destroy(v),
-            .e_binary => |v| alloc.destroy(v),
+            .e_binary => |v| {
+                v.lhs.destroy(alloc);
+                v.rhs.destroy(alloc);
+                alloc.destroy(v);
+            },
         }
     }
 };
@@ -263,6 +329,15 @@ pub const Expr = struct {
         const newv = alloc.dupe(u8, v) catch |err| panic(err);
         const data = ExprData.init(alloc, .e_lvalue, Lvalue{ .ident = newv });
         return Expr{ .span = span, .data = data };
+    }
+
+    pub fn initBinary(alloc: std.mem.Allocator, left: Expr, op: Operator, right: Expr, span: *const SourceSpan) Expr {
+        const new = BinaryExpr{ .lhs = left, .op = op, .rhs = right };
+        const data = ExprData.init(alloc, .e_binary, new);
+        return Expr{
+            .data = data,
+            .span = span,
+        };
     }
 };
 

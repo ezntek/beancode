@@ -103,7 +103,7 @@ pub const Parser = struct {
         return &self.peek().?.span; // FIXME: better null handling
     }
 
-    fn check(self: *const Self, comptime tok: TokenData) bool {
+    fn check(self: *const Self, comptime tok: TokenKind) bool {
         const p = self.peek() orelse return false;
         return p.data == tok;
     }
@@ -133,15 +133,14 @@ pub const Parser = struct {
         }
     }
 
-    fn match(self: *const Self, comptime vals: []TokenData) bool {
-        for (vals) |val| {
+    fn match(self: *Self, comptime vals: anytype) ?Token {
+        inline for (vals) |val| {
             if (self.check(val)) {
                 // we dont care about this value
-                _ = self.consume();
-                return true;
+                return self.consume();
             }
         }
-        return false;
+        return null;
     }
 
     fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
@@ -324,30 +323,76 @@ pub const Parser = struct {
     }
 
     fn mathPow(self: *Self) ?ast.Expr {
-        //const base = self.unary() orelse return null;
-        return self.unary();
+        var base = self.unary() orelse return null;
+
+        while (self.match(.{.pow})) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.unary() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     fn mathMulDiv(self: *Self) ?ast.Expr {
-        return self.mathPow();
+        var base = self.mathPow() orelse return null;
+
+        while (self.match(.{ .mul, .div })) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.mathPow() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     fn mathAddSub(self: *Self) ?ast.Expr {
-        return self.mathMulDiv();
+        var base = self.mathMulDiv() orelse return null;
+
+        while (self.match(.{ .sub, .add })) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.mathMulDiv() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     fn comparison(self: *Self) ?ast.Expr {
-        return self.mathAddSub();
+        var base = self.mathAddSub() orelse return null;
+
+        const itms = .{ .greater_than, .greater_than_or_equal, .less_than, .less_than_or_equal };
+        while (self.match(itms)) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.mathAddSub() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     fn equality(self: *Self) ?ast.Expr {
-        const left = self.comparison();
-        return left;
+        var base = self.comparison() orelse return null;
+
+        while (self.match(.{ .equal, .not_equal })) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.comparison() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     fn logicalComparison(self: *Self) ?ast.Expr {
-        const left = self.equality();
-        return left;
+        var base = self.equality() orelse return null;
+
+        while (self.match(.{ .k_and, .k_or })) |op_tok| {
+            const op = ast.Operator.fromToken(op_tok.data).?;
+            const right = self.equality() orelse return null;
+            base = ast.Expr.initBinary(self.alloc, base, op, right, &op_tok.span);
+        }
+
+        return base;
     }
 
     pub fn expression(self: *Self) ?ast.Expr {
