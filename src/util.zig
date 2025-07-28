@@ -8,20 +8,20 @@ pub fn panic(err: anyerror) noreturn {
 }
 
 pub fn fatal(location: ?[]const u8, comptime msg: []const u8, fmtargs: anytype) noreturn {
+    const stderr = std.io.getStdErr().writer();
+    var bw = std.io.bufferedWriter(stderr);
+    const writer = bw.writer();
+
+    writer.print("\u{1b}[1;31mfatal:\u{1b}[0m ", .{}) catch |err| panic(err);
+    writer.print(msg, fmtargs) catch |err| panic(err);
+
     if (location) |loc| {
-        std.debug.print("\u{001b}[1;31merror(\u{001b}[0m{s}\u{001b}[1;31m)\u{001b}[0;2m: ", .{loc});
+        writer.print("\n\u{1b}[1m{s} stop!\n\u{001b}[0m", .{loc}) catch |err| panic(err);
     } else {
-        std.debug.print("\u{001b}[1;31merror\u{001b}[0;2m: ", .{});
+        writer.print("\n\u{1b}[1mcompile stop!\n\u{001b}[0m", .{}) catch |err| panic(err);
     }
 
-    std.debug.print(msg, fmtargs);
-
-    if (location) |loc| {
-        std.debug.print("\n\u{001b}[31m{s} STOP!\n\u{001b}[0m", .{loc});
-    } else {
-        std.debug.print("\n\u{001b}[1mcompile STOP!\n\u{001b}[0m", .{});
-    }
-
+    bw.flush() catch |err| panic(err);
     std.process.exit(1);
 }
 
@@ -29,10 +29,13 @@ pub fn diag(loc: *const SourceSpan, file_name: []const u8, comptime msg: []const
     const stderr = std.io.getStdErr().writer();
     var bw = std.io.bufferedWriter(stderr);
     const writer = bw.writer();
-    writer.print("{s}:{}:{}: ", .{ file_name, loc.line, loc.col }) catch |err| panic(err);
+    defer {
+        bw.flush() catch |err| panic(err);
+    }
+
+    writer.print("\u{1b}[31;1merror: \u{1b}[0;1m{s}:{}:{}:\u{1b}[0m ", .{ file_name, loc.line, loc.col }) catch |err| panic(err);
     writer.print(msg, fmtargs) catch |err| panic(err);
     writer.writeByte('\n') catch |err| panic(err);
-    bw.flush() catch |err| panic(err);
 }
 
 pub fn isUppercase(s: []const u8) bool {

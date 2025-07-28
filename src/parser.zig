@@ -100,7 +100,8 @@ pub const Parser = struct {
     }
 
     fn getSpan(self: *const Self) *const SourceSpan {
-        return &self.peek().?.span; // FIXME: better null handling
+        // XXX: I dont know if this is supposed to work like this!
+        return &self.prev().?.span; // FIXME: better null handling
     }
 
     fn check(self: *const Self, comptime tok: TokenKind) bool {
@@ -165,8 +166,12 @@ pub const Parser = struct {
     }
 
     fn consumeNewlines(self: *Self) void {
-        while (self.peek() == .newline) {
-            self.consume();
+        while (self.peek()) |tok| {
+            if (tok.data == .newline) {
+                _ = self.consume();
+            } else {
+                break;
+            }
         }
     }
 
@@ -400,20 +405,95 @@ pub const Parser = struct {
     }
 
     fn printStmt(self: *Self) ?ast.Statement {
-        _ = self.peekAndCheckThenConsume(.k_print) orelse return null;
+        const print = self.peekAndCheckThenConsume(.k_print) orelse return null;
 
-        const initial = self.expression();
-        if (initial) |exp| {
-            return Statement.initPrintStmt(&.{exp}, self.alloc, self.getSpan());
+        var exprs: std.ArrayListUnmanaged(Expr) = .empty;
+        defer exprs.deinit(self.alloc);
+
+        while (self.expression()) |exp| {
+            exprs.append(self.alloc, exp) catch |err| panic(err);
+
+            if (self.consume()) |tok| {
+                switch (tok.data) {
+                    .comma => {},
+                    .newline, .eof => break,
+                    else => self.diag("found invalid token after expression in print: \"{s}\"", .{tok}),
+                }
+            }
         } else {
             self.diag("found invalid expression after print keyword", .{});
+            _ = self.consume(); // get past the issue
+            return null;
         }
+
+        return Statement.initPrintStmt(exprs.items, self.alloc, &print.span);
+    }
+
+    fn statement(self: *Self) ?Statement {
+        self.consumeNewlines();
+
+        if (self.printStmt()) |v| return v;
+
         return null;
     }
 
+    fn skipToNextNewline(self: *Self) void {
+        while (self.peek()) |pk| {
+            if (pk.data == .newline or pk.data == .eof) {
+                return;
+            } else {
+                _ = self.consume();
+            }
+        }
+    }
+
+    fn nextStatement(self: *Self) ?Statement {
+        const s = self.statement();
+        if (s) |res| {
+            self.consumeNewlines();
+            return res;
+        } else {
+            if (self.peek()) |pk| {
+                if (pk.data == .eof or pk.data == .newline) {
+                    return null;
+                }
+
+                self.diag("found invalid statement at \"{s}\"", .{pk});
+                self.skipToNextNewline();
+            }
+            return null;
+        }
+    }
+
     pub fn program(self: *Self) ast.Program {
-        const print = self.printStmt().?;
-        const res = ast.Program.init(self.alloc, &.{print});
+        var stmts: std.ArrayListUnmanaged(Statement) = .empty;
+        defer stmts.deinit(self.alloc);
+
+        while (self.cur < self.tokens.len) {
+            if (self.peek()) |pk| {
+                if (pk.data == .eof) {
+                    break;
+                }
+            }
+
+            self.consumeNewlines();
+            if (self.nextStatement()) |stmt| {
+                stmts.append(self.alloc, stmt) catch |err| panic(err);
+            } else {
+                // we might put other things here
+                if (self.error_count > MAX_ERROR_COUNT) {
+                    util.fatal("parser", "too many errors emitted!", .{});
+                }
+            }
+        }
+
+        if (self.error_count > 1) {
+            util.fatal("parser", "emitted {} errors.", .{self.error_count});
+        } else if (self.error_count == 1) {
+            util.fatal("parser", "emitted 1 error.", .{});
+        }
+
+        const res = ast.Program.init(self.alloc, stmts.items);
         return res;
     }
 };

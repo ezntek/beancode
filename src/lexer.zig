@@ -573,6 +573,21 @@ pub const Lexer = struct {
             end += 1;
         }
 
+        if (end >= self.file.len) {
+            const span = SourceSpan{
+                .len = @truncate(self.file.len - begin),
+                .line = self.row,
+                .col = begin,
+            };
+
+            if (stringOrCharLiteral) {
+                util.diag(&span, self.file_name, "unexpected end of file while scanning for string or character literal", .{});
+            } else {
+                util.diag(&span, self.file_name, "unexpected end of file while scanning for word", .{});
+            }
+            util.fatal("lexer", "compilation cannot continue.", .{});
+        }
+
         const result = self.alloc.alloc(u8, end - begin) catch |err| util.panic(err);
         std.mem.copyForwards(u8, result, self.file[begin..end]);
         return result;
