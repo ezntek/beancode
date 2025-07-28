@@ -12,6 +12,7 @@ const diag = util.diag;
 const panic = util.panic;
 
 const Expr = ast.Expr;
+const Lvalue = ast.Lvalue;
 const Statement = ast.Statement;
 
 const MAX_ERROR_COUNT = 20;
@@ -286,12 +287,21 @@ pub const Parser = struct {
         return Expr.initIdent(self.alloc, p.data.ident, self.getSpan());
     }
 
-    fn functionCall(self: *Self) ?Expr {
+    fn lvalueArrayIndex(self: *Self) ?Expr {
         _ = self;
         unreachable;
     }
 
-    fn lvalueArrayIndex(self: *Self) ?Expr {
+    fn lvalueIdent(self: *Self) ?ast.Lvalue {
+        const id = self.consumeAndCheck(.ident) orelse return null;
+        return Lvalue.initIdent(self.alloc, id.data.ident);
+    }
+
+    fn lvalue(self: *Self) ?ast.Lvalue {
+        return self.lvalueIdent();
+    }
+
+    fn functionCall(self: *Self) ?Expr {
         _ = self;
         unreachable;
     }
@@ -405,7 +415,7 @@ pub const Parser = struct {
     }
 
     fn printStmt(self: *Self) ?ast.Statement {
-        const print = self.peekAndCheckThenConsume(.k_print) orelse return null;
+        const begin = self.peekAndCheckThenConsume(.k_print) orelse return null;
 
         var exprs: std.ArrayListUnmanaged(Expr) = .empty;
         defer exprs.deinit(self.alloc);
@@ -426,13 +436,26 @@ pub const Parser = struct {
             return null;
         }
 
-        return Statement.initPrintStmt(exprs.items, self.alloc, &print.span);
+        return Statement.initPrintStmt(exprs.items, self.alloc, &begin.span);
+    }
+
+    fn readStmt(self: *Self) ?ast.Statement {
+        const begin = self.peekAndCheckThenConsume(.k_read) orelse return null;
+
+        if (self.lvalue()) |id| {
+            return Statement.initReadStmt(id, self.alloc, &begin.span);
+        } else {
+            self.diag("found invalid expression after read keyword", .{});
+            _ = self.consume(); // get past the issue
+            return null;
+        }
     }
 
     fn statement(self: *Self) ?Statement {
         self.consumeNewlines();
 
         if (self.printStmt()) |v| return v;
+        if (self.readStmt()) |v| return v;
 
         return null;
     }

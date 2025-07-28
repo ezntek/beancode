@@ -360,18 +360,19 @@ pub const PrintStmt = struct {
 };
 
 pub const ReadStmt = struct {
-    ident: Lvalue,
+    ident: *const Lvalue,
 
     const Self = @This();
 
-    pub fn init() Self {
-        unreachable; // TODO: implement
+    pub fn init(ident: Lvalue, alloc: std.mem.Allocator) Self {
+        const lv = alloc.create(Lvalue) catch |err| panic(err);
+        lv.* = ident;
+        return Self{ .ident = lv };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
-        _ = self;
-        _ = alloc;
-        unreachable; // TODO: implement
+        self.ident.deinit(alloc);
+        alloc.destroy(self.ident);
     }
 };
 
@@ -504,6 +505,11 @@ pub const Statement = struct {
     pub fn initPrintStmt(items: []const Expr, alloc: std.mem.Allocator, span: *const SourceSpan) Statement {
         const res = PrintStmt.init(items, alloc);
         return Statement{ .data = .{ .s_print = res }, .span = span };
+    }
+
+    pub fn initReadStmt(lv: Lvalue, alloc: std.mem.Allocator, span: *const SourceSpan) Statement {
+        const res = ReadStmt.init(lv, alloc);
+        return Statement{ .data = .{ .s_read = res }, .span = span };
     }
 };
 

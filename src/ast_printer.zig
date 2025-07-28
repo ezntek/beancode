@@ -169,7 +169,7 @@ pub const AstPrinter = struct {
 
     pub fn visitReadStmt(self: *const Self, s_read: *const ast.ReadStmt) void {
         self.write("read(");
-        self.visitLvalue(&s_read.ident);
+        self.visitLvalue(s_read.ident);
         self.write(")");
     }
 
