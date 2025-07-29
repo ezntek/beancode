@@ -12,6 +12,7 @@ const diag = util.diag;
 const panic = util.panic;
 
 const Expr = ast.Expr;
+const Type = ast.Type;
 const Lvalue = ast.Lvalue;
 const Statement = ast.Statement;
 
@@ -49,6 +50,10 @@ pub const Parser = struct {
 
     fn prev(self: *const Self) ?Token {
         return if (self.cur - 1 < self.tokens.len) self.tokens[self.cur - 1] else null;
+    }
+
+    fn get(self: *const Self, pt: u32) ?Token {
+        return if (self.cur < self.tokens.len) self.tokens[pt] else null;
     }
 
     fn peek(self: *const Self) ?Token {
@@ -123,16 +128,21 @@ pub const Parser = struct {
         return self.prev();
     }
 
+    fn skip(self: *Self) void {
+        _ = self.consume();
+    }
+
     fn consumeAndExpect(self: *Self, expected: TokenKind) ?Token {
         if (self.consume()) |tok| {
             if (tok.data != expected) {
-                self.diag("expected token {s} but got {s}", .{ expected, tok });
+                self.diag("expected token \"{s}\" but got \"{s}\"", .{ expected, tok });
             } else {
                 return tok;
             }
         } else {
-            self.diag("expected token {s} but reached the end of the token stream", .{expected});
+            self.diag("expected token \"{s}\" but reached the end of the token stream", .{expected});
         }
+        return null;
     }
 
     fn match(self: *Self, comptime vals: anytype) ?Token {
@@ -145,11 +155,30 @@ pub const Parser = struct {
         return null;
     }
 
-    fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
+    fn diagAtSpan(self: *Self, span: *const SourceSpan, comptime fmt: []const u8, fmtargs: anytype) void {
         const fname = self.file_name orelse "(no file)";
-        util.diag(self.getSpan(), fname, fmt, fmtargs);
+        util.diag(span, fname, fmt, fmtargs);
         _ = self.bumpErrorCount();
-        // TODO: proper error handlinG
+        // TODO: proper error handling
+    }
+
+    fn diag(self: *Self, comptime fmt: []const u8, fmtargs: anytype) void {
+        const a = self.getSpan().*; // this works, dont touch
+        return self.diagAtSpan(&a, fmt, fmtargs);
+    }
+
+    fn diagExpected(self: *Self, comptime msg: []const u8) void {
+        if (self.peek()) |pk| {
+            self.diag("expected {s}, but found \"{s}\"", .{ msg, pk });
+        } else {
+            // XXX: is this really a good message?
+            self.diag("expected {s}, but found no token", .{msg});
+        }
+    }
+
+    fn diagAndSkip(self: *Self, comptime msg: []const u8, fmtargs: anytype) void {
+        self.diag(msg, fmtargs);
+        self.skip();
     }
 
     fn bumpErrorCount(self: *Self) bool {
@@ -176,13 +205,28 @@ pub const Parser = struct {
         }
     }
 
-    fn checkNewline(self: *const Self, ctx: []const u8) void {
-        const tok = self.consume();
-        if (tok != .newline) {
-            const ts = tok.getTokenString(self.alloc);
-            defer self.alloc.free(ts);
+    fn checkNewline(self: *Self, ctx: []const u8) void {
+        const tok = self.consume() orelse return; // end of stream should be fine
+        if (tok.data != .newline and tok.data != .eof) {
             self.diag("expected newline after {s} but found `{s}`", .{ ctx, tok });
         }
+    }
+
+    fn primitiveType(self: *Self) ?Type {
+        const tok = self.consume() orelse return null;
+        return switch (tok.data) {
+            .t_int => Type.initPrimitive(.int),
+            .t_float => Type.initPrimitive(.float),
+            .t_bool => Type.initPrimitive(.bool),
+            .t_string => Type.initPrimitive(.string),
+            .t_char => Type.initPrimitive(.char),
+            else => null,
+        };
+    }
+
+    // i love shadowing names to not piss the compiler off
+    fn _type(self: *Self) ?ast.Type {
+        return self.primitiveType(); // TODO: array type
     }
 
     fn isInt(val: []const u8) bool {
@@ -279,12 +323,16 @@ pub const Parser = struct {
         return null;
     }
 
-    fn ident(self: *Self) Expr {
-        // ident checking logic was already done
-        // we know for sure this is an ident
-        const p = self.consume().?;
+    /// Get an identifier as a slice
+    fn identRaw(self: *Self) ?[]const u8 {
+        const p = self.peekAndCheckThenConsume(.ident) orelse return null;
+        return p.data.ident;
+    }
 
-        return Expr.initIdent(self.alloc, p.data.ident, self.getSpan());
+    /// Get an identifier as an expression
+    fn ident(self: *Self) ?Expr {
+        const id_raw = self.identRaw() orelse return null;
+        return Expr.initIdent(self.alloc, id_raw, self.getSpan());
     }
 
     fn lvalueArrayIndex(self: *Self) ?Expr {
@@ -302,11 +350,13 @@ pub const Parser = struct {
     }
 
     fn functionCall(self: *Self) ?Expr {
+        // TODO: implement
         _ = self;
         unreachable;
     }
 
     fn typecast(self: *Self) ?Expr {
+        // TODO: implement
         _ = self;
         unreachable;
     }
@@ -316,7 +366,10 @@ pub const Parser = struct {
         switch (p.data) {
             .primitive => |_| return self.primitive(),
             .ident => |_| {
-                const next = self.peekNext() orelse return self.ident();
+                const next = self.peekNext() orelse {
+                    return self.ident() orelse return null;
+                };
+
                 if (next.data == .left_paren) {
                     return self.functionCall();
                 } else if (next.data == .left_bracket) {
@@ -436,19 +489,110 @@ pub const Parser = struct {
             return null;
         }
 
-        return Statement.initPrintStmt(exprs.items, self.alloc, &begin.span);
+        // we check inside the while loop
+        // self.checkNewline("print statement");
+
+        return Statement.initPrintStmt(self.alloc, exprs.items, &begin.span);
     }
 
     fn readStmt(self: *Self) ?ast.Statement {
         const begin = self.peekAndCheckThenConsume(.k_read) orelse return null;
 
-        if (self.lvalue()) |id| {
-            return Statement.initReadStmt(id, self.alloc, &begin.span);
-        } else {
-            self.diag("found invalid expression after read keyword", .{});
-            _ = self.consume(); // get past the issue
+        const id = self.lvalue() orelse {
+            self.diagAndSkip("found invalid expression after read keyword", .{});
+            return null;
+        };
+
+        self.checkNewline("read statement");
+
+        return Statement.initReadStmt(self.alloc, id, &begin.span);
+    }
+
+    fn constStmt(self: *Self) ?ast.Statement {
+        const begin = self.peekAndCheckThenConsume(.k_const) orelse return null;
+
+        const id = self.identRaw() orelse {
+            self.diagExpected("identifier after const");
+            return null;
+        };
+
+        _ = self.consumeAndExpect(.assign) orelse return null;
+
+        const exp = self.expression() orelse {
+            self.diagAndSkip("found invalid expression after assignment in const statement", .{});
+            return null;
+        };
+
+        self.checkNewline("const statement");
+
+        // TODO: export support
+        return Statement.initConstStmt(self.alloc, id, exp, false, &begin.span);
+    }
+
+    fn varStmt(self: *Self) ?ast.Statement {
+        const begin = self.peekAndCheckThenConsume(.k_var) orelse return null;
+        var val: ?Expr = null;
+        var typ: ?Type = null;
+
+        // === ALLOWED ===
+        // var i: int = 3
+        // var j: int
+        // var x = 4;
+        // === DISALLOWED ===
+        // var x
+
+        const id = self.identRaw() orelse {
+            self.diagExpected("ident after var");
+            return null;
+        };
+
+        if (self.peekAndCheckThenConsume(.colon)) |_| {
+            if (self._type()) |t| {
+                typ = t;
+            } else {
+                self.diagAndSkip("found invalid type in var statement", .{});
+            }
+        }
+
+        if (self.peekAndCheckThenConsume(.assign)) |_| {
+            val = self.expression() orelse {
+                self.diagAndSkip("found invalid expression in var statement", .{});
+                return null;
+            };
+        }
+
+        if (val == null and typ == null) {
+            self.diag("either a value, type or both must be supplied to a var statement!", .{});
             return null;
         }
+
+        self.checkNewline("var statement");
+
+        return Statement.initVarStmt(self.alloc, id, typ, val, false, &begin.span);
+    }
+
+    fn assignStmt(self: *Self) ?ast.Statement {
+        const saved_point = self.cur;
+        const initial = self.lvalue();
+
+        const ass = self.peekAndCheckThenConsume(.assign) orelse {
+            self.cur = saved_point;
+            return null;
+        };
+
+        const lv = initial orelse {
+            self.diag("invalid left hand side expression in assignment", .{});
+            return null;
+        };
+
+        const exp = self.expression() orelse {
+            self.diag("found invalid expression in assignment", .{});
+            return null;
+        };
+
+        self.checkNewline("assignment");
+
+        return Statement.initAssignStmt(lv, exp, &ass.span);
     }
 
     fn statement(self: *Self) ?Statement {
@@ -456,6 +600,9 @@ pub const Parser = struct {
 
         if (self.printStmt()) |v| return v;
         if (self.readStmt()) |v| return v;
+        if (self.constStmt()) |v| return v;
+        if (self.varStmt()) |v| return v;
+        if (self.assignStmt()) |v| return v;
 
         return null;
     }
@@ -465,7 +612,7 @@ pub const Parser = struct {
             if (pk.data == .newline or pk.data == .eof) {
                 return;
             } else {
-                _ = self.consume();
+                self.skip();
             }
         }
     }
@@ -476,14 +623,7 @@ pub const Parser = struct {
             self.consumeNewlines();
             return res;
         } else {
-            if (self.peek()) |pk| {
-                if (pk.data == .eof or pk.data == .newline) {
-                    return null;
-                }
-
-                self.diag("found invalid statement at \"{s}\"", .{pk});
-                self.skipToNextNewline();
-            }
+            self.skipToNextNewline();
             return null;
         }
     }

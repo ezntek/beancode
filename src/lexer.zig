@@ -92,6 +92,20 @@ pub const TokenKind = enum {
     eof,
     ident,
     primitive,
+
+    const Self = @This();
+
+    pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+
+        const tn = @tagName(self);
+        if (tn[1] == '_') {
+            try writer.print("token({s})", .{tn[2..]});
+        } else {
+            try writer.print("token({s})", .{tn});
+        }
+    }
 };
 
 pub const TokenData = union(TokenKind) {
@@ -624,6 +638,8 @@ pub const Lexer = struct {
     }
 
     fn nextStringOrCharLiteral(self: *Lexer, word: []const u8) ?Token {
+        if (word.len < 3) return null;
+
         const slc = word[1 .. word.len - 1];
 
         // col is magical sorcery

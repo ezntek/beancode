@@ -113,11 +113,48 @@ pub const PrimitiveType = enum {
 pub const ArrayType = struct {
     type: *const Type, // allow for nested arrays
     len: u32,
+
+    const Self = @This();
+
+    pub fn init(alloc: std.mem.Allocator, typ: Type, len: u32) Self {
+        const a_type = alloc.create(Type) catch |err| panic(err);
+        a_type.* = typ;
+        return Self{
+            .type = a_type,
+            .len = len,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        alloc.destroy(self.type);
+    }
 };
 
 pub const Type = union(enum) {
     primitive: PrimitiveType,
     array: ArrayType,
+
+    const Self = @This();
+
+    pub fn initPrimitive(prim: PrimitiveType) Self {
+        return Self{
+            .primitive = prim,
+        };
+    }
+
+    pub fn initArray(alloc: std.mem.Allocator, typ: Type, len: u32) Self {
+        const arr = ArrayType.init(alloc, typ, len);
+        return Self{
+            .array = arr,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        switch (self.*) {
+            .array => |a| a.deinit(alloc),
+            else => {},
+        }
+    }
 };
 
 pub const ArrayLiteral = struct {
@@ -298,8 +335,8 @@ pub const ExprData = union(ExprKind) {
             .e_array_index_identifier => |v| alloc.destroy(v),
             .e_function_call => |v| alloc.destroy(v),
             .e_binary => |v| {
-                v.lhs.destroy(alloc);
-                v.rhs.destroy(alloc);
+                v.lhs.deinit(alloc);
+                v.rhs.deinit(alloc);
                 alloc.destroy(v);
             },
         }
@@ -315,7 +352,7 @@ pub const Expr = struct {
         return Expr{ .span = loc, .data = data };
     }
 
-    pub fn destroy(self: *const Expr, alloc: std.mem.Allocator) void {
+    pub fn deinit(self: *const Expr, alloc: std.mem.Allocator) void {
         return self.data.deinit(alloc);
     }
 
@@ -346,14 +383,14 @@ pub const PrintStmt = struct {
 
     const Self = @This();
 
-    pub fn init(items: []const Expr, alloc: std.mem.Allocator) Self {
+    pub fn init(alloc: std.mem.Allocator, items: []const Expr) Self {
         const new_items = alloc.dupe(Expr, items) catch |err| panic(err);
         return PrintStmt{ .items = new_items };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
         for (self.items) |itm| {
-            itm.destroy(alloc);
+            itm.deinit(alloc);
         }
         alloc.free(self.items);
     }
@@ -364,7 +401,7 @@ pub const ReadStmt = struct {
 
     const Self = @This();
 
-    pub fn init(ident: Lvalue, alloc: std.mem.Allocator) Self {
+    pub fn init(alloc: std.mem.Allocator, ident: Lvalue) Self {
         const lv = alloc.create(Lvalue) catch |err| panic(err);
         lv.* = ident;
         return Self{ .ident = lv };
@@ -379,54 +416,69 @@ pub const ReadStmt = struct {
 pub const ConstStmt = struct {
     ident: []const u8,
     value: Expr,
-    exp: bool,
+    exp: bool, // export
 
     const Self = @This();
 
-    pub fn init() Self {
-        unreachable; // TODO: implement
+    pub fn init(alloc: std.mem.Allocator, ident: []const u8, value: Expr, exp: bool) Self {
+        const a_ident = alloc.dupe(u8, ident) catch |err| panic(err);
+        return Self{
+            .ident = a_ident,
+            .value = value,
+            .exp = exp,
+        };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
-        _ = self;
-        _ = alloc;
-        unreachable; // TODO: implement
+        self.value.deinit(alloc);
+        alloc.free(self.ident);
     }
 };
 
 pub const VarStmt = struct {
     ident: []const u8,
     typ: ?Type,
-    exp: bool,
     value: ?Expr,
+    exp: bool,
 
     const Self = @This();
 
-    pub fn init() Self {
-        unreachable; // TODO: implement
+    pub fn init(alloc: std.mem.Allocator, ident: []const u8, typ: ?Type, value: ?Expr, exp: bool) Self {
+        const a_ident = alloc.dupe(u8, ident) catch |err| panic(err);
+        return Self{
+            .ident = a_ident,
+            .typ = typ,
+            .value = value,
+            .exp = exp,
+        };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
-        _ = self;
-        _ = alloc;
-        unreachable; // TODO: implement
+        if (self.typ) |t| {
+            t.deinit(alloc);
+        }
+
+        if (self.value) |e| {
+            e.deinit(alloc);
+        }
+
+        alloc.free(self.ident);
     }
 };
 
 pub const AssignStmt = struct {
-    ident: Lvalue,
+    lv: Lvalue,
     value: Expr,
 
     const Self = @This();
 
-    pub fn init() Self {
-        unreachable; // TODO: implement
+    pub fn init(lv: Lvalue, value: Expr) Self {
+        return Self{ .lv = lv, .value = value };
     }
 
     pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
-        _ = self;
-        _ = alloc;
-        unreachable; // TODO: implement
+        self.lv.deinit(alloc);
+        self.value.deinit(alloc);
     }
 };
 
@@ -469,7 +521,7 @@ pub const StatementData = union(StatementKind) {
 
     const Self = @This();
 
-    pub fn init(comptime kind: StatementKind, alloc: std.mem.Allocator, v: anytype) StatementData {
+    pub fn init(alloc: std.mem.Allocator, comptime kind: StatementKind, v: anytype) StatementData {
         const res = alloc.create(@TypeOf(v)) catch |err| panic(err);
         res.* = v;
         return @unionInit(ExprData, @tagName(kind), res);
@@ -493,8 +545,8 @@ pub const Statement = struct {
 
     const Self = @This();
 
-    pub fn init(comptime kind: StatementKind, alloc: std.mem.Allocator, v: anytype, span: *const SourceSpan) Statement {
-        const res = StatementData.init(kind, alloc, v);
+    pub fn init(alloc: std.mem.Allocator, comptime kind: StatementKind, v: anytype, span: *const SourceSpan) Statement {
+        const res = StatementData.init(alloc, kind, v);
         return Statement{ .data = res, .span = span };
     }
 
@@ -502,18 +554,44 @@ pub const Statement = struct {
         self.data.deinit(alloc);
     }
 
-    pub fn initPrintStmt(items: []const Expr, alloc: std.mem.Allocator, span: *const SourceSpan) Statement {
-        const res = PrintStmt.init(items, alloc);
+    pub fn initPrintStmt(alloc: std.mem.Allocator, items: []const Expr, span: *const SourceSpan) Statement {
+        const res = PrintStmt.init(alloc, items);
         return Statement{ .data = .{ .s_print = res }, .span = span };
     }
 
-    pub fn initReadStmt(lv: Lvalue, alloc: std.mem.Allocator, span: *const SourceSpan) Statement {
-        const res = ReadStmt.init(lv, alloc);
+    pub fn initReadStmt(alloc: std.mem.Allocator, lv: Lvalue, span: *const SourceSpan) Statement {
+        const res = ReadStmt.init(alloc, lv);
         return Statement{ .data = .{ .s_read = res }, .span = span };
+    }
+
+    pub fn initConstStmt(alloc: std.mem.Allocator, id: []const u8, val: Expr, exp: bool, span: *const SourceSpan) Statement {
+        const res = ConstStmt.init(alloc, id, val, exp);
+        return Statement{ .data = .{ .s_const = res }, .span = span };
+    }
+
+    pub fn initVarStmt(alloc: std.mem.Allocator, id: []const u8, typ: ?Type, val: ?Expr, exp: bool, span: *const SourceSpan) Statement {
+        const res = VarStmt.init(alloc, id, typ, val, exp);
+        return Statement{
+            .data = .{
+                .s_var = res,
+            },
+            .span = span,
+        };
+    }
+
+    pub fn initAssignStmt(lv: Lvalue, exp: Expr, span: *const SourceSpan) Statement {
+        const res = AssignStmt.init(lv, exp);
+        return Statement{
+            .data = .{
+                .s_assign = res,
+            },
+            .span = span,
+        };
     }
 };
 
 test "make expr" {
+    // TODO: update tests
     const alloc = std.heap.page_allocator;
     const expr = ExprData.init(.e_literal, alloc, Literal.initPrimitive(.{ .int = 234 }));
     const w = std.io.getStdErr().writer().any();

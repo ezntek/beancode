@@ -211,7 +211,7 @@ pub const AstPrinter = struct {
     pub fn visitAssignStmt(self: *const Self, s_assign: *const ast.AssignStmt) void {
         // ident, value
         self.write("assign(");
-        self.visitLvalue(&s_assign.ident);
+        self.visitLvalue(&s_assign.lv);
         self.write(", ");
         self.visitExpr(s_assign.value);
         self.write(")");
