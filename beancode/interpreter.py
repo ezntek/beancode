@@ -1479,16 +1479,16 @@ class Interpreter:
                         f"cannot use type of {inner_end.kind} as array bound!", d.pos
                     )
 
-                # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
-                get_inner_arr = lambda: [BCValue(inner_type) for _ in range(inner_end.integer)]  # type: ignore
-
                 outer_end = self.visit_expr(atype.matrix_bounds[1])  # type: ignore
                 if outer_end.kind != "integer":
                     raise BCError(
                         f"cannot use type of {outer_end.kind} as array bound!", d.pos
                     )
 
-                outer_arr: BCValue = [get_inner_arr() for _ in range(outer_end.integer)]  # type: ignore
+                # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
+                in_lim = inner_end.get_integer()
+                out_lim = outer_end.get_integer()
+                outer_arr = [[BCValue(inner_type) for _ in range(in_lim)] for _ in range(out_lim)]  # type: ignore
 
                 outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
                 if outer_begin.kind != "integer":

@@ -1,74 +1,62 @@
 include_ffi "beanray"
 
-// max rectangles present on screen at once
-constant max <- 100
+CONSTANT MaxRect <- 1000
+CONSTANT WinWidth <- 800
+CONSTANT WinHeight <- 600
+CONSTANT SizeVar <- 50
+CONSTANT BaseSize <- 100
 
-declare recs: array[1:max,1:7] of integer
+DECLARE RectX: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectY: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectW: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectH: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectC: ARRAY[1:MaxRect,1:3] OF INTEGER
 
-for i <- 1 to max
-    for j <- 1 to 7
-        recs[i,j] <- 0
-    next j
-next i
+DECLARE LastId: INTEGER
+LastId <- 1
 
-// will be incremented first things first
-declare cur <- 0
+FUNCTION RandomBetween(Low: INTEGER, High: INTEGER) RETURNS INTEGER
+    DECLARE Result: INTEGER
+    Result <- INTEGER(RANDOM() * (High - Low + 1)) + Low
+    RETURN Result
+ENDFUNCTION
 
-declare timer <- -1
-constant winwidth <- 1024
-constant winheight <- 768
+PROCEDURE DisplayRects()
+    DECLARE Color: ARRAY[1:4] OF INTEGER
+    FOR Counter <- 1 TO LastId
+        Color[1] <- RectC[Counter,1]
+        Color[2] <- RectC[Counter,2]
+        Color[3] <- RectC[Counter,3]
+        Color[4] <- 255
+        CALL DrawRectangle(RectX[Counter], RectY[Counter], RectW[Counter], RectH[Counter], Color)
+    NEXT Counter
+ENDPROCEDURE
 
-function random_between(low: integer, high: integer) returns integer
-    return integer(random() * (high - low)) + low
-endfunction
+PROCEDURE GenerateRect()
+    RectX[LastId] <- RandomBetween(0, WinWidth)
+    RectY[LastId] <- RandomBetween(0, WinHeight)
+    RectW[LastId] <- BaseSize + RandomBetween(0, SizeVar)
+    RectH[LastId] <- BaseSize + RandomBetween(0, SizeVar)
+    RectC[LastId,1] <- RandomBetween(0, 255)
+    RectC[LastId,2] <- RandomBetween(0, 255)  
+    RectC[LastId,3] <- RandomBetween(0, 255)  
+ENDPROCEDURE
 
-procedure update
-    timer <- timer + 1
+CALL InitWindow(WinWidth, WinHeight, "Raylib Random Rectangles (Pseudocode)")
 
-    if mod(timer, 2) = 0 then
-        cur <- mod(cur, max)
-        cur <- cur + 1
+WHILE NOT WindowShouldClose() DO
+    CALL GenerateRect
+    CALL BeginDrawing
+    CALL ClearBackground(WHITE)
+    CALL DisplayRects
+    CALL DrawFPS(20, 20)
+    CALL EndDrawing
 
-        recs[cur, 1] <- random_between(0, winwidth)
-        recs[cur, 2] <- random_between(0, winheight)
-        recs[cur, 3] <- random_between(100, 225)
-        recs[cur, 4] <- random_between(100, 225)
+    LastId <- LastId + 1
+    IF LastId > MaxRect
+      THEN
+        LastId <- 1
+    ENDIF
+ENDWHILE
 
-        recs[cur, 5] <- random_between(0, 255)
-        recs[cur, 6] <- random_between(0, 255)
-        recs[cur, 7] <- random_between(0, 255)
-    endif
-endprocedure
-
-procedure draw
-    call ClearBackground(RAYWHITE)
-
-    for i <- 1 to cur
-        declare rec <- { recs[i, 1], recs[i, 2], recs[i, 3], recs[i, 4] }
-        declare color <- { recs[i, 5], recs[i, 6], recs[i, 7], 255 }
-        call DrawRectangleRec(rec, color)
-    next i
-
-    call DrawText("Pseudocode Random Rectangles", 20, 20, 20, GRAY)
-    call DrawFPS(20, 50)
-    
-    declare txt <- "number of rects: " + string(cur)
-
-    call DrawText(txt, 20, 80, 20, RED)
-endprocedure
-
-procedure main
-    call InitWindow(winwidth, winheight, "good morning")
-    //call SetTargetFPS(60)
-    
-    while not WindowShouldClose() do
-        call update
-        call BeginDrawing
-        call draw
-        call EndDrawing
-    endwhile
-
-    call CloseWindow
-endprocedure
-
-call main
+CALL CloseWindow
