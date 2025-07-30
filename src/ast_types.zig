@@ -100,11 +100,11 @@ pub const PrimitiveType = enum {
 
     pub fn fromToken(data: l.TokenData) ?Self {
         return switch (data) {
-            .int => .int,
-            .float => .float,
-            .char => .char,
-            .string => .string,
-            .bool => .bool,
+            .t_int => .int,
+            .t_float => .float,
+            .t_char => .char,
+            .t_string => .string,
+            .t_bool => .bool,
             else => null,
         };
     }
@@ -158,8 +158,26 @@ pub const Type = union(enum) {
 };
 
 pub const ArrayLiteral = struct {
-    items: []Expr,
-    len: Expr,
+    items: []const Expr,
+    len: u16,
+
+    const Self = @This();
+
+    pub fn init(alloc: std.mem.Allocator, items: []const Expr, len: u16) Self {
+        const a_items = alloc.dupe(Expr, items) catch |err| panic(err);
+        return Self{
+            .items = a_items,
+            .len = len,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        for (self.items) |itm| {
+            itm.deinit(alloc);
+        }
+
+        alloc.free(self.items);
+    }
 };
 
 pub const Primitive = union(PrimitiveType) {
@@ -191,12 +209,37 @@ pub const Primitive = union(PrimitiveType) {
 pub const Typecast = struct {
     type: PrimitiveType,
     expr: Expr,
+
+    const Self = @This();
+
+    pub fn init(typ: PrimitiveType, exp: Expr) Self {
+        return Self{ .type = typ, .expr = exp };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        self.expr.deinit(alloc);
+    }
 };
 
 pub const BinaryExpr = struct {
     lhs: Expr,
     op: Operator,
     rhs: Expr,
+
+    const Self = @This();
+
+    pub fn init(lhs: Expr, op: Operator, rhs: Expr) Self {
+        return Self{
+            .lhs = lhs,
+            .op = op,
+            .rhs = rhs,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        self.lhs.deinit(alloc);
+        self.rhs.deinit(alloc);
+    }
 };
 
 pub const LiteralKind = enum {
@@ -233,11 +276,42 @@ pub const Literal = union(LiteralKind) {
 pub const ArrayIndex = struct {
     expr: Expr,
     idx: u32,
+
+    const Self = @This();
+
+    pub fn init(expr: Expr, idx: u32) Self {
+        return Self{
+            .expr = expr,
+            .idx = idx,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        self.expr.deinit(alloc);
+    }
 };
 
 pub const FunctionCall = struct {
     name: Expr, // just assume everything is callable
-    args: []Expr,
+    args: []const Expr,
+
+    const Self = @This();
+
+    pub fn init(name: Expr, args: []const Expr, alloc: std.mem.Allocator) Self {
+        const a_args = alloc.dupe(Expr, args) catch |err| panic(err);
+        return Self{
+            .name = name,
+            .args = a_args,
+        };
+    }
+
+    pub fn deinit(self: *const Self, alloc: std.mem.Allocator) void {
+        for (self.args) |arg| {
+            arg.deinit(alloc);
+        }
+        alloc.free(self.args);
+        self.name.deinit(alloc);
+    }
 };
 
 pub const LvalueArrayIndex = struct {
@@ -292,7 +366,6 @@ pub const ExprKind = enum {
     e_typecast,
     e_array_literal,
     e_array_index,
-    e_array_index_identifier,
     e_function_call,
     e_binary,
 };
@@ -306,10 +379,10 @@ pub const ExprData = union(ExprKind) {
     e_typecast: *const Typecast,
     e_array_literal: *const ArrayLiteral,
     e_array_index: *const ArrayIndex,
-    e_array_index_identifier: *const LvalueArrayIndex,
     e_function_call: *const FunctionCall,
     e_binary: *const BinaryExpr,
 
+    /// Creates an ExprData with the union's value heap-allocated for the AST.
     pub fn init(alloc: std.mem.Allocator, comptime kind: ExprKind, v: anytype) ExprData {
         const res = alloc.create(@TypeOf(v)) catch |err| panic(err);
         res.* = v;
@@ -329,14 +402,24 @@ pub const ExprData = union(ExprKind) {
                 v.deinit(alloc);
                 alloc.destroy(v);
             },
-            .e_typecast => |v| alloc.destroy(v),
-            .e_array_literal => |v| alloc.destroy(v),
-            .e_array_index => |v| alloc.destroy(v),
-            .e_array_index_identifier => |v| alloc.destroy(v),
-            .e_function_call => |v| alloc.destroy(v),
+            .e_typecast => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
+            .e_array_literal => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
+            .e_array_index => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
+            .e_function_call => |v| {
+                v.deinit(alloc);
+                alloc.destroy(v);
+            },
             .e_binary => |v| {
-                v.lhs.deinit(alloc);
-                v.rhs.deinit(alloc);
+                v.deinit(alloc);
                 alloc.destroy(v);
             },
         }
@@ -369,8 +452,41 @@ pub const Expr = struct {
     }
 
     pub fn initBinary(alloc: std.mem.Allocator, left: Expr, op: Operator, right: Expr, span: *const SourceSpan) Expr {
-        const new = BinaryExpr{ .lhs = left, .op = op, .rhs = right };
+        const new = BinaryExpr.init(left, op, right);
         const data = ExprData.init(alloc, .e_binary, new);
+        return Expr{
+            .data = data,
+            .span = span,
+        };
+    }
+
+    pub fn initGrouping(alloc: std.mem.Allocator, inner: Expr, span: *const SourceSpan) Expr {
+        const data = ExprData.init(alloc, .e_grouping, inner);
+        return Expr{
+            .data = data,
+            .span = span,
+        };
+    }
+
+    pub fn initNot(alloc: std.mem.Allocator, inner: Expr, span: *const SourceSpan) Expr {
+        const data = ExprData.init(alloc, .e_not, inner);
+        return Expr{
+            .data = data,
+            .span = span,
+        };
+    }
+
+    pub fn initNegation(alloc: std.mem.Allocator, inner: Expr, span: *const SourceSpan) Expr {
+        const data = ExprData.init(alloc, .e_negation, inner);
+        return Expr{
+            .data = data,
+            .span = span,
+        };
+    }
+
+    pub fn initTypecast(alloc: std.mem.Allocator, typ: PrimitiveType, expr: Expr, span: *const SourceSpan) Expr {
+        const tc = Typecast.init(typ, expr);
+        const data = ExprData.init(alloc, .e_typecast, tc);
         return Expr{
             .data = data,
             .span = span,

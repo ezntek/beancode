@@ -150,7 +150,6 @@ pub const AstPrinter = struct {
             .e_typecast => |tc| self.visitTypecast(tc),
             .e_array_literal => |arrlit| self.visitArrayLiteral(arrlit),
             .e_array_index => |arridx| self.visitArrayIndex(arridx),
-            .e_array_index_identifier => |arridx| self.visitLvalueArrayIndex(arridx),
             .e_function_call => |fncall| self.visitFunctionCall(fncall),
             .e_binary => |bin| self.visitBinaryExpr(bin),
         }

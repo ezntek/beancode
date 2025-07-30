@@ -93,7 +93,15 @@ pub const Parser = struct {
         return if (self.cur + 1 < self.tokens.len) self.tokens[self.cur + 1] else null;
     }
 
-    fn peekNextAndExpect(self: *const Self, comptime expected: TokenKind) ?Token {
+    fn peekNextAndCheck(self: *const Self, comptime wanted: TokenKind) bool {
+        if (self.peekNext()) |tok| {
+            return tok.data == wanted;
+        } else {
+            return false;
+        }
+    }
+
+    fn peekNextAndExpect(self: *Self, comptime expected: TokenKind) ?Token {
         if (self.peekNext()) |tok| {
             if (tok.data != expected) {
                 self.diag("expected token {s} but got {s}", .{ expected, tok });
@@ -103,6 +111,7 @@ pub const Parser = struct {
         } else {
             self.diag("expected token {s} but reached the end of the token stream", .{expected});
         }
+        return null;
     }
 
     fn getSpan(self: *const Self) *const SourceSpan {
@@ -355,10 +364,19 @@ pub const Parser = struct {
         unreachable;
     }
 
-    fn typecast(self: *Self) ?Expr {
-        // TODO: implement
-        _ = self;
-        unreachable;
+    fn typecast(self: *Self, typ: TokenData) ?Expr {
+        // this line shouldn't actually return null, because we check it in
+        // unary()
+        const prim = ast.PrimitiveType.fromToken(typ) orelse return null;
+
+        const bracket = self.peekNextAndExpect(.left_paren) orelse return null;
+
+        const inner = self.expression() orelse {
+            self.diagAndSkip("found invalid expression within typecast", .{});
+            return null;
+        };
+
+        return Expr.initTypecast(self.alloc, prim, inner, &bracket.span);
     }
 
     fn unary(self: *Self) ?ast.Expr {
@@ -379,10 +397,25 @@ pub const Parser = struct {
                 }
             },
             .t_int, .t_float, .t_bool, .t_string, .t_char => {
-                const next = self.peekNext() orelse return null;
-                if (next.data == .left_paren) {
-                    return self.typecast();
+                if (self.peekNextAndCheck(.left_paren)) {
+                    return self.typecast(p.data);
                 }
+            },
+            .left_paren => {
+                const begin = self.consume() orelse return null;
+                const expr = self.expression() orelse {
+                    self.diagAndSkip("invalid expression within grouping", .{});
+                    return null;
+                };
+
+                _ = self.consumeAndExpect(.right_paren) orelse return null;
+
+                // FIXME: span is incorrect
+                return Expr.initGrouping(
+                    self.alloc,
+                    expr,
+                    &begin.span,
+                );
             },
             // TODO: implement others
             else => return null,
