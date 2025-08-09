@@ -3,13 +3,12 @@ name = "beancode"
 version = "0.1.0"
 description = "A cursed IGCSE pseudocode interpreter/transpiler"
 authors = [
-    {name = "ezntek",email = "eason@ezntek.com"}
+    {name = "ezntek", email = "eason@ezntek.com"}
 ]
 license = {text = "MPL-2.0"}
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "typed-argument-parser (>=1.10.1,<2.0.0)",
     "raylib (>=5.5.0.2,<6.0.0.0)"
 ]
 

@@ -1480,14 +1480,15 @@ class Interpreter:
         else:
             key = s.ident.ident
 
-            if key not in self.variables:
-                raise BCError(f"attempted to use variable {key} without declaring it", s.ident.pos)
+            exp = self.visit_expr(s.value)
+            var = self.variables.get(key)
+    
+            if var is None:
+                var = Variable(exp, False, export=False)
+                self.variables[key] = var 
 
             if self.variables[key].const:
                 raise BCError(f"attemped to write to constant {key}", s.ident.pos)
-
-            exp = self.visit_expr(s.value)
-            var = self.variables[key].val
 
             if isinstance(exp.kind, BCArrayType):
                 if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.array.matrix_bounds:  # type: ignore
@@ -1495,9 +1496,9 @@ class Interpreter:
 
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.array.flat_bounds:  # type: ignore
                     raise BCError(f"mismatched array sizes in array assignment", s.pos)
-            elif var.kind != exp.kind and exp.kind != "null":
+            elif var.val.kind != exp.kind and exp.kind != "null":
                 raise BCError(
-                    f"cannot assign {exp.kind} to {var.kind}", s.ident.pos
+                    f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
                 )
 
             self.variables[key].val = exp

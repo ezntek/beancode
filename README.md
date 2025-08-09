@@ -102,6 +102,12 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
  * You can also declare variables without types and directly assign them: `DECLARE Num <- 5`
 7. Array literals are supported:
  * `Arr <- {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}`
+8. Get the type of any value as a string with `TYPE(value)` or `TYPEOF(value)`
+9. You can directly assign variables without declaring its type through type inference:
+   ```
+   X <- 5
+   OUTPUT X // works
+   ```
 
 ## quirks
 
