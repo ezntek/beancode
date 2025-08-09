@@ -2,7 +2,7 @@
 
 ***WARNING***: This is *NOT* my best work. please do *NOT* assume my programming ability to be this, and do *NOT* use this project as a reference for yours. The layout is horrible. The code style is horrible. The code is not idiomatic. I went through 607,587,384 hacks and counting just for this project to work.
 
-## information
+## Information
 
 This is a very cursed non-optimizing super-cursed super-cursed-pro-max-plus-ultra IGCSE pseudocode tree-walk interpreter written in the best language, Python.
 
@@ -14,25 +14,58 @@ This is my foray into compiler engineering; through this project I have finally 
 
 `</rant>`
 
-## standard
+## Standard
 
 this is a tree-walker for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) (pseudocode was this way for literal millenia).
 
-## installation
+## Dependencies
 
-why
+* `typed-argument-parser`
+* `pipx` if you wish to install it system-wide
 
-## running
+## Installation
 
-note: the extension does not matter
+* Clone the respository with `git clone https://github.com/ezntek/beancode --branch=py --depth=1`
+* `cd beancode`
+* `pipx install .`
 
-`python -m beancode --file yourfile.bean`
-`python main.py --file yourfile.bean` 
+### Notes on using `pip`
 
+If you use pip, you may be faced with an error as such:
 
-## xtra feachurse™
+```
+error: externally-managed-environment
 
-there are many extra features, which are not standard to IGCSE Pseudocode.
+× This environment is externally managed
+╰─> To install Python packages system-wide, try 'pacman -S
+    python-xyz', where xyz is the package you are trying to
+    install.
+
+=== snip ===
+
+note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+hint: See PEP 668 for the detailed specification.
+```
+
+You can either choose to run `pip install . --break-system-packages`, which is not recommended but is likely to work, or you can run it in a virtual environment.
+
+Either way, it is still recommended to use `pipx`, as all the hard work is done for you.
+
+## Running
+
+*note: the extension of the source file does not matter, but I recommend `.bean`.*
+
+If you installed it globally:
+
+`beancode file.bean`
+
+If you wish to run it in the project directory:
+
+`python -m beancode file.bean`
+
+## extra features™
+
+There are many extra features, which are not standard to IGCSE Pseudocode.
 
 1. Lowercase keywords are supported; but cases may not be mixed. All library routines are fully case-insensitive.
 2. Includes can be done with `include "file.bean"`, relative to the file.
@@ -72,7 +105,7 @@ there are many extra features, which are not standard to IGCSE Pseudocode.
 
 ## quirks
 
-* ***the errors are complete unintelligible dogfeces***. I will not fix them. I do not want to fix them.
+* Not more than 1 parse error can be reported at one time. Sorry, not sorry!
 * Lowercase keywords are supported.
 * ***TODO: allow arrays of unknown size to be parsed and passed into functions/procs***
 * ***TODO: else if if i feel freaky***

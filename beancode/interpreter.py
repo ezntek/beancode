@@ -710,9 +710,44 @@ class Interpreter:
 
         return retval
 
+    def visit_typeof(self, stmt: FunctionCall) -> BCValue:
+        if len(stmt.args) > 1:
+            raise BCError(f"cannot get the type of more than one value!", stmt.pos)
+
+        if len(stmt.args) == 0:
+            raise BCError(f"insufficient arguments passed to TYPE/TYPEOF", stmt.pos)
+
+        s = str()
+        val = self.visit_expr(stmt.args[0])
+        kind = val.kind
+        if isinstance(kind, BCArrayType):
+            s += "ARRAY["
+            arr = val.get_array()
+            if arr.flat_bounds is not None:
+                s += str(arr.flat_bounds[0])
+                s += ":"
+                s += str(arr.flat_bounds[1])
+            elif arr.matrix_bounds is not None:
+                s += str(arr.matrix_bounds[0])
+                s += ":"
+                s += str(arr.matrix_bounds[1])
+                s += ","
+                s += str(arr.matrix_bounds[2])
+                s += ":"
+                s += str(arr.matrix_bounds[3])
+            s += "] OF "
+            s += str(arr.typ.inner).upper()
+        else:
+            s = str(kind.upper())
+        return BCValue("string", string=s)
+
+
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
             return self.visit_libroutine(stmt)
+
+        if stmt.ident.lower() in ["typeof", "type"]:
+            return self.visit_typeof(stmt)
 
         try: 
             func = self.functions[stmt.ident]
@@ -1002,10 +1037,6 @@ class Interpreter:
                 raise BCError(
                     f"attempted to access nonexistent variable `{expr.ident}`", expr.pos
                 )
-
-            # if var.val == None or var.is_uninitialized():
-            #    raise BCWarning("attempted to access an uninitialized variable")
-
             return var.val
         elif isinstance(expr, Literal):
             return expr.to_bcvalue()
@@ -1017,7 +1048,6 @@ class Interpreter:
             return self.visit_array_index(expr)
         elif isinstance(expr, FunctionCall):
             return self.visit_fncall(expr)
-
         else:
             raise ValueError("expr is very corrupted whoops")
 
@@ -1068,6 +1098,21 @@ class Interpreter:
                 res += str(evaled)
         print(res)
 
+    def _guess_input_type(self, inp: str) -> BCValue:
+        p = Parser([])
+        if p.is_real(inp):
+            return BCValue(kind="real")
+        elif p.is_integer(inp):
+            return BCValue(kind="integer")
+        
+        if inp.strip().lower() in ["true", "false", "no", "yes"]:
+            return BCValue(kind="boolean")
+        
+        if len(inp.strip()) == 1:
+            return BCValue(kind="char")
+        else:
+            return BCValue(kind="string")
+
     def visit_input_stmt(self, stmt: InputStatement):
         inp = input()
         id = stmt.ident.ident
@@ -1075,7 +1120,9 @@ class Interpreter:
         data: Variable | None = self.variables.get(id)
 
         if data is None:
-            raise BCError(f"attempted to call `INPUT` into nonexistent variable {id}", stmt.ident.pos)
+            val = self._guess_input_type(inp)
+            data = Variable(val, False, export=False)
+            self.variables[id] = data 
 
         if data.const:
             raise BCError(f"attempted to call `INPUT` into constant {id}", stmt.ident.pos)

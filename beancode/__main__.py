@@ -1,24 +1,17 @@
 import os
-import typing
+import sys
+import argparse
+
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
 from . import BCError, BCWarning, panic
 
-from tap import Tap
-
-Backend = typing.Literal["interpreter", "none"]
-
-class Args(Tap):
-    file: str  # filename
-    out_file: str = ""
-    backend: Backend = "interpreter"
-    print: bool = True
-    debug: bool = False
-
-
 def main():
-    args = Args().parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file", type=str)
+    parser.add_argument("--debug", action="store_true", help="show debugging information")
+    args = parser.parse_args()
 
     if not os.path.exists(args.file):
         panic(f"file {args.file} does not exist!")
@@ -33,46 +26,31 @@ def main():
         for tok in toks:
             print(tok)
 
-    warnings: list[BCWarning]
-
     parser = Parser(toks)
 
     try:
-        program, warnings = parser.program()
+        program, _ = parser.program()
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)
-
-    if warnings:
-        for warning in warnings:
-            warning.print(args.file, file_content)
+    except BCWarning as w:
+        w.print(args.file, file_content)
         exit(1)
 
-    match args.backend:
-        case "interpreter":
-            if args.debug:
-                print("\033[1m----- BEGINNING OF AST -----\033[0m")
-                for stmt in program.stmts:
-                    print(stmt)
-                    print()
-
-            print("\033[1m----- BEGINNING OF INTERPRETER OUTPUT -----\033[0m")
-            try:
-                i = Interpreter(program.stmts)
-                i.toplevel = True
-                i.visit_block(None)
-            except BCError as err:
-                err.print(args.file, file_content)
-                exit(1)
-        case "none":
-            if args.print:
-                print("\033[0m\033[1m----- BEGINNING OF AST -----\033[0m\033[2m")
-                for stmt in program.stmts:
-                    print(stmt)
-                    print()
-                print("\033[0m\033[1m----- END OF AST -----\033[0m")
-            print("\033[0m")
-
+    if args.debug:
+        print("\033[1m----- BEGINNING OF AST -----\033[0m", file=sys.stderr)
+        for stmt in program.stmts:
+            print(stmt)
+            print()
+        print("\033[0m\033[1m----- END OF AST -----\033[0m", file=sys.stderr)
+    
+    try:
+        i = Interpreter(program.stmts)
+        i.toplevel = True
+        i.visit_block(None)
+    except BCError as err:
+        err.print(args.file, file_content)
+        exit(1)
 
 if __name__ == "__main__":
     main()
