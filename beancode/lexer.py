@@ -334,6 +334,8 @@ class Lexer:
             "+": "add",
             "-": "sub",
             "/": "div",
+            # this is cursed but eh
+            "←": "assign"
         }
 
         res = hm.get(self.file[self.cur])

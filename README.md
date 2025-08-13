@@ -1,10 +1,12 @@
 # beancode1
 
-this is a tree-walker for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf).
+This is a tree-walking interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf), written in Python.
 
 ***IMPORTANT:*** Some examples using [raylib](https://github.com/raysan5/raylib) are provided. They were written entirely for fun; in order to run those examples one must install the `raylib` package for those examples to run, else, you will get an error.
 
 This interpreter is called beancode (aka `beancode1`. `beancode2` does exist, it is a **completely different programming language** featured in the main branch of this repository. Future references to beancode means the current implementation.)
+
+**If youre looking for beancode2, head over to the main branch.**
 
 ## Dependencies
 

@@ -697,10 +697,16 @@ class Interpreter:
         match name.lower():
             case "ucase":
                 [txt, *_] = evargs
-                return self.visit_ucase(txt.get_string())
+                if txt.kind == "char":
+                    return self.visit_ucase(txt.get_char())
+                else:
+                    return self.visit_ucase(txt.get_string())
             case "lcase":
                 [txt, *_] = evargs
-                return self.visit_lcase(txt.get_string())
+                if txt.kind == "char":
+                    return self.visit_lcase(txt.get_char())
+                else:
+                    return self.visit_lcase(txt.get_string())
             case "substring":
                 [txt, begin, length, *_] = evargs
                 return self.visit_substring(
