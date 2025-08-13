@@ -465,7 +465,7 @@ class Parser:
             return Grouping(begin.pos, inner=e)
         elif p.kind == "operator" and p.operator == "sub":
             begin = self.consume()
-            e = self.expression()
+            e = self.unary()
             if e is None:
                 raise BCError("invalid expression for negation", begin)
             return Negation(begin.pos, e)
@@ -540,7 +540,7 @@ class Parser:
             if right is None:
                 return None
 
-            expr = BinaryExpr(expr.pos, expr, op, right)  
+            expr = BinaryExpr(expr.pos, expr, op, right)
         return expr
 
     def equality(self) -> Expr | None:
@@ -747,7 +747,6 @@ class Parser:
             if expr is None:
                 raise BCError("invalid expression after assign in declare", self.peek())
 
-
         if typ is None and expr is None:
             raise BCError(
                 "must have either a type declaration, expression to assign as, or both",
@@ -848,7 +847,9 @@ class Parser:
 
         then = self.consume()
         if then.keyword != "then":
-            raise BCError(f"expected `THEN` after if condition, but found `{str(then)}`", then)
+            raise BCError(
+                f"expected `THEN` after if condition, but found `{str(then)}`", then
+            )
 
         # dont enforce newline after then
         if self.peek().kind == "newline":

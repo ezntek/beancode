@@ -2,6 +2,7 @@ import typing
 from dataclasses import dataclass
 from . import *
 
+
 @dataclass
 class Expr:
     # location of the token
@@ -58,6 +59,7 @@ class BCArray:
             raise BCError("tried to access matrix array from a flat array")
         return self.matrix
 
+
 BCType = BCArrayType | BCPrimitiveType
 
 
@@ -107,15 +109,15 @@ class BCValue:
     @classmethod
     def new_boolean(cls, b: bool) -> "BCValue":
         return cls("boolean", boolean=b)
-    
+
     @classmethod
     def new_char(cls, c: str) -> "BCValue":
         return cls("char", char=c[0])
-    
+
     @classmethod
     def new_string(cls, s: str) -> "BCValue":
         return cls("string", string=s)
-    
+
     # arrays later
 
     def get_integer(self) -> int:
@@ -175,6 +177,7 @@ class BCValue:
             case "null":
                 return "(null)"
 
+
 @dataclass
 class Literal(Expr):
     kind: BCPrimitiveType
@@ -194,6 +197,7 @@ class Literal(Expr):
             boolean=self.boolean,
             array=None,
         )
+
 
 @dataclass
 class Negation(Expr):
@@ -256,6 +260,7 @@ class ArrayIndex(Expr):
     ident: Identifier
     idx_outer: Expr
     idx_inner: Expr | None = None
+
 
 StatementKind = typing.Literal[
     "declare",
@@ -418,6 +423,7 @@ class IncludeStatement:
     file: str
     ffi: bool
 
+
 @dataclass
 class Statement:
     kind: StatementKind
@@ -480,5 +486,3 @@ class Statement:
 @dataclass
 class Program:
     stmts: list[Statement]
-
-

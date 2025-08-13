@@ -5,16 +5,19 @@ import argparse
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
-from . import BCError, BCWarning, panic
+from . import BCError, BCWarning, error
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=str)
-    parser.add_argument("--debug", action="store_true", help="show debugging information")
+    parser.add_argument(
+        "--debug", action="store_true", help="show debugging information"
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.file):
-        panic(f"file {args.file} does not exist!")
+        error(f"file {args.file} does not exist!")
 
     with open(args.file, "r+") as f:
         file_content = f.read()
@@ -43,7 +46,7 @@ def main():
             print(stmt)
             print()
         print("\033[0m\033[1m----- END OF AST -----\033[0m", file=sys.stderr)
-    
+
     try:
         i = Interpreter(program.stmts)
         i.toplevel = True
@@ -51,6 +54,7 @@ def main():
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)
+
 
 if __name__ == "__main__":
     main()

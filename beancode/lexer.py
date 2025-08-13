@@ -226,7 +226,7 @@ class Lexer:
             "scope",
             "endscope",
             "include",
-            "include_ffi", 
+            "include_ffi",
             "export",
             "print",
         ]
@@ -337,7 +337,7 @@ class Lexer:
         }
 
         res = hm.get(self.file[self.cur])
-        
+
         if res is not None:
             if res == "sub" and self.file[self.cur + 1].isdigit():
                 return None

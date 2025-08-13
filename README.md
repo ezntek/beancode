@@ -1,22 +1,10 @@
-# beancode
+# beancode1
 
-***WARNING***: This is *NOT* my best work. please do *NOT* assume my programming ability to be this, and do *NOT* use this project as a reference for yours. The layout is horrible. The code style is horrible. The code is not idiomatic. I went through 607,587,384 hacks and counting just for this project to work.
+this is a tree-walker for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf).
 
-## Information
+***IMPORTANT:*** Some examples using [raylib](https://github.com/raysan5/raylib) are provided. They were written entirely for fun; in order to run those examples one must install the `raylib` package for those examples to run, else, you will get an error.
 
-This is a very cursed non-optimizing super-cursed super-cursed-pro-max-plus-ultra IGCSE pseudocode tree-walk interpreter written in the best language, Python.
-
-(I definitely do not have 30,000 C projects and I definitely do not advocate for C and the burning of Python at the stake for projects such as this).
-
-It's slow, it's horrible, it's hacky, but it works :) and if it ain't broke, don't fix it.
-
-This is my foray into compiler engineering; through this project I have finally learned how to perform recursive-descent parsing. I will most likely adapt this into C/Rust (maybe not C++) and play with a bytecode VM sooner or later (with a different language, because Python is slow and does not have null safety in 2025).
-
-`</rant>`
-
-## Standard
-
-this is a tree-walker for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) (pseudocode was this way for literal millenia).
+This interpreter is called beancode (aka `beancode1`. `beancode2` does exist, it is a **completely different programming language** featured in the main branch of this repository. Future references to beancode means the current implementation.)
 
 ## Dependencies
 
@@ -111,9 +99,28 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
 
 ## quirks
 
-* Not more than 1 parse error can be reported at one time. Sorry, not sorry!
+* ***Multiple statements in CASE OFs are not supported! Therefore, the following code is illegal:***
+  ```
+  CASE OF Var
+      CASE 'a': OUTPUT "foo"
+                OUTPUT "bar"
+  ENDCASE
+  ```
+  Please put your code into a procedure instead.
+* ***File IO is completely unsupported.*** You might get cryptic errors if you try.
+* Not more than 1 parse error can be reported at one time.
 * Lowercase keywords are supported.
-* ***TODO: allow arrays of unknown size to be parsed and passed into functions/procs***
-* ***TODO: else if if i feel freaky***
-* ***a fecesload of testing***
-* the code is horrible (unidiomatic. i miss C. i miss tagged unions from rust. i _strongly dislike_ oop.)
+
+## Appendix
+
+This turned out to be a very cursed non-optimizing super-cursed super-cursed-pro-max-plus-ultra IGCSE pseudocode tree-walk interpreter written in the best language, Python.
+
+(I definitely do not have 30,000 C projects and I definitely do not advocate for C and the burning of Python at the stake for projects such as this).
+
+It's slow, it's horrible, it's hacky, but it works :) and if it ain't broke, don't fix it.
+
+This is my foray into compiler engineering; through this project I have finally learned how to perform recursive-descent parsing. I will most likely adapt this into C/Rust (maybe not C++) and play with a bytecode VM sooner or later (with a different language, because Python is slow and does not have null safety in 2025).
+
+***WARNING***: This is *NOT* my best work. please do *NOT* assume my programming ability to be this, and do *NOT* use this project as a reference for yours. The layout is horrible. The code style is horrible. The code is not idiomatic. I went through 607,587,384 hacks and counting just for this project to work.
+
+`</rant>`
