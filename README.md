@@ -15,6 +15,15 @@ This interpreter is called beancode (aka `beancode1`. `beancode2` does exist, it
 
 ## Installation
 
+### Installing from PyPI (pip)
+
+* `pipx install beancode` (you should have pipx installed)
+* `pip install --break-system-packages beancode` 
+
+***since this package does not actually have dependencies, you can pass `--break-system-packages` safely.***
+
+### Installing from this repository
+
 * Clone the respository with `git clone https://github.com/ezntek/beancode --branch=py --depth=1`
 * `cd beancode`
 * `pipx install .`

@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-python3 -m beancode --file "examples/${1}.bean"
+python3 -m beancode "examples/${1}.bean"

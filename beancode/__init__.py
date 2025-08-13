@@ -1,3 +1,5 @@
+__version__ = "0.1.1"
+
 class BCError(Exception):
     # row, col, bol
     pos: tuple[int, int, int]

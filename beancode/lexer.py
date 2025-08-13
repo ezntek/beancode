@@ -1,5 +1,6 @@
 import typing as t
 from dataclasses import dataclass
+from . import BCError
 
 Keyword = t.Literal[
     "declare",
@@ -366,8 +367,6 @@ class Lexer:
             return Token("separator", self.get_pos(), separator=res)  # type: ignore
 
     def next_word(self) -> str:
-        # do not question why this works. its sorcery from the old zig shit
-
         begin = self.cur
         curr_ch = self.file[self.cur]
         end = self.cur
@@ -391,7 +390,7 @@ class Lexer:
 
             while (
                 not curr_ch.isspace()
-                and (not self.is_separator(curr_ch))
+                and not self.is_separator(curr_ch)
                 and not self.is_operator_start(curr_ch)
             ):
                 self.cur += 1
@@ -437,8 +436,13 @@ class Lexer:
 
     def next_string_or_char_literal(self, word: str) -> Token | None:
         slc = word[1 : len(word) - 1]
-        pos = (self.row, self.cur - self.bol - (len(word) + 2), self.bol)
-        if word[0] == '"' and word[len(word) - 1] == '"':
+        pos = (self.row, self.cur - self.bol - len(word) + 1, self.bol)
+        if word[0] == '"':
+            if word[len(word) - 1] != '"':
+                # XXX: somehow, on an unterminated literal, the column is one too high.
+                pos = (pos[0], pos[1] - 1, pos[2])
+                raise BCError("unterminated string literal", pos)
+            
             return Token(
                 "literal",
                 pos,
@@ -446,6 +450,10 @@ class Lexer:
             )
 
         if word[0] == "'" and word[len(word) - 1] == "'":
+            if word[len(word) - 1] != '\'':
+                pos = (pos[0], pos[1] - 1, pos[2])
+                raise BCError("unterminated character literal", pos)
+
             return Token(
                 "literal",
                 pos,

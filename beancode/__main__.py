@@ -5,14 +5,16 @@ import argparse
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
-from . import BCError, BCWarning, error
-
+from . import BCError, BCWarning, error, __version__
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=str)
     parser.add_argument(
         "--debug", action="store_true", help="show debugging information"
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"beancode version {__version__}"
     )
     args = parser.parse_args()
 
@@ -23,7 +25,12 @@ def main():
         file_content = f.read()
 
     lexer = Lexer(file_content)
-    toks = lexer.tokenize()
+    
+    try:
+        toks = lexer.tokenize()
+    except BCError as err:
+        err.print(args.file, file_content)
+        exit(1)
 
     if args.debug:
         for tok in toks:
