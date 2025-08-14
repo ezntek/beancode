@@ -583,35 +583,23 @@ class Interpreter:
                     )
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
-                    if tup[0] == 0:
-                        raise BCError(
-                            "attemped to access the 0th array element, which is disallowed in pseudocode",
-                            ind.idx_outer.pos,
-                        )
-                    else:
-                        raise BCError(
-                            f"attempted to access out of bounds array element `{tup[0]}`",
-                            ind.idx_outer.pos,
-                        )
+                    raise BCError(
+                        f"attempted to access out of bounds array element `{tup[0]}`",
+                        ind.idx_outer.pos,
+                    )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
-                    if tup[1] == 0:
-                        raise BCError(
-                            "attemped to access the 0th array element, which is disallowed in pseudocode", ind.idx_inner.pos  # type: ignore
-                        )
-                    else:
-                        raise BCError(
-                            f"attempted to access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
-                        )
+                    raise BCError(
+                        f"attempted to access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
+                    )
 
-                res = a.matrix[tup[0] - 1][inner - 1]  # type: ignore
+                res = a.matrix[tup[0] - a.matrix_bounds[0]][inner - a.matrix_bounds[2]]  # type: ignore
 
                 if res.is_uninitialized():
                     return BCValue("null")
                 else:
                     return res
             else:
-
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
                         raise BCError(
@@ -623,8 +611,8 @@ class Interpreter:
                             f"attempted to access out of bounds array element {tup[0]}",
                             ind.idx_outer.pos,
                         )
-
-                res = a.flat[tup[0] - 1]  # type: ignore
+                
+                res = a.flat[tup[0] - a.flat_bounds[0]]  # type: ignore
                 if res.is_uninitialized():
                     return BCValue("null")
                 else:
@@ -1601,14 +1589,14 @@ class Interpreter:
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     raise BCError(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
 
-                a.matrix[tup[0] - 1][tup[1] - 1] = val  # type: ignore
+                a.matrix[tup[0] - a.matrix_bounds[0]][tup[1] - a.matrix_bounds[2]] = val  # type: ignore
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     raise BCError(
                         f"tried to access out of bounds array index {tup[0]}",
                         s.ident.idx_outer.pos,
                     )
-                a.flat[tup[0] - 1] = val  # type: ignore
+                a.flat[tup[0] - a.flat_bounds[0]] = val  # type: ignore
         else:
             key = s.ident.ident
 
@@ -1667,11 +1655,6 @@ class Interpreter:
                         f"cannot use type of {outer_end.kind} as array bound!", d.pos
                     )
 
-                # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
-                in_lim = inner_end.get_integer()
-                out_lim = outer_end.get_integer()
-                outer_arr = [[BCValue(inner_type) for _ in range(in_lim)] for _ in range(out_lim)]  # type: ignore
-
                 outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
                 if outer_begin.kind != "integer":
                     raise BCError(
@@ -1683,6 +1666,12 @@ class Interpreter:
                     raise BCError(
                         f"cannot use type of {inner_begin.kind} as array bound!", d.pos
                     )
+
+                # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
+                in_size = inner_end.get_integer() - inner_begin.get_integer()
+                out_size = outer_end.get_integer() - outer_begin.get_integer()
+                # array bound declarations are inclusive
+                outer_arr = [[BCValue(inner_type) for _ in range(in_size + 1)] for _ in range(out_size + 1)]  # type: ignore
 
                 bounds = (outer_begin.integer, outer_end.integer, inner_begin.integer, inner_end.integer)  # type: ignore
                 atype.is_matrix = True
@@ -1700,7 +1689,8 @@ class Interpreter:
                         f"cannot use type of {end.kind} as array bound!", d.pos
                     )
 
-                arr: BCValue = [BCValue(atype) for _ in range(end.integer)]  # type: ignore
+                size = end.get_integer() - begin.get_integer()
+                arr: BCValue = [BCValue(atype) for _ in range(size + 1)]  # type: ignore
 
                 bounds = (begin.integer, end.integer)  # type: ignore
                 atype.is_matrix = False
