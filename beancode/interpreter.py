@@ -4,6 +4,7 @@ import typing as t
 import importlib
 import random
 import time
+import copy
 
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
@@ -1565,7 +1566,7 @@ class Interpreter:
     def visit_assign_stmt(self, s: AssignStatement):
         if isinstance(s.ident, ArrayIndex):
             key = s.ident.ident.ident
-
+        
             if self.variables[key].val.array is None:
                 raise BCError(
                     f"tried to index a variable of type {self.variables[key].val.kind} like an array",
@@ -1589,14 +1590,15 @@ class Interpreter:
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     raise BCError(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
 
-                a.matrix[tup[0] - a.matrix_bounds[0]][tup[1] - a.matrix_bounds[2]] = val  # type: ignore
+                a.matrix[tup[0] - a.matrix_bounds[0]][tup[1] - a.matrix_bounds[2]] = copy.deepcopy(val)  # type: ignore
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     raise BCError(
                         f"tried to access out of bounds array index {tup[0]}",
                         s.ident.idx_outer.pos,
                     )
-                a.flat[tup[0] - a.flat_bounds[0]] = val  # type: ignore
+
+                a.flat[tup[0] - a.flat_bounds[0]] = copy.deepcopy(val)  # type: ignore
         else:
             key = s.ident.ident
 
@@ -1622,8 +1624,8 @@ class Interpreter:
                 raise BCError(
                     f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
                 )
-
-            self.variables[key].val = exp
+            
+            self.variables[key].val = copy.deepcopy(exp)
 
     def visit_constant_stmt(self, c: ConstantStatement):
         key = c.ident.ident
