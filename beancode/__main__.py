@@ -53,7 +53,7 @@ def main():
             print(stmt)
             print()
         print("\033[0m\033[1m----- END OF AST -----\033[0m", file=sys.stderr)
-
+    
     try:
         i = Interpreter(program.stmts)
         i.toplevel = True

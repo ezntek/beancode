@@ -319,7 +319,7 @@ class ConstantStatement:
 @dataclass
 class DeclareStatement:
     pos: tuple[int, int, int]
-    ident: Identifier
+    ident: list[Identifier]
     typ: BCType
     export: bool = False
     expr: Expr | None = None

@@ -723,12 +723,25 @@ class Parser:
         if export == True:
             self.consume()
 
+        idents = []
         ident = self.consume()
         if ident.ident is None:
             raise BCError(
                 f"expected ident after declare stmt, found `{ident.__repr__()}`",
                 self.peek(),
             )
+        idents.append(Identifier(ident.pos, ident.ident))
+
+        while self.peek().separator == "comma":
+            self.consume() # consume the sep
+            if self.peek().separator == "colon":
+                break
+
+            ident = self.consume()
+            if ident.ident is None:
+                raise BCError(f"invalid identifier after comma in declare statement: `{ident.__repr__()}`",
+                              self.peek())
+            idents.append(Identifier(ident.pos, ident.ident))
 
         typ = None
         expr = None
@@ -741,11 +754,13 @@ class Parser:
                 raise BCError("invalid type after DECLARE", self.peek())
 
         if self.peek().operator == "assign":
-            self.consume()
+            tok = self.consume()
+            if len(idents) > 1:
+                raise BCError("cannot have assignment in declaration of multiple variables", tok.pos)
 
             expr = self.expression()
             if expr is None:
-                raise BCError("invalid expression after assign in declare", self.peek())
+                raise BCError("invalid expression after assign in declare", tok.pos)
 
         if typ is None and expr is None:
             raise BCError(
@@ -755,7 +770,7 @@ class Parser:
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(begin.pos, ident=Identifier(ident.pos, ident.ident), typ=typ, expr=expr, export=export)  # type: ignore
+        res = DeclareStatement(begin.pos, ident=idents, typ=typ, expr=expr, export=export)  # type: ignore
         return Statement("declare", declare=res)
 
     def constant_stmt(self) -> Statement | None:
