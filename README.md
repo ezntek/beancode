@@ -8,6 +8,10 @@ This interpreter is called beancode (aka `beancode1`. `beancode2` does exist, it
 
 **If youre looking for beancode2, head over to the main branch.**
 
+***IMPORTANT:*** Consider this project to still be in alpha. I am and will be actively patching bugs I find in the interpreter. Do not consider this stable; please frequently update this software.
+
+Once I deem it stable enough, I will tag `v1.0.0`.
+
 ## Dependencies
 
 * `typed-argument-parser`
