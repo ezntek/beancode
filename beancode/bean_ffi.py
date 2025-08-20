@@ -59,8 +59,6 @@ class BCConstant:
     name: str
     value: BCValue
 
-
-@dataclass
 class Exports(TypedDict):
     constants: list[BCConstant]
     variables: list[BCDeclare]
