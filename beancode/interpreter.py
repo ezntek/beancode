@@ -1762,3 +1762,9 @@ class Interpreter:
 
     def reset(self):
         self.cur_stmt = 0
+
+    def reset_all(self):
+        self.block = list()
+        self.calls = list()
+        self.variables = dict()
+        self.functions = dict()
