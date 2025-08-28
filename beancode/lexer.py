@@ -528,6 +528,11 @@ class Lexer:
             ident=word,
         )
 
+    def reset(self):
+        self.cur = 0
+        self.row = 0
+        self.bol = 0
+
     def tokenize(self) -> list[Token]:
         self.res = []
 

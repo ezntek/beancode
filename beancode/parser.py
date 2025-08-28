@@ -820,6 +820,8 @@ class Parser:
             temp_idx = self.cur
             while self.tokens[temp_idx].separator != "right_bracket":
                 temp_idx += 1
+                if temp_idx == len(self.tokens):
+                    raise BCError("reached end of file while searching for end delimiter `]`", self.tokens[temp_idx-1])
 
             p = self.tokens[temp_idx + 1]
 
@@ -1348,7 +1350,7 @@ class Parser:
 
         cur = self.peek()
         expr = self.expression()
-        if expr:
+        if expr is not None:
             raise BCWarning("unused expression", cur, data=expr)
         else:
             raise BCError("invalid statement or expression", cur)
@@ -1363,16 +1365,17 @@ class Parser:
             p = self.peek()
             raise BCError(f"found invalid statement at `{p}`", p)
 
-    def program(self) -> tuple[Program, list[BCWarning]]:
+    def reset(self):
+        self.cur = 0
+
+    def program(self) -> Program:
         stmts = []
-        warnings = []
 
-        try:
-            while self.cur < len(self.tokens):
-                self.clean_newlines()
-                stmt = self.scan_one_statement()
-                stmts.append(stmt)
-        except BCWarning as warn:
-            warnings.append(warn)
+        while self.cur < len(self.tokens):
+            self.clean_newlines()
+            stmt = self.scan_one_statement()
+            stmts.append(stmt)
+        
+        self.cur = 0
 
-        return (Program(stmts=stmts), warnings)
+        return Program(stmts=stmts)

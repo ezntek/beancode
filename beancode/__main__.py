@@ -2,12 +2,22 @@ import os
 import sys
 import argparse
 
+from .repl import repl
+
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
 from . import BCError, BCWarning, error, __version__
 
 def main():
+    if len(sys.argv) == 1:
+        try:
+            sys.exit(repl())
+        except KeyboardInterrupt:
+            sys.exit(1)
+        except EOFError:
+            sys.exit(1)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=str)
     parser.add_argument(
@@ -45,7 +55,7 @@ def main():
     parser = Parser(toks)
 
     try:
-        program, _ = parser.program()
+        program = parser.program()
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)

@@ -1345,16 +1345,14 @@ class Interpreter:
             file_content = f.read()
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
-        warnings: list[BCWarning]
         parser = Parser(toks)
         try:
-            program, warnings = parser.program()
+            program = parser.program()
         except BCError as err:
             err.print(filename, file_content)
             exit(1)
-        if warnings:
-            for warning in warnings:
-                warning.print(filename, file_content)
+        except BCWarning as warn:
+            warn.print(filename, file_content)
             exit(1)
 
         intp = self.new(program.stmts)
@@ -1761,3 +1759,6 @@ class Interpreter:
     def visit_program(self, program: Program):
         if program is not None:
             self.visit_block(program.stmts)
+
+    def reset(self):
+        self.cur_stmt = 0
