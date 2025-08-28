@@ -56,9 +56,15 @@ class Parser:
         return self.tokens[self.cur - 1]
 
     def peek(self) -> l.Token:
+        if self.cur >= len(self.tokens):
+            raise BCError(f"unexpected end of file", self.tokens[len(self.tokens)-1])
+
         return self.tokens[self.cur]
 
-    def peek_next(self) -> l.Token:
+    def peek_next(self) -> l.Token | None:
+        if self.cur + 1 >= len(self.tokens):
+            return None
+
         return self.tokens[self.cur + 1]
 
     def match(self, typs: list[tuple[l.TokenType, str]]) -> bool:
@@ -334,6 +340,9 @@ class Parser:
 
     def array_index(self) -> Expr | None:
         pn = self.peek_next()
+        if pn is None:
+            return None
+
         if pn.kind != "separator" and pn.separator != "left_bracket":
             return None
 
@@ -379,6 +388,9 @@ class Parser:
             return None
 
         leftb = self.peek_next()
+        if leftb is None:
+            return None
+
         if leftb.separator != "left_paren":
             return None
 
@@ -440,6 +452,9 @@ class Parser:
             return self.array_literal()
         elif p.kind == "ident":
             pn = self.peek_next()
+            if pn is None:
+                return None
+
             if pn.kind == "separator" and pn.separator == "left_bracket":
                 return self.array_index()
 
@@ -449,6 +464,9 @@ class Parser:
             return self.ident()
         elif p.kind == "type":
             pn = self.peek_next()
+            if pn is None:
+                return None
+
             if pn.kind == "separator" and pn.separator == "left_paren":
                 return self.typecast()
         elif p.kind == "separator" and p.separator == "left_paren":
@@ -713,6 +731,8 @@ class Parser:
         if begin.keyword == "export":
             export = True
             begin = self.peek_next()
+            if begin is None:
+                raise BCError("expected token following export, but got end of file", begin)
 
         # combining the conditions does NOT WORK.
         if begin.keyword != "declare":
@@ -779,6 +799,8 @@ class Parser:
 
         if begin.keyword == "export":
             begin = self.peek_next()
+            if begin is None:
+                raise BCError("expected token following export, but got end of file", begin)
             export = True
 
         if begin.kind != "keyword":
@@ -815,6 +837,8 @@ class Parser:
 
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
+        if p is None:
+            return None
 
         if p.separator == "left_bracket":
             temp_idx = self.cur
@@ -1102,6 +1126,8 @@ class Parser:
 
         if begin.keyword == "export":
             begin = self.peek_next()
+            if begin is None:
+                raise BCError("expected token following export, but got end of file", begin)
             export = True
 
         if begin.keyword != "procedure":
@@ -1162,6 +1188,8 @@ class Parser:
 
         if begin.keyword == "export":
             begin = self.peek_next()
+            if begin is None:
+                raise BCError("expected token following export, but got end of file", begin)
             export = True
 
         if begin.keyword != "function":
@@ -1279,7 +1307,11 @@ class Parser:
 
     def stmt(self) -> Statement | None:
         self.clean_newlines()
-
+        
+        if self.cur + 1 >= len(self.tokens):
+            self.cur += 1
+            return None
+    
         assign = self.assign_stmt()
         if assign is not None:
             return assign
@@ -1355,13 +1387,16 @@ class Parser:
         else:
             raise BCError("invalid statement or expression", cur)
 
-    def scan_one_statement(self) -> Statement:
+    def scan_one_statement(self) -> Statement | None:
         s = self.stmt()
 
         if s is not None:
             self.clean_newlines()
             return s
         else:
+            if self.cur >= len(self.tokens):
+                return None
+
             p = self.peek()
             raise BCError(f"found invalid statement at `{p}`", p)
 
@@ -1374,6 +1409,8 @@ class Parser:
         while self.cur < len(self.tokens):
             self.clean_newlines()
             stmt = self.scan_one_statement()
+            if stmt is None: # this has to be an EOF
+                continue
             stmts.append(stmt)
         
         self.cur = 0

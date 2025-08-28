@@ -239,7 +239,7 @@ class Lexer:
         return (row, col + 1 - back, self.bol)
 
     def is_separator(self, ch: str) -> bool:
-        return ch in "{}[]():,"
+        return ch in "{}[]():,;"
 
     def is_operator_start(self, ch: str) -> bool:
         return ch in "+-*/=<>"
@@ -359,6 +359,10 @@ class Lexer:
             ":": "colon",
             ",": "comma",
         }
+
+        if self.file[self.cur] == ";":
+            self.cur += 1
+            return Token("newline", pos=self.get_pos())
 
         res = hm.get(self.file[self.cur])
 

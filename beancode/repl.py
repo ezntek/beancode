@@ -97,7 +97,8 @@ def repl() -> int:
         except BCWarning as w:
             if isinstance(w.data, ast.Expr):
                 exp: ast.Expr = w.data # type: ignore
-                s = ast.Statement(kind="output", output=ast.OutputStatement(pos=(0,0,0), items=[exp]))
+                output_stmt = ast.OutputStatement(pos=(0,0,0), items=[exp])
+                s = ast.Statement(kind="output", output=output_stmt)
                 program = ast.Program([s])
             else:
                 w.print("(repl)", inp)
