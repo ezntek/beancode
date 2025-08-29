@@ -64,7 +64,9 @@ class Repl:
 
     def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
         while True:
+            oldrow = self.lx.row
             self.lx.reset()
+            self.lx.row = oldrow + 1
 
             inp = input("\033[0m.. ")
 

@@ -882,11 +882,12 @@ class Parser:
         if self.peek().kind == "newline":
             self.clean_newlines()
 
-        then = self.consume()
+        then = self.peek()
         if then.keyword != "then":
             raise BCError(
                 f"expected `THEN` after if condition, but found `{str(then)}`", then
             )
+        self.consume()
 
         # dont enforce newline after then
         if self.peek().kind == "newline":
@@ -909,7 +910,6 @@ class Parser:
                 else_stmts.append(self.scan_one_statement())
 
         self.consume()  # byebye endif
-        self.check_newline("ENDIF")
 
         res = IfStatement(
             begin.pos, cond=cond, if_block=if_stmts, else_block=else_stmts
@@ -987,8 +987,9 @@ class Parser:
         if self.peek().kind == "newline":
             self.clean_newlines()
         
-        if self.peek().keyword != "do":
-            raise BCError("expected `DO` after while loop condition", self.prev())
+        do = self.peek()
+        if do.keyword != "do":
+            raise BCError(f"expected `DO` after while loop condition, but found {str(do)}", self.prev())
         self.consume()
 
         if self.peek().kind == "newline":
@@ -1000,7 +1001,6 @@ class Parser:
 
         self.consume()  # byebye `ENDWHILE`
 
-        self.check_newline("after while loop declaration")
 
         res = WhileStatement(begin.pos, expr, stmts)
         return Statement("while", while_s=res)
@@ -1018,19 +1018,21 @@ class Parser:
         if counter.ident is None or not isinstance(counter, Identifier):  # type: ignore
             raise BCError("expected ident before `<-` in a for loop", self.peek())
 
-        assign = self.consume()
+        assign = self.peek()
         if assign.operator != "assign":
             raise BCError(
                 "expected assignment operator `<-` after counter in a for loop", assign
             )
+        self.consume()
 
         begin = self.expression()
         if begin is None:
             raise BCError("invalid expression as begin in for loop", self.peek())
 
-        to = self.consume()
+        to = self.peek()
         if to.keyword != "to":
             raise BCError("expected TO after beginning value in for loop", to)
+        self.consume()
 
         end = self.expression()
         if end is None:
@@ -1043,7 +1045,6 @@ class Parser:
             if step is None:
                 raise BCError("invalid expression as step in for loop", self.peek())
 
-        self.check_newline("after for loop declaration")
 
         stmts = []
         while self.peek().keyword != "next":
@@ -1073,7 +1074,6 @@ class Parser:
         # byebye `REPEAT`
         self.consume()
 
-        self.check_newline("repeat-until loop declaration")
 
         self.clean_newlines()
 
@@ -1089,7 +1089,6 @@ class Parser:
                 "found invalid expression for repeat-until loop condition", self.peek()
             )
 
-        self.check_newline("after repeat-until loop declaration")
 
         res = RepeatUntilStatement(begin.pos, expr, stmts)
         return Statement("repeatuntil", repeatuntil=res)
@@ -1165,8 +1164,6 @@ class Parser:
                     self.peek(),
                 )
 
-        self.check_newline("PROCEDURE")
-
         stmts = []
         while self.peek().keyword != "endprocedure":
             stmts.append(self.scan_one_statement())
@@ -1237,7 +1234,6 @@ class Parser:
                 "invalid type after RETURNS for function return value", self.peek()
             )
 
-        self.check_newline("FUNCTION")
 
         stmts = []
         while self.peek().keyword != "endfunction":
@@ -1262,7 +1258,6 @@ class Parser:
             return
         self.consume()
 
-        self.check_newline("manual scope declaration")
 
         self.clean_newlines()
 
@@ -1271,7 +1266,6 @@ class Parser:
             stmts.append(self.scan_one_statement())
 
         self.consume()
-        self.check_newline("after scope declaration end")
         res = ScopeStatement(scope.pos, stmts)
         return Statement("scope", scope=res)
 
