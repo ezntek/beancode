@@ -119,40 +119,45 @@ class BCValue:
         return cls("string", string=s)
 
     # arrays later
+    def _kind(self) -> str:
+        if isinstance(self.kind, BCArrayType):
+            return "(array)"
+        else:
+            return str(self.kind)
 
     def get_integer(self) -> int:
         if self.kind != "integer":
-            raise BCError(f"tried to access integer value from BCValue of {self.kind}")
+            raise BCError(f"tried to access integer value from BCValue of {self._kind()}")
 
         return self.integer  # type: ignore
 
     def get_real(self) -> float:
         if self.kind != "real":
-            raise BCError(f"tried to access real value from BCValue of {self.kind}")
+            raise BCError(f"tried to access real value from BCValue of {self._kind()}")
 
         return self.real  # type: ignore
 
     def get_char(self) -> str:
         if self.kind != "char":
-            raise BCError(f"tried to access char value from BCValue of {self.kind}")
+            raise BCError(f"tried to access char value from BCValue of {self._kind()}")
 
         return self.char  # type: ignore
 
     def get_string(self) -> str:
         if self.kind != "string":
-            raise BCError(f"tried to access string value from BCValue of {self.kind}")
+            raise BCError(f"tried to access string value from BCValue of {self._kind()}")
 
         return self.string  # type: ignore
 
     def get_boolean(self) -> bool:
         if self.kind != "boolean":
-            raise BCError(f"tried to access boolean value from BCValue of {self.kind}")
+            raise BCError(f"tried to access boolean value from BCValue of {self._kind()}")
 
         return self.boolean  # type: ignore
 
     def get_array(self) -> BCArray:
         if not isinstance(self.kind, BCArrayType):
-            raise BCError(f"tried to access array value from BCValue of {self.kind}")
+            raise BCError(f"tried to access array value from BCValue of {self._kind()}")
 
         return self.array  # type: ignore
 

@@ -878,8 +878,9 @@ class Parser:
                     )
 
             p = self.tokens[temp_idx + 1]
-
-            if p.kind != "operator" and p.operator != "assign":
+            if p.kind != "operator":
+                return None
+            elif p.operator != "assign":
                 return None
         elif p.operator != "assign":
             return None
