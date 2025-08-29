@@ -3,8 +3,10 @@ __version__ = "0.3.0"
 class BCError(Exception):
     # row, col, bol
     pos: tuple[int, int, int]
+    eof: bool
 
-    def __init__(self, msg: str, ctx=None) -> None:  # type: ignore
+    def __init__(self, msg: str, ctx=None, eof=False) -> None:  # type: ignore
+        self.eof = eof
         self.len = 1
         if type(ctx).__name__ == "Token":
             self.pos = ctx.pos  # type: ignore

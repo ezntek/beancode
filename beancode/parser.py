@@ -57,7 +57,7 @@ class Parser:
 
     def peek(self) -> l.Token:
         if self.cur >= len(self.tokens):
-            raise BCError(f"unexpected end of file", self.tokens[len(self.tokens)-1])
+            raise BCError(f"unexpected end of file", self.tokens[len(self.tokens)-1], eof=True)
 
         return self.tokens[self.cur]
 
@@ -636,8 +636,6 @@ class Parser:
 
             exprs.append(new)
 
-        self.check_newline("OUTPUT")
-
         res = OutputStatement(begin.pos, items=exprs)
         return Statement("output", output=res)
 
@@ -655,8 +653,6 @@ class Parser:
         ident = self.ident()
         if not isinstance(ident, Identifier) or ident.ident is None:
             raise BCError(f"expected identifier after `INPUT` but found {ident}", begin)
-
-        self.check_newline("INPUT")
 
         res = InputStatement(begin.pos, ident)
         return Statement("input", input=res)
@@ -988,12 +984,12 @@ class Parser:
                 "found invalid expression for while loop condition", self.peek()
             )
 
-        do = self.consume()
-        if do.keyword != "do":
-            raise BCError("expected `DO` after while loop condition", self.peek())
-
-        # oh dear
-        self.check_newline("while loop declaration")
+        if self.peek().kind == "newline":
+            self.clean_newlines()
+        
+        if self.peek().keyword != "do":
+            raise BCError("expected `DO` after while loop condition", self.prev())
+        self.consume()
 
         if self.peek().kind == "newline":
             self.clean_newlines()

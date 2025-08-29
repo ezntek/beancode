@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 
-from .repl import repl
+from .repl import Repl
 
 from .interpreter import Interpreter
 from .lexer import *
@@ -12,7 +12,7 @@ from . import BCError, BCWarning, error, __version__
 def main():
     if len(sys.argv) == 1:
         try:
-            sys.exit(repl())
+            sys.exit(Repl().repl())
         except KeyboardInterrupt:
             sys.exit(1)
         except EOFError:

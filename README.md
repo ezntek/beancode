@@ -139,3 +139,13 @@ This is my foray into compiler engineering; through this project I have finally 
 ***WARNING***: This is *NOT* my best work. please do *NOT* assume my programming ability to be this, and do *NOT* use this project as a reference for yours. The layout is horrible. The code style is horrible. The code is not idiomatic. I went through 607,587,384 hacks and counting just for this project to work.
 
 `</rant>`
+
+## Errata
+
+* Some errors will report as `unused expression`, like the following:
+```
+for i <- 1 to 10
+  output i
+nex ti
+```
+

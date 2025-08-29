@@ -342,6 +342,9 @@ class Lexer:
         res = hm.get(self.file[self.cur])
 
         if res is not None:
+            if self.cur + 1 >= len(self.file):
+                raise BCError("unexpected end of file while scanning for operator", self.get_pos(back=1))
+
             if res == "sub" and self.file[self.cur + 1].isdigit():
                 return None
 

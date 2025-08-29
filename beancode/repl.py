@@ -10,7 +10,7 @@ from enum import Enum
 
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
 \033[2mUsing Python {sys.version}\033[0m
-type ".help" for a list of REPL commands, or start typing some code.
+type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
@@ -26,6 +26,11 @@ class DotCommandResult(Enum):
     BREAK = 1,
     UNKNOWN_COMMAND = 2,
     RESET = 3,
+
+class ContinuationResult(Enum):
+    BREAK = 0,
+    ERROR = 1,
+    SUCCESS = 2,
 
 def handle_dot_command(s: str) -> DotCommandResult:
     match s:
@@ -46,71 +51,141 @@ def handle_dot_command(s: str) -> DotCommandResult:
             return DotCommandResult.NO_OP
     return DotCommandResult.UNKNOWN_COMMAND
 
-def repl() -> int:
-    print(BANNER, end=str())
 
-    lx = lexer.Lexer(str())
-    p = parser.Parser(list())
-    i = intp.Interpreter(list())
+class Repl:
+    lx: lexer.Lexer
+    p: parser.Parser
+    i: intp.Interpreter
 
-    inp = str()
-    while True:
-        lx.reset()
-        p.reset()
-        i.reset()
+    def __init__(self):
+        self.lx = lexer.Lexer(str())
+        self.p = parser.Parser(list())
+        self.i = intp.Interpreter(list())
 
-        inp = input(">> ")
+    def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
+        while True:
+            self.lx.reset()
 
-        if len(inp) == 0:
-            continue
-        
-        if inp[0] == ".":
-            match handle_dot_command(inp[1:]):
-                case DotCommandResult.NO_OP:
-                    continue
-                case DotCommandResult.BREAK:
-                    break
-                case DotCommandResult.UNKNOWN_COMMAND:
-                    print("\033[1minvalid dot command\033[0m")
-                    print(HELP)
-                    continue
-                case DotCommandResult.RESET:
-                    i.reset_all()
-                    continue
+            inp = input("\033[0m.. ")
 
-        lx.file = inp
-        try:
-            toks = lx.tokenize()
-        except BCError as err:
-            err.print("(repl)", inp)
-            print()
-            continue
+            if len(inp) == 0:
+                continue
+            
+            if inp[0] == ".":
+                match handle_dot_command(inp[1:]):
+                    case DotCommandResult.NO_OP:
+                        continue
+                    case DotCommandResult.BREAK:
+                        return (None, ContinuationResult.BREAK)
+                    case DotCommandResult.UNKNOWN_COMMAND:
+                        print("\033[1minvalid dot command\033[0m")
+                        print(HELP)
+                        continue
+                    case DotCommandResult.RESET:
+                        self.i.reset_all()
+                        continue
+            
+            self.lx.file = inp
 
-        program: ast.Program
-        p.tokens = toks
-        try:
-            program = p.program()
-        except BCError as err:
-            err.print("(repl)", inp)
-            print()
-            continue
-        except BCWarning as w:
-            if isinstance(w.data, ast.Expr):
-                exp: ast.Expr = w.data # type: ignore
-                output_stmt = ast.OutputStatement(pos=(0,0,0), items=[exp])
-                s = ast.Statement(kind="output", output=output_stmt)
-                program = ast.Program([s])
-            else:
-                w.print("(repl)", inp)
+            try:
+                toks = self.lx.tokenize()
+            except BCError as err:
+                err.print("(repl)", inp)
+                print()
                 continue
 
-        i.block = program.stmts
-        i.toplevel = True
-        try:
-            i.visit_block(None)
-        except BCError as err:
-            err.print("(repl)", inp)
-            print()
-            continue
+            self.p.reset()
+            self.p.tokens += toks
+            
 
-    return 0
+            try:
+                prog = self.p.program()
+            except BCError as err:
+                if err.eof:
+                    continue
+                else:
+                    err.print("(repl)", inp)
+                    print()
+                    return (None, ContinuationResult.ERROR)
+            except BCWarning as w:
+                w.print("(repl)", inp)
+                print()
+                return (None, ContinuationResult.ERROR)
+
+            return (prog, ContinuationResult.SUCCESS)
+            
+            
+    def repl(self) -> int:
+        print(BANNER, end=str())
+
+        inp = str()
+        while True:
+            self.lx.reset()
+            self.p.reset()
+            self.i.reset()
+
+            inp = input("\033[0;1m>> \033[0m")
+
+            if len(inp) == 0:
+                continue
+            
+            if inp[0] == ".":
+                match handle_dot_command(inp[1:]):
+                    case DotCommandResult.NO_OP:
+                        continue
+                    case DotCommandResult.BREAK:
+                        break
+                    case DotCommandResult.UNKNOWN_COMMAND:
+                        print("\033[1minvalid dot command\033[0m")
+                        print(HELP)
+                        continue
+                    case DotCommandResult.RESET:
+                        self.i.reset_all()
+                        continue
+
+            self.lx.file = inp
+            try:
+                toks = self.lx.tokenize()
+            except BCError as err:
+                err.print("(repl)", inp)
+                print()
+                continue
+
+            program: ast.Program
+            self.p.tokens = toks
+            try:
+                program = self.p.program()
+            except BCError as err:
+                if err.eof:
+                    cont = self.get_continuation()
+                    match cont[1]:
+                        case ContinuationResult.SUCCESS:
+                            program = cont[0] # type: ignore
+                        case ContinuationResult.BREAK:
+                            break
+                        case ContinuationResult.ERROR:
+                            continue
+                else:
+                    err.print("(repl)", inp)
+                    print()
+                    continue
+            except BCWarning as w:
+                if isinstance(w.data, ast.Expr):
+                    exp: ast.Expr = w.data # type: ignore
+                    output_stmt = ast.OutputStatement(pos=(0,0,0), items=[exp])
+                    s = ast.Statement(kind="output", output=output_stmt)
+                    program = ast.Program([s])
+                else:
+                    w.print("(repl)", inp)
+                    continue
+
+            self.i.block = program.stmts
+            self.i.toplevel = True
+            try:
+                self.i.visit_block(None)
+            except BCError as err:
+                err.print("(repl)", inp)
+                print()
+                continue
+
+        return 0
