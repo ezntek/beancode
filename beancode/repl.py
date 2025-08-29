@@ -5,7 +5,15 @@ from . import interpreter as intp
 from . import __version__
 
 import sys
-import readline
+
+try:
+    import readline
+except ImportError:
+    print(
+        "\033[33;1mwarn:\033[0m could not import readline, continuing without shell history",
+        file=sys.stderr,
+    )
+
 from enum import Enum
 
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
@@ -21,16 +29,19 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .exit:    exit the interpreter (.quit also works)
 """
 
+
 class DotCommandResult(Enum):
-    NO_OP = 0,
-    BREAK = 1,
-    UNKNOWN_COMMAND = 2,
-    RESET = 3,
+    NO_OP = (0,)
+    BREAK = (1,)
+    UNKNOWN_COMMAND = (2,)
+    RESET = (3,)
+
 
 class ContinuationResult(Enum):
-    BREAK = 0,
-    ERROR = 1,
-    SUCCESS = 2,
+    BREAK = (0,)
+    ERROR = (1,)
+    SUCCESS = (2,)
+
 
 def handle_dot_command(s: str) -> DotCommandResult:
     match s:
@@ -72,7 +83,7 @@ class Repl:
 
             if len(inp) == 0:
                 continue
-            
+
             if inp[0] == ".":
                 match handle_dot_command(inp[1:]):
                     case DotCommandResult.NO_OP:
@@ -86,7 +97,7 @@ class Repl:
                     case DotCommandResult.RESET:
                         self.i.reset_all()
                         continue
-            
+
             self.lx.file = inp
 
             try:
@@ -98,7 +109,6 @@ class Repl:
 
             self.p.reset()
             self.p.tokens += toks
-            
 
             try:
                 prog = self.p.program()
@@ -115,8 +125,7 @@ class Repl:
                 return (None, ContinuationResult.ERROR)
 
             return (prog, ContinuationResult.SUCCESS)
-            
-            
+
     def repl(self) -> int:
         print(BANNER, end=str())
 
@@ -130,7 +139,7 @@ class Repl:
 
             if len(inp) == 0:
                 continue
-            
+
             if inp[0] == ".":
                 match handle_dot_command(inp[1:]):
                     case DotCommandResult.NO_OP:
@@ -162,7 +171,7 @@ class Repl:
                     cont = self.get_continuation()
                     match cont[1]:
                         case ContinuationResult.SUCCESS:
-                            program = cont[0] # type: ignore
+                            program = cont[0]  # type: ignore
                         case ContinuationResult.BREAK:
                             break
                         case ContinuationResult.ERROR:
@@ -173,8 +182,8 @@ class Repl:
                     continue
             except BCWarning as w:
                 if isinstance(w.data, ast.Expr):
-                    exp: ast.Expr = w.data # type: ignore
-                    output_stmt = ast.OutputStatement(pos=(0,0,0), items=[exp])
+                    exp: ast.Expr = w.data  # type: ignore
+                    output_stmt = ast.OutputStatement(pos=(0, 0, 0), items=[exp])
                     s = ast.Statement(kind="output", output=output_stmt)
                     program = ast.Program([s])
                 else:

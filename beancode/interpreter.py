@@ -365,7 +365,7 @@ class Interpreter:
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
 
-                res = lhs_num ** rhs_num
+                res = lhs_num**rhs_num
 
                 if isinstance(res, int):
                     return BCValue("integer", integer=res)
@@ -658,7 +658,7 @@ class Interpreter:
                             f"attempted to access out of bounds array element {tup[0]}",
                             ind.idx_outer.pos,
                         )
-                
+
                 res = a.flat[tup[0] - a.flat_bounds[0]]  # type: ignore
                 if res.is_uninitialized():
                     return BCValue("null")
@@ -708,7 +708,7 @@ class Interpreter:
         else:
             return BCValue("integer", integer=int(lhs % rhs))
 
-    def visit_sqrt(self, val: BCValue) -> BCValue: # type: ignore
+    def visit_sqrt(self, val: BCValue) -> BCValue:  # type: ignore
         if val.kind == "integer":
             num = val.get_integer()
             return BCValue("real", real=math.sqrt(num))
@@ -800,7 +800,10 @@ class Interpreter:
             case "sqrt":
                 [val, *_] = evargs
                 if val.kind not in ["integer", "real"]:
-                    raise BCError(f"cannot perform a square root on object of type {val.kind}", stmt.pos)
+                    raise BCError(
+                        f"cannot perform a square root on object of type {val.kind}",
+                        stmt.pos,
+                    )
                 return self.visit_sqrt(val)
             case "getchar":
                 return self.visit_getchar()
@@ -1403,7 +1406,7 @@ class Interpreter:
 
         with open(filename, "r+") as f:
             file_content = f.read()
-        
+
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
         parser = Parser(toks)
@@ -1548,7 +1551,7 @@ class Interpreter:
         elif step < 0:
             while counter.get_integer() >= end.get_integer():
                 intp.visit_block(None)
-                # FIXME:  
+                # FIXME:
                 # clear declared variables (barbaric)
                 c = intp.variables[stmt.counter.ident]
                 intp.variables = self.variables.copy()
@@ -1625,7 +1628,7 @@ class Interpreter:
     def visit_assign_stmt(self, s: AssignStatement):
         if isinstance(s.ident, ArrayIndex):
             key = s.ident.ident.ident
-        
+
             if self.variables[key].val.array is None:
                 raise BCError(
                     f"tried to index a variable of type {self.variables[key].val.kind} like an array",
@@ -1683,7 +1686,7 @@ class Interpreter:
                 raise BCError(
                     f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
                 )
-            
+
             self.variables[key].val = copy.deepcopy(exp)
 
     def visit_constant_stmt(self, c: ConstantStatement):
@@ -1695,7 +1698,7 @@ class Interpreter:
         self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
 
     def _declare_array(self, d: DeclareStatement, key: str):
-        atype: BCArrayType = d.typ # type: ignore
+        atype: BCArrayType = d.typ  # type: ignore
         inner_type = atype.inner
         if atype.is_matrix:
             inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
@@ -1734,15 +1737,11 @@ class Interpreter:
         else:
             begin = self.visit_expr(atype.flat_bounds[0])  # type: ignore
             if begin.kind != "integer":
-                raise BCError(
-                    f"cannot use type of {begin.kind} as array bound!", d.pos
-                )
+                raise BCError(f"cannot use type of {begin.kind} as array bound!", d.pos)
 
             end = self.visit_expr(atype.flat_bounds[1])  # type: ignore
             if end.kind != "integer":
-                raise BCError(
-                    f"cannot use type of {end.kind} as array bound!", d.pos
-                )
+                raise BCError(f"cannot use type of {end.kind} as array bound!", d.pos)
 
             size = end.get_integer() - begin.get_integer()
             arr: BCValue = [BCValue(atype) for _ in range(size + 1)]  # type: ignore
@@ -1764,7 +1763,9 @@ class Interpreter:
             if isinstance(d.typ, BCArrayType):
                 self._declare_array(d, key)
             else:
-                self.variables[key] = Variable(BCValue(kind=d.typ), False, export=d.export)
+                self.variables[key] = Variable(
+                    BCValue(kind=d.typ), False, export=d.export
+                )
                 if d.expr is not None:
                     expr = self.visit_expr(d.expr)
                     self.variables[key].val = expr

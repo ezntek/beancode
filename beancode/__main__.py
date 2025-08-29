@@ -9,6 +9,7 @@ from .lexer import *
 from .parser import Parser
 from . import BCError, BCWarning, error, __version__
 
+
 def main():
     if len(sys.argv) == 1:
         try:
@@ -41,7 +42,7 @@ def main():
         file_content = f.read()
 
     lexer = Lexer(file_content)
-    
+
     try:
         toks = lexer.tokenize()
     except BCError as err:
@@ -80,6 +81,7 @@ def main():
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)
+
 
 if __name__ == "__main__":
     main()

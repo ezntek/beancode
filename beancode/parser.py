@@ -57,7 +57,9 @@ class Parser:
 
     def peek(self) -> l.Token:
         if self.cur >= len(self.tokens):
-            raise BCError(f"unexpected end of file", self.tokens[len(self.tokens)-1], eof=True)
+            raise BCError(
+                f"unexpected end of file", self.tokens[len(self.tokens) - 1], eof=True
+            )
 
         return self.tokens[self.cur]
 
@@ -578,7 +580,7 @@ class Parser:
             if right is None:
                 return None
 
-            expr = BinaryExpr(expr.pos, expr, op, right) # type: ignore
+            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
         return expr
 
     def equality(self) -> Expr | None:
@@ -748,7 +750,9 @@ class Parser:
             export = True
             begin = self.peek_next()
             if begin is None:
-                raise BCError("expected token following export, but got end of file", begin)
+                raise BCError(
+                    "expected token following export, but got end of file", begin
+                )
 
         # combining the conditions does NOT WORK.
         if begin.keyword != "declare":
@@ -769,14 +773,16 @@ class Parser:
         idents.append(Identifier(ident.pos, ident.ident))
 
         while self.peek().separator == "comma":
-            self.consume() # consume the sep
+            self.consume()  # consume the sep
             if self.peek().separator == "colon":
                 break
 
             ident = self.consume()
             if ident.ident is None:
-                raise BCError(f"invalid identifier after comma in declare statement: `{ident.__repr__()}`",
-                              self.peek())
+                raise BCError(
+                    f"invalid identifier after comma in declare statement: `{ident.__repr__()}`",
+                    self.peek(),
+                )
             idents.append(Identifier(ident.pos, ident.ident))
 
         typ = None
@@ -792,7 +798,10 @@ class Parser:
         if self.peek().operator == "assign":
             tok = self.consume()
             if len(idents) > 1:
-                raise BCError("cannot have assignment in declaration of multiple variables", tok.pos)
+                raise BCError(
+                    "cannot have assignment in declaration of multiple variables",
+                    tok.pos,
+                )
 
             expr = self.expression()
             if expr is None:
@@ -816,7 +825,9 @@ class Parser:
         if begin.keyword == "export":
             begin = self.peek_next()
             if begin is None:
-                raise BCError("expected token following export, but got end of file", begin)
+                raise BCError(
+                    "expected token following export, but got end of file", begin
+                )
             export = True
 
         if begin.kind != "keyword":
@@ -861,7 +872,10 @@ class Parser:
             while self.tokens[temp_idx].separator != "right_bracket":
                 temp_idx += 1
                 if temp_idx == len(self.tokens):
-                    raise BCError("reached end of file while searching for end delimiter `]`", self.tokens[temp_idx-1])
+                    raise BCError(
+                        "reached end of file while searching for end delimiter `]`",
+                        self.tokens[temp_idx - 1],
+                    )
 
             p = self.tokens[temp_idx + 1]
 
@@ -1006,10 +1020,13 @@ class Parser:
 
         if self.peek().kind == "newline":
             self.clean_newlines()
-        
+
         do = self.peek()
         if do.keyword != "do":
-            raise BCError(f"expected `DO` after while loop condition, but found {str(do)}", self.prev())
+            raise BCError(
+                f"expected `DO` after while loop condition, but found {str(do)}",
+                self.prev(),
+            )
         self.consume()
 
         if self.peek().kind == "newline":
@@ -1020,7 +1037,6 @@ class Parser:
             stmts.append(self.scan_one_statement())
 
         self.consume()  # byebye `ENDWHILE`
-
 
         res = WhileStatement(begin.pos, expr, stmts)
         return Statement("while", while_s=res)
@@ -1065,7 +1081,6 @@ class Parser:
             if step is None:
                 raise BCError("invalid expression as step in for loop", self.peek())
 
-
         stmts = []
         while self.peek().keyword != "next":
             stmts.append(self.scan_one_statement())
@@ -1094,7 +1109,6 @@ class Parser:
         # byebye `REPEAT`
         self.consume()
 
-
         self.clean_newlines()
 
         stmts = []
@@ -1108,7 +1122,6 @@ class Parser:
             raise BCError(
                 "found invalid expression for repeat-until loop condition", self.peek()
             )
-
 
         res = RepeatUntilStatement(begin.pos, expr, stmts)
         return Statement("repeatuntil", repeatuntil=res)
@@ -1142,7 +1155,9 @@ class Parser:
         if begin.keyword == "export":
             begin = self.peek_next()
             if begin is None:
-                raise BCError("expected token following export, but got end of file", begin)
+                raise BCError(
+                    "expected token following export, but got end of file", begin
+                )
             export = True
 
         if begin.keyword != "procedure":
@@ -1202,7 +1217,9 @@ class Parser:
         if begin.keyword == "export":
             begin = self.peek_next()
             if begin is None:
-                raise BCError("expected token following export, but got end of file", begin)
+                raise BCError(
+                    "expected token following export, but got end of file", begin
+                )
             export = True
 
         if begin.keyword != "function":
@@ -1254,7 +1271,6 @@ class Parser:
                 "invalid type after RETURNS for function return value", self.peek()
             )
 
-
         stmts = []
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()
@@ -1277,7 +1293,6 @@ class Parser:
         if scope.keyword != "scope":
             return
         self.consume()
-
 
         self.clean_newlines()
 
@@ -1317,11 +1332,11 @@ class Parser:
 
     def stmt(self) -> Statement | None:
         self.clean_newlines()
-        
+
         if self.cur + 1 >= len(self.tokens):
             self.cur += 1
             return None
-    
+
         assign = self.assign_stmt()
         if assign is not None:
             return assign
@@ -1419,10 +1434,10 @@ class Parser:
         while self.cur < len(self.tokens):
             self.clean_newlines()
             stmt = self.scan_one_statement()
-            if stmt is None: # this has to be an EOF
+            if stmt is None:  # this has to be an EOF
                 continue
             stmts.append(stmt)
-        
+
         self.cur = 0
 
         return Program(stmts=stmts)

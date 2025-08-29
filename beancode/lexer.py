@@ -66,7 +66,7 @@ Operator = t.Literal[
     "div",
     "add",
     "sub",
-    "pow"
+    "pow",
 ]
 
 Separator = t.Literal[
@@ -339,14 +339,17 @@ class Lexer:
             "/": "div",
             "^": "pow",
             # this is cursed but eh
-            "←": "assign"
+            "←": "assign",
         }
 
         res = hm.get(self.file[self.cur])
 
         if res is not None:
             if self.cur + 1 >= len(self.file):
-                raise BCError("unexpected end of file while scanning for operator", self.get_pos(back=1))
+                raise BCError(
+                    "unexpected end of file while scanning for operator",
+                    self.get_pos(back=1),
+                )
 
             if res == "sub" and self.file[self.cur + 1].isdigit():
                 return None
@@ -456,7 +459,7 @@ class Lexer:
                 # XXX: somehow, on an unterminated literal, the column is one too high.
                 pos = (pos[0], pos[1] - 1, pos[2])
                 raise BCError("unterminated string literal", pos)
-            
+
             return Token(
                 "literal",
                 pos,
@@ -464,7 +467,7 @@ class Lexer:
             )
 
         if word[0] == "'" and word[len(word) - 1] == "'":
-            if word[len(word) - 1] != '\'':
+            if word[len(word) - 1] != "'":
                 pos = (pos[0], pos[1] - 1, pos[2])
                 raise BCError("unterminated character literal", pos)
 

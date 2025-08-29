@@ -59,6 +59,7 @@ class BCConstant:
     name: str
     value: BCValue
 
+
 class Exports(TypedDict):
     constants: list[BCConstant]
     variables: list[BCDeclare]
