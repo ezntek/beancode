@@ -999,6 +999,9 @@ class Parser:
                 otherwise = stmt
             else:
                 branches.append(CaseofBranch(expr.pos, expr, stmt))  # type: ignore
+
+            self.check_newline("CASE OF branch")
+            self.consume_newlines()
         self.consume()
 
         res = CaseofStatement(case.pos, main_expr, branches, otherwise)
