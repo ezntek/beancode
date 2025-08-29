@@ -737,78 +737,91 @@ class Interpreter:
         for _, arg in zip(range(nargs), args):
             evargs.append(self.visit_expr(arg))
 
-        match name.lower():
-            case "ucase":
-                [txt, *_] = evargs
-                if txt.kind == "char":
-                    return self.visit_ucase(txt.get_char())
-                else:
-                    return self.visit_ucase(txt.get_string())
-            case "lcase":
-                [txt, *_] = evargs
-                if txt.kind == "char":
-                    return self.visit_lcase(txt.get_char())
-                else:
-                    return self.visit_lcase(txt.get_string())
-            case "substring":
-                [txt, begin, length, *_] = evargs
-                return self.visit_substring(
-                    txt.get_string(), begin.get_integer(), length.get_integer()
-                )
-            case "div":
-                [lhs, rhs, *_] = evargs
-
-                if lhs.kind not in ["integer", "real"]:
-                    raise BCError(
-                        f"expected INTEGER or REAL for the lhs of DIV, get {lhs.kind}",
-                        stmt.pos,
+        try:
+            match name.lower():
+                case "ucase":
+                    [txt, *_] = evargs
+                    if txt.kind == "char":
+                        return self.visit_ucase(txt.get_char())
+                    elif txt.kind == "string":
+                        return self.visit_ucase(txt.get_string())
+                    else:
+                        raise BCError(f"cannot call UCASE on a {txt.kind}", stmt.pos)
+                case "lcase":
+                    [txt, *_] = evargs
+                    if txt.kind == "char":
+                        return self.visit_lcase(txt.get_char())
+                    elif txt.kind == "string":
+                        return self.visit_lcase(txt.get_string())
+                    else:
+                        raise BCError(f"cannot call LCASE on a {txt.kind}", stmt.pos)
+                case "substring":
+                    [txt, begin, length, *_] = evargs
+                    return self.visit_substring(
+                        txt.get_string(), begin.get_integer(), length.get_integer()
                     )
-                if rhs.kind not in ["integer", "real"]:
-                    raise BCError(
-                        f"expected INTEGER or REAL for the rhs of DIV, get {rhs.kind}",
-                        stmt.pos,
-                    )
+                case "div":
+                    [lhs, rhs, *_] = evargs
 
-                lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
-                rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    if lhs.kind not in ["integer", "real"]:
+                        raise BCError(
+                            f"expected INTEGER or REAL for the lhs of DIV, get {lhs.kind}",
+                            stmt.pos,
+                        )
+                    if rhs.kind not in ["integer", "real"]:
+                        raise BCError(
+                            f"expected INTEGER or REAL for the rhs of DIV, get {rhs.kind}",
+                            stmt.pos,
+                        )
 
-                return self.visit_div(lhs_val, rhs_val)
-            case "mod":
-                [lhs, rhs, *_] = evargs
+                    lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                    rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
 
-                if lhs.kind not in ["integer", "real"]:
-                    raise BCError(
-                        f"expected INTEGER or REAL for the lhs of MOD, get {lhs.kind}",
-                        stmt.pos,
-                    )
-                if rhs.kind not in ["integer", "real"]:
-                    raise BCError(
-                        f"expected INTEGER or REAL for the rhs of MOD, get {rhs.kind}",
-                        stmt.pos,
-                    )
+                    return self.visit_div(lhs_val, rhs_val)
+                case "mod":
+                    [lhs, rhs, *_] = evargs
 
-                lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
-                rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    if lhs.kind not in ["integer", "real"]:
+                        raise BCError(
+                            f"expected INTEGER or REAL for the lhs of MOD, get {lhs.kind}",
+                            stmt.pos,
+                        )
+                    if rhs.kind not in ["integer", "real"]:
+                        raise BCError(
+                            f"expected INTEGER or REAL for the rhs of MOD, get {rhs.kind}",
+                            stmt.pos,
+                        )
 
-                return self.visit_mod(lhs_val, rhs_val)
-            case "length":
-                [txt, *_] = evargs
-                return self.visit_length(txt.get_string())
-            case "round":
-                [val_r, places, *_] = evargs
-                return self.visit_round(val_r.get_real(), places.get_integer())
-            case "sqrt":
-                [val, *_] = evargs
-                if val.kind not in ["integer", "real"]:
-                    raise BCError(
-                        f"cannot perform a square root on object of type {val.kind}",
-                        stmt.pos,
-                    )
-                return self.visit_sqrt(val)
-            case "getchar":
-                return self.visit_getchar()
-            case "random":
-                return self.visit_random()
+                    lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                    rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+
+                    return self.visit_mod(lhs_val, rhs_val)
+                case "length":
+                    [txt, *_] = evargs
+                    if isinstance(txt.kind, BCArrayType):
+                        raise BCError("cannot call LENGTH on an array! please manually access the end index instead.", stmt.pos)
+                    if txt.kind != "string":
+                        raise BCError(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
+
+                    return self.visit_length(txt.get_string())
+                case "round":
+                    [val_r, places, *_] = evargs
+                    return self.visit_round(val_r.get_real(), places.get_integer())
+                case "sqrt":
+                    [val, *_] = evargs
+                    if val.kind not in ["integer", "real"]:
+                        raise BCError(
+                            f"cannot perform a square root on object of type {val.kind}",
+                            stmt.pos,
+                        )
+                    return self.visit_sqrt(val)
+                case "getchar":
+                    return self.visit_getchar()
+                case "random":
+                    return self.visit_random()
+        except BCError as e:
+            e.pos = stmt.pos
+            raise e
 
     def visit_libroutine_noreturn(self, stmt: CallStatement):
         name = stmt.ident.lower()

@@ -3,7 +3,7 @@ __version__ = "0.3.0-alpha2"
 
 class BCError(Exception):
     # row, col, bol
-    pos: tuple[int, int, int]
+    pos: tuple[int, int, int] | None
     eof: bool
 
     def __init__(self, msg: str, ctx=None, eof=False) -> None:  # type: ignore
@@ -22,6 +22,10 @@ class BCError(Exception):
         super().__init__(s)
 
     def print(self, filename: str, file_content: str):
+        if self.pos is None:
+            print(self.msg, end="")
+            return
+
         line = self.pos[0]
         col = self.pos[1]
         bol = self.pos[2]
@@ -29,10 +33,6 @@ class BCError(Exception):
         eol = bol
         while eol != len(file_content) and file_content[eol] != "\n":
             eol += 1
-
-        if self.pos == (0, 0, 0):
-            print(self.msg, end="")
-            return
 
         line_begin = f" \033[31;1m{line}\033[0m | "
         padding = len(str(line) + "  | ") + col - 1
