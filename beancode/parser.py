@@ -898,7 +898,7 @@ class Parser:
         if cond is None:
             raise BCError("found invalid expression for if condition", self.peek())
 
-        # allow stupid igcse shit
+        # allow stupid igcse stuff
         if self.peek().kind == "newline":
             self.clean_newlines()
 

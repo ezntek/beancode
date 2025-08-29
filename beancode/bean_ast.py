@@ -173,7 +173,7 @@ class BCValue:
             case "char":
                 return str(self.get_char())
             case "boolean":
-                return str(self.get_boolean())
+                return str(self.get_boolean()).upper()
             case "null":
                 return "(null)"
 

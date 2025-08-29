@@ -414,6 +414,10 @@ class Lexer:
             # skip past the initial delim
             self.cur += 1
             end += 1
+
+            if self.cur >= len(self.file):
+                raise BCError("unexpected end of file", self.get_pos())
+
             curr_ch = self.file[self.cur]
 
             while curr_ch != begin_ch:

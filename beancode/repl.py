@@ -18,7 +18,7 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .clear:   clear the screen
  .reset:   reset the interpreter
  .version: print the version
- .exit:    exit the interpreter (same as .quit)
+ .exit:    exit the interpreter (.quit also works)
 """
 
 class DotCommandResult(Enum):

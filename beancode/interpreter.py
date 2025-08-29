@@ -5,6 +5,7 @@ import importlib
 import random
 import time
 import copy
+import math
 
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
@@ -36,6 +37,7 @@ LIBROUTINES = {
     "mod": 2,
     "substring": 3,
     "round": 2,
+    "sqrt": 1,
     "length": 1,
     "getchar": 0,
     "random": 0,
@@ -573,8 +575,7 @@ class Interpreter:
                         "right hand side in boolean operation is null", expr.rhs.pos
                     )
 
-                # python does: False or True = False....fuck you
-
+                # python does: False or True = False... <redacted> you
                 res = lhs_b or rhs_b
 
                 return BCValue("boolean", boolean=res)
@@ -707,6 +708,14 @@ class Interpreter:
         else:
             return BCValue("integer", integer=int(lhs % rhs))
 
+    def visit_sqrt(self, val: BCValue) -> BCValue: # type: ignore
+        if val.kind == "integer":
+            num = val.get_integer()
+            return BCValue("real", real=math.sqrt(num))
+        elif val.kind == "real":
+            num = val.get_real()
+            return BCValue("real", real=math.sqrt(num))
+
     def visit_random(self) -> BCValue:
         return BCValue("real", real=random.random())
 
@@ -788,6 +797,11 @@ class Interpreter:
             case "round":
                 [val_r, places, *_] = evargs
                 return self.visit_round(val_r.get_real(), places.get_integer())
+            case "sqrt":
+                [val, *_] = evargs
+                if val.kind not in ["integer", "real"]:
+                    raise BCError(f"cannot perform a square root on object of type {val.kind}", stmt.pos)
+                return self.visit_sqrt(val)
             case "getchar":
                 return self.visit_getchar()
             case "random":
@@ -1377,17 +1391,19 @@ class Interpreter:
             self.functions[func.name] = func
 
     def visit_include_stmt(self, stmt: IncludeStatement):
-        filename = stmt.file
-        path = os.path.join(__file__, filename)
-
         if stmt.ffi:
             return self.visit_include_ffi_stmt(stmt)
+
+        filename = stmt.file
+        path = os.path.join("./", filename)
 
         # TODO: abstract this stuff into another file
         if not os.path.exists(path):
             error(f"file {filename} does not exist!")
+
         with open(filename, "r+") as f:
             file_content = f.read()
+        
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
         parser = Parser(toks)
@@ -1510,8 +1526,8 @@ class Interpreter:
         if step > 0:
             while counter.get_integer() <= end.get_integer():
                 intp.visit_block(None)
-                # FIXME: actually retarded bullshit
-                # clear declared variables (barbaric)
+                #  FIXME: barbaric
+                # clear declared variables
                 c = intp.variables[stmt.counter.ident]
                 intp.variables = self.variables.copy()
                 intp.variables[stmt.counter.ident] = c
@@ -1532,7 +1548,7 @@ class Interpreter:
         elif step < 0:
             while counter.get_integer() >= end.get_integer():
                 intp.visit_block(None)
-                # FIXME: actually retarded bullshit
+                # FIXME:  
                 # clear declared variables (barbaric)
                 c = intp.variables[stmt.counter.ident]
                 intp.variables = self.variables.copy()
