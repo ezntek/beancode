@@ -286,13 +286,13 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError(
+                    raise BCError(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError(
+                    raise BCError(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
@@ -325,17 +325,62 @@ class Interpreter:
                     return BCValue("integer", integer=res)
                 elif isinstance(res, float):
                     return BCValue("real", real=res)
+            case "pow":
+                lhs = self.visit_expr(expr.lhs)
+                rhs = self.visit_expr(expr.rhs)
+
+                if lhs.kind in ["boolean", "char", "string"]:
+                    raise BCError(
+                        "Cannot exponentiate bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind in ["boolean", "char", "string"]:
+                    raise BCError(
+                        "Cannot exponentiate bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                lhs_num: int | float | None = 0
+                rhs_num: int | float | None = 0
+
+                if lhs.kind == "integer":
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == "real":
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == "integer":
+                    rhs_num = rhs.get_integer()
+                elif lhs.kind == "real":
+                    rhs_num = rhs.get_real()
+
+                if lhs_num == None:
+                    raise BCError(
+                        "left hand side in numerical operation is null!", expr.lhs.pos
+                    )
+                if rhs_num == None:
+                    raise BCError(
+                        "right hand side in numerical operation is null!", expr.rhs.pos
+                    )
+
+                res = lhs_num ** rhs_num
+
+                if isinstance(res, int):
+                    return BCValue("integer", integer=res)
+                elif isinstance(res, float):
+                    return BCValue("real", real=res)
+
             case "div":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError(
+                    raise BCError(
                         "Cannot divide between bools, chars, and strings!", expr.lhs.pos
                     )
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError(
+                    raise BCError(
                         "Cannot divide between bools, chars, and strings!", expr.rhs.pos
                     )
 
@@ -402,7 +447,7 @@ class Interpreter:
                     return BCValue("string", string=res)
 
                 if "boolean" in [lhs.kind, rhs.kind]:
-                    raise ValueError("Cannot add bools, chars, and strings!")
+                    raise BCError("Cannot add bools, chars, and strings!")
 
                 lhs_num: int | float | None = 0
                 rhs_num: int | float | None = 0
@@ -436,10 +481,10 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError("Cannot subtract bools, chars, and strings!")
+                    raise BCError("Cannot subtract bools, chars, and strings!")
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise ValueError("Cannot subtract bools, chars, and strings!")
+                    raise BCError("Cannot subtract bools, chars, and strings!")
 
                 lhs_num: int | float | None = 0
                 rhs_num: int | float | None = 0

@@ -496,8 +496,28 @@ class Parser:
         else:
             return None
 
-    def factor(self) -> Expr | None:
+    def pow(self) -> Expr | None:
         expr = self.unary()
+        if expr is None:
+            return None
+
+        while self.match([("operator", "pow")]):
+            op = self.prev().operator
+
+            if op is None:
+                raise BCError("pow: op is None", op)
+
+            right = self.unary()
+
+            if right is None:
+                return None
+
+            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
+
+        return expr
+
+    def factor(self) -> Expr | None:
+        expr = self.pow()
         if expr is None:
             return None
 
@@ -507,7 +527,7 @@ class Parser:
             if op is None:
                 raise BCError("factor: op is None", op)
 
-            right = self.unary()
+            right = self.pow()
 
             if right is None:
                 return None
@@ -558,7 +578,7 @@ class Parser:
             if right is None:
                 return None
 
-            expr = BinaryExpr(expr.pos, expr, op, right)
+            expr = BinaryExpr(expr.pos, expr, op, right) # type: ignore
         return expr
 
     def equality(self) -> Expr | None:

@@ -66,6 +66,7 @@ Operator = t.Literal[
     "div",
     "add",
     "sub",
+    "pow"
 ]
 
 Separator = t.Literal[
@@ -103,6 +104,7 @@ _OPERATORS = {
     "add": "+",
     "sub": "-",
     "div": "/",
+    "pow": "^",
 }
 
 
@@ -242,7 +244,7 @@ class Lexer:
         return ch in "{}[]():,;"
 
     def is_operator_start(self, ch: str) -> bool:
-        return ch in "+-*/=<>"
+        return ch in "+-*/=<>^"
 
     def is_numeral(self, potential_num: str) -> bool:
         if len(potential_num) == 1 and potential_num[0] == "-":
@@ -335,6 +337,7 @@ class Lexer:
             "+": "add",
             "-": "sub",
             "/": "div",
+            "^": "pow",
             # this is cursed but eh
             "←": "assign"
         }

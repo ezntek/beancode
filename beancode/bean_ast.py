@@ -242,6 +242,7 @@ Operator = typing.Literal[
     "div",
     "add",
     "sub",
+    "pow",
     "and",
     "or",
     "not",
