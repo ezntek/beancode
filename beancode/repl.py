@@ -6,13 +6,16 @@ from . import __version__
 
 import sys
 
+def _warn(msg: str):
+    print(
+        f"\033[33;1mwarn:\033[0m {msg}",
+        file=sys.stderr,
+    )
+
 try:
     import readline
 except ImportError:
-    print(
-        "\033[33;1mwarn:\033[0m could not import readline, continuing without shell history",
-        file=sys.stderr,
-    )
+    _warn("could not import readline, continuing without shell history")
 
 from enum import Enum
 
@@ -134,8 +137,12 @@ class Repl:
             self.lx.reset()
             self.p.reset()
             self.i.reset()
-
-            inp = input("\033[0;1m>> \033[0m")
+            
+            try:
+                inp = input("\033[0;1m>> \033[0m")
+            except KeyboardInterrupt:
+                _warn("type \".exit\" or \".quit\" to exit the REPL.")
+                continue
 
             if len(inp) == 0:
                 continue
