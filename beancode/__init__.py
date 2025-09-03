@@ -30,6 +30,16 @@ class BCError(Exception):
         col = self.pos[1]
         bol = self.pos[2]
 
+        if line != 1 and bol == 0:
+            i = 1
+            j = 0
+            while i < line:
+                while file_content[j] != '\n':
+                    j += 1
+                j += 1
+                i += 1 
+            bol = j
+       
         eol = bol
         while eol != len(file_content) and file_content[eol] != "\n":
             eol += 1
@@ -83,7 +93,7 @@ class BCWarning(Exception):
             return
 
         line_begin = f" \033[35;1m{line}\033[0m | "
-        padding = len(str(line) + "  | ") + col
+        padding = len(str(line) + "  | ") + col - 1
         spaces = lambda *_: " " * padding
 
         print(f"\033[0m\033[1m{filename}:{line}: ", end="")

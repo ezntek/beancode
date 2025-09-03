@@ -1,0 +1,3 @@
+procedure x
+while i < 5
+output i

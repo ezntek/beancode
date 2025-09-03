@@ -51,7 +51,7 @@ def main():
 
     if args.debug:
         for tok in toks:
-            print(tok)
+            tok.print()
 
     parser = Parser(toks)
 

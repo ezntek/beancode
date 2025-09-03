@@ -1029,7 +1029,7 @@ class Parser:
         if do.keyword != "do":
             raise BCError(
                 f"expected `DO` after while loop condition, but found {str(do)}",
-                self.prev(),
+                self.peek(),
             )
         self.consume()
 

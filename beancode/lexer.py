@@ -168,10 +168,16 @@ class Token:
         else:
             raise Exception()  # TODO: fix
 
-    def __repr__(self) -> str:
+    def print(self):
         s, kind = self.get()
         s = s if s != "\n" else ""
-        return f"token({kind}): {s}"
+        pos = f"({self.pos[0]}, {self.pos[1]}, {self.pos[2]})"
+        print(f"token({kind}){pos}: {s}")
+
+    def __repr__(self) -> str:
+        s, _ = self.get()
+        s = s if s != "\n" else "newline"
+        return f"<{s}>" 
 
 
 class Lexer:

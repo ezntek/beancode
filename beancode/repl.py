@@ -76,13 +76,15 @@ class Repl:
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
 
-    def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
+    def get_continuation(self, so_far: str) -> tuple[ast.Program | None, ContinuationResult]:
+        buf = so_far + "\n" # stupid python input semantics
         while True:
             oldrow = self.lx.row
             self.lx.reset()
             self.lx.row = oldrow + 1
 
             inp = input("\033[0m.. ")
+            buf += inp + "\n"
 
             if len(inp) == 0:
                 continue
@@ -106,7 +108,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", inp)
+                err.print("(repl)", buf)
                 print()
                 continue
 
@@ -119,7 +121,7 @@ class Repl:
                 if err.eof:
                     continue
                 else:
-                    err.print("(repl)", inp)
+                    err.print("(repl)", buf)
                     print()
                     return (None, ContinuationResult.ERROR)
             except BCWarning as w:
@@ -141,6 +143,7 @@ class Repl:
             try:
                 inp = input("\033[0;1m>> \033[0m")
             except KeyboardInterrupt:
+                print()
                 _warn("type \".exit\" or \".quit\" to exit the REPL.")
                 continue
 
@@ -175,7 +178,7 @@ class Repl:
                 program = self.p.program()
             except BCError as err:
                 if err.eof:
-                    cont = self.get_continuation()
+                    cont = self.get_continuation(inp)
                     match cont[1]:
                         case ContinuationResult.SUCCESS:
                             program = cont[0]  # type: ignore
