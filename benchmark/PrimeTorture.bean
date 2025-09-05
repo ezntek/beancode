@@ -1,0 +1,30 @@
+constant NUM <- 750000
+
+procedure write(s: string)
+    for i <- 1 to length(s)
+        call putchar(substring(s, i, 1))
+    next i
+
+    call flush
+endprocedure
+
+function isPrime(n: integer) returns boolean
+    for i <- 2 to integer(sqrt(n))
+        if mod(n, i) = 0 then
+            return false
+        endif
+    next i
+
+    return true
+endfunction
+
+procedure primeTorture(n: integer)
+    for i <- 1 to n
+        if isPrime(i) then
+            call write(string(i) + ", ")
+        endif
+    next i
+endprocedure
+
+call primeTorture(NUM)
+output ""
