@@ -53,7 +53,7 @@ class Interpreter:
     functions: dict[
         str, ProcedureStatement | FunctionStatement | BCProcedure | BCFunction
     ]
-    calls: list[BlockType]
+    calls: list[tuple[BlockType, str | None]]
     func: bool
     proc: bool
     loop: bool
@@ -86,15 +86,28 @@ class Interpreter:
         func = False
 
         for item in reversed(self.calls):
-            if item == "procedure":
+            if item[0] == "procedure":
                 proc = True
                 break
-            elif item == "function":
+            elif item[0] == "function":
                 func = True
                 break
 
         return (proc, func)
 
+    def error(self, msg: str, pos: t.Any = None) -> t.NoReturn:
+        proc = None
+        func = None
+        for item in reversed(self.calls):
+            if item[0] == "procedure":
+                proc = item[1]
+                break
+            elif item[0] == "function":
+                func = item[1]
+                break
+
+        raise BCError(msg, pos, proc=proc, func=func)
+    
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         match expr.op:
             case "assign":
@@ -120,19 +133,19 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
 
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
                     if lhs_num == None:
-                        raise BCError(
+                        self.error(
                             "left hand side in comparison operation is null!",
                             expr.lhs.pos,
                         )
                     if rhs_num == None:
-                        raise BCError(
+                        self.error(
                             "right hand side in comparison operation is null!",
                             expr.rhs.pos,
                         )
@@ -140,12 +153,12 @@ class Interpreter:
                     return BCValue("boolean", boolean=(lhs_num > rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        raise BCError(
+                        self.error(
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
                     elif lhs.kind == "boolean":
-                        raise BCError(
+                        self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
@@ -164,19 +177,19 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
 
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"impossible to perform less_than between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
                     if lhs_num == None:
-                        raise BCError(
+                        self.error(
                             "left hand side in comparison operation is null!",
                             expr.lhs.pos,
                         )
                     if rhs_num == None:
-                        raise BCError(
+                        self.error(
                             "right hand side in comparison operation is null!",
                             expr.rhs.pos,
                         )
@@ -184,12 +197,12 @@ class Interpreter:
                     return BCValue("boolean", boolean=(lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        raise BCError(
+                        self.error(
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
                     elif lhs.kind == "boolean":
-                        raise BCError(
+                        self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
@@ -208,19 +221,19 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
 
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
                     if lhs_num == None:
-                        raise BCError(
+                        self.error(
                             "left hand side in comparison operation is null!",
                             expr.lhs.pos,
                         )
                     if rhs_num == None:
-                        raise BCError(
+                        self.error(
                             "right hand side in comparison operation is null!",
                             expr.rhs.pos,
                         )
@@ -228,12 +241,12 @@ class Interpreter:
                     return BCValue("boolean", boolean=(lhs_num >= rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        raise BCError(
+                        self.error(
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
                     elif lhs.kind == "boolean":
-                        raise BCError(
+                        self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
@@ -252,19 +265,19 @@ class Interpreter:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
 
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
                     if lhs_num == None:
-                        raise BCError(
+                        self.error(
                             "left hand side in comparison operation is null!",
                             expr.lhs.pos,
                         )
                     if rhs_num == None:
-                        raise BCError(
+                        self.error(
                             "right hand side in comparison operation is null!",
                             expr.rhs.pos,
                         )
@@ -272,12 +285,12 @@ class Interpreter:
                     return BCValue("boolean", boolean=(lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
-                        raise BCError(
+                        self.error(
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
                     elif lhs.kind == "boolean":
-                        raise BCError(f"illegal to compare booleans", expr.lhs.pos)
+                        self.error(f"illegal to compare booleans", expr.lhs.pos)
                     elif lhs.kind == "string":
                         return BCValue(
                             "boolean", boolean=(lhs.get_string() <= rhs.get_string())
@@ -288,13 +301,13 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
@@ -313,11 +326,11 @@ class Interpreter:
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
                     )
                 if rhs_num == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
 
@@ -332,13 +345,13 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
                     )
@@ -357,11 +370,11 @@ class Interpreter:
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
                     )
                 if rhs_num == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
 
@@ -377,12 +390,12 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot divide between bools, chars, and strings!", expr.lhs.pos
                     )
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise BCError(
+                    self.error(
                         "Cannot divide between bools, chars, and strings!", expr.rhs.pos
                     )
 
@@ -400,11 +413,11 @@ class Interpreter:
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
                     )
                 if rhs_num == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
 
@@ -434,13 +447,13 @@ class Interpreter:
                         rhs_str_or_char = rhs.get_char()
 
                     if lhs_str_or_char == None:
-                        raise BCError(
+                        self.error(
                             "left hand side in string/char concatenation is null!",
                             expr.lhs.pos,
                         )
 
                     if rhs_str_or_char == None:
-                        raise BCError(
+                        self.error(
                             "right hand side in string/char concatenation is null!",
                             expr.rhs.pos,
                         )
@@ -449,7 +462,7 @@ class Interpreter:
                     return BCValue("string", string=res)
 
                 if "boolean" in [lhs.kind, rhs.kind]:
-                    raise BCError("Cannot add bools, chars, and strings!")
+                    self.error("Cannot add bools, chars, and strings!")
 
                 lhs_num: int | float | None = 0
                 rhs_num: int | float | None = 0
@@ -465,11 +478,11 @@ class Interpreter:
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
                     )
                 if rhs_num == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
                 res = lhs_num + rhs_num
@@ -483,10 +496,10 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind in ["boolean", "char", "string"]:
-                    raise BCError("Cannot subtract bools, chars, and strings!")
+                    self.error("Cannot subtract bools, chars, and strings!")
 
                 if rhs.kind in ["boolean", "char", "string"]:
-                    raise BCError("Cannot subtract bools, chars, and strings!")
+                    self.error("Cannot subtract bools, chars, and strings!")
 
                 lhs_num: int | float | None = 0
                 rhs_num: int | float | None = 0
@@ -502,11 +515,11 @@ class Interpreter:
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
                     )
                 if rhs_num == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in numerical operation is null!", expr.rhs.pos
                     )
                 res = lhs_num - rhs_num
@@ -520,13 +533,13 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind != "boolean":
-                    raise BCError(
+                    self.error(
                         f"cannot perform logical AND on value with type {lhs.kind}",
                         expr.lhs.pos,
                     )
 
                 if rhs.kind != "boolean":
-                    raise BCError(
+                    self.error(
                         f"cannot perform logical AND on value with type {lhs.kind}",
                         expr.rhs.pos,
                     )
@@ -535,12 +548,12 @@ class Interpreter:
                 rhs_b = rhs.get_boolean()
 
                 if lhs_b == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in boolean operation is null", expr.lhs.pos
                     )
 
                 if rhs_b == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in boolean operation is null", expr.rhs.pos
                     )
 
@@ -551,13 +564,13 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind != "boolean":
-                    raise BCError(
+                    self.error(
                         f"cannot perform logical OR on value with type {lhs.kind}",
                         expr.lhs.pos,
                     )
 
                 if rhs.kind != "boolean":
-                    raise BCError(
+                    self.error(
                         f"cannot perform logical OR on value with type {lhs.kind}",
                         expr.rhs.pos,
                     )
@@ -566,12 +579,12 @@ class Interpreter:
                 rhs_b = rhs.get_boolean()
 
                 if lhs_b == None:
-                    raise BCError(
+                    self.error(
                         "left hand side in boolean operation is null", expr.lhs.pos
                     )
 
                 if rhs_b == None:
-                    raise BCError(
+                    self.error(
                         "right hand side in boolean operation is null", expr.rhs.pos
                     )
 
@@ -584,7 +597,7 @@ class Interpreter:
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            raise BCError("found (null) for array index", ind.idx_outer.pos)
+            self.error("found (null) for array index", ind.idx_outer.pos)
 
         v = self.variables[ind.ident.ident].val
 
@@ -593,11 +606,11 @@ class Interpreter:
 
             if a.typ.is_matrix:
                 if ind.idx_inner is None:
-                    raise BCError("expected 2 indices for matrix indexing", ind.pos)
+                    self.error("expected 2 indices for matrix indexing", ind.pos)
 
                 inner_index = self.visit_expr(ind.idx_inner).integer
                 if inner_index is None:
-                    raise BCError(
+                    self.error(
                         "found (null) for inner array index", ind.idx_inner.pos
                     )
 
@@ -605,13 +618,13 @@ class Interpreter:
             else:
                 return (index, None)
         else:
-            raise BCError(f"attemped to index {v.kind}", ind.ident.pos)
+            self.error(f"attemped to index {v.kind}", ind.ident.pos)
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
         index = self.visit_expr(ind.idx_outer).integer
 
         if index is None:
-            raise BCError("found (null) for array index", ind.idx_outer.pos)
+            self.error("found (null) for array index", ind.idx_outer.pos)
 
         v = self.variables[ind.ident.ident].val
 
@@ -625,18 +638,18 @@ class Interpreter:
             if a.typ.is_matrix:
                 inner = tup[1]
                 if inner is None:
-                    raise BCError(
+                    self.error(
                         "second index not present for matrix index", ind.ident.pos
                     )
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
-                    raise BCError(
+                    self.error(
                         f"attempted to access out of bounds array element `{tup[0]}`",
                         ind.idx_outer.pos,
                     )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
-                    raise BCError(
+                    self.error(
                         f"attempted to access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
                     )
 
@@ -649,12 +662,12 @@ class Interpreter:
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
-                        raise BCError(
+                        self.error(
                             "attemped to access the 0th array element, which is disallowed in pseudocode",
                             ind.idx_outer.pos,
                         )
                     else:
-                        raise BCError(
+                        self.error(
                             f"attempted to access out of bounds array element {tup[0]}",
                             ind.idx_outer.pos,
                         )
@@ -665,7 +678,7 @@ class Interpreter:
                 else:
                     return res
         else:
-            raise BCError(f"attempted to index {v.kind}", ind.ident.pos)
+            self.error(f"attempted to index {v.kind}", ind.ident.pos)
 
     def visit_ucase(self, txt: str) -> BCValue:
         return BCValue("string", string=txt.upper())
@@ -728,7 +741,7 @@ class Interpreter:
         nargs = LIBROUTINES[name.lower()]
 
         if len(args) < nargs:
-            raise BCError(
+            self.error(
                 f"expected {nargs} args, but got {len(args)} in call to library routine {name}",
                 stmt.pos,
             )
@@ -746,7 +759,7 @@ class Interpreter:
                     elif txt.kind == "string":
                         return self.visit_ucase(txt.get_string())
                     else:
-                        raise BCError(f"cannot call UCASE on a {txt.kind}", stmt.pos)
+                        self.error(f"cannot call UCASE on a {txt.kind}", stmt.pos)
                 case "lcase":
                     [txt, *_] = evargs
                     if txt.kind == "char":
@@ -754,7 +767,7 @@ class Interpreter:
                     elif txt.kind == "string":
                         return self.visit_lcase(txt.get_string())
                     else:
-                        raise BCError(f"cannot call LCASE on a {txt.kind}", stmt.pos)
+                        self.error(f"cannot call LCASE on a {txt.kind}", stmt.pos)
                 case "substring":
                     [txt, begin, length, *_] = evargs
                     return self.visit_substring(
@@ -764,12 +777,12 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     if lhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"expected INTEGER or REAL for the lhs of DIV, get {lhs.kind}",
                             stmt.pos,
                         )
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"expected INTEGER or REAL for the rhs of DIV, get {rhs.kind}",
                             stmt.pos,
                         )
@@ -782,12 +795,12 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     if lhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"expected INTEGER or REAL for the lhs of MOD, get {lhs.kind}",
                             stmt.pos,
                         )
                     if rhs.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"expected INTEGER or REAL for the rhs of MOD, get {rhs.kind}",
                             stmt.pos,
                         )
@@ -799,9 +812,9 @@ class Interpreter:
                 case "length":
                     [txt, *_] = evargs
                     if isinstance(txt.kind, BCArrayType):
-                        raise BCError("cannot call LENGTH on an array! please manually access the end index instead.", stmt.pos)
+                        self.error("cannot call LENGTH on an array! please manually access the end index instead.", stmt.pos)
                     if txt.kind != "string":
-                        raise BCError(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
+                        self.error(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
 
                     return self.visit_length(txt.get_string())
                 case "round":
@@ -810,7 +823,7 @@ class Interpreter:
                 case "sqrt":
                     [val, *_] = evargs
                     if val.kind not in ["integer", "real"]:
-                        raise BCError(
+                        self.error(
                             f"cannot perform a square root on object of type {val.kind}",
                             stmt.pos,
                         )
@@ -829,7 +842,7 @@ class Interpreter:
         nargs = LIBROUTINES_NORETURN[name.lower()]
 
         if len(args) < nargs:
-            raise BCError(
+            self.error(
                 f"expected {nargs} args, but got {len(args)} in call to library routine {name}"
             )
 
@@ -850,7 +863,7 @@ class Interpreter:
 
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):
-            raise BCError(
+            self.error(
                 # TODO: better error msg
                 f"FFI function {func.name} declares {len(func.params)} variables but only found {len(stmt.args)} in function call",
                 stmt.pos,
@@ -863,7 +876,7 @@ class Interpreter:
         retval = func.fn(args)
 
         if retval.is_null() or retval.is_uninitialized():
-            raise BCError(
+            self.error(
                 f"FFI function {func.name} returns {func.returns.upper()} but returned a null/uninitialized value.",
                 stmt.pos,
             )
@@ -872,10 +885,10 @@ class Interpreter:
 
     def visit_typeof(self, stmt: FunctionCall) -> BCValue:
         if len(stmt.args) > 1:
-            raise BCError(f"cannot get the type of more than one value!", stmt.pos)
+            self.error(f"cannot get the type of more than one value!", stmt.pos)
 
         if len(stmt.args) == 0:
-            raise BCError(f"insufficient arguments passed to TYPE/TYPEOF", stmt.pos)
+            self.error(f"insufficient arguments passed to TYPE/TYPEOF", stmt.pos)
 
         s = str()
         val = self.visit_expr(stmt.args[0])
@@ -911,24 +924,24 @@ class Interpreter:
         try:
             func = self.functions[stmt.ident]
         except KeyError:
-            raise BCError(f"no function named {stmt.ident} exists", stmt.pos)
+            self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
         if isinstance(func, ProcedureStatement):
-            raise BCError("cannot call procedure without CALL!", stmt.pos)
+            self.error("cannot call procedure without CALL!", stmt.pos)
 
         if isinstance(func, BCProcedure):
-            raise BCError("cannot call FFI procedure without CALL!", stmt.pos)
+            self.error("cannot call FFI procedure without CALL!", stmt.pos)
 
         if isinstance(func, BCFunction):
             return self.visit_ffi_fncall(func, stmt)
 
         intp = self.new(func.block, func=True)
         intp.calls = self.calls
-        intp.calls.append("function")
+        intp.calls.append(("function", func.name))
         vars = self.variables
 
         if len(func.args) != len(stmt.args):
-            raise BCError(
+            self.error(
                 f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
             )
@@ -942,16 +955,16 @@ class Interpreter:
 
         intp.visit_block(func.block)
         if intp._returned is False:
-            raise BCError(f"function did not return a value!", stmt.pos)
+            self.error(f"function did not return a value!", stmt.pos)
 
         if intp.retval is None:
-            raise BCError(f"function's return value is None!", stmt.pos)
+            self.error(f"function's return value is None!", stmt.pos)
         else:
             return intp.retval  # type: ignore
 
     def visit_ffi_call(self, proc: BCProcedure, stmt: CallStatement):
         if len(proc.params) != len(stmt.args):
-            raise BCError(
+            self.error(
                 # TODO: better error msg
                 f"FFI procedure {proc.name} declares {len(proc.params)} variables but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
@@ -973,16 +986,16 @@ class Interpreter:
         try:
             proc = self.functions[stmt.ident]
         except KeyError:
-            raise BCError(f"no procedure named {stmt.ident} exists", stmt.pos)
+            self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
         if isinstance(proc, FunctionStatement):
-            raise BCError(
+            self.error(
                 "cannot run CALL on a function! please call the function without the CALL keyword instead.",
                 stmt.pos,
             )
 
         if isinstance(proc, BCFunction):
-            raise BCError(
+            self.error(
                 "cannot run CALL on an FFI function! please call the function without the CALL keyword instaed.",
                 stmt.pos,
             )
@@ -992,11 +1005,11 @@ class Interpreter:
 
         intp = self.new(proc.block, proc=True)
         intp.calls = self.calls
-        intp.calls.append("procedure")
+        intp.calls.append(("procedure", proc.name))
         vars = self.variables
 
         if len(proc.args) != len(stmt.args):
-            raise BCError(
+            self.error(
                 f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
             )
@@ -1039,7 +1052,7 @@ class Interpreter:
                 try:
                     i = int(s.strip())
                 except ValueError:
-                    raise BCError(f"impossible to convert `{s}` to an INTEGER!", pos)
+                    self.error(f"impossible to convert `{s}` to an INTEGER!", pos)
             case "integer":
                 return inner
             case "real":
@@ -1060,13 +1073,13 @@ class Interpreter:
                 try:
                     r = float(s.strip())
                 except ValueError:
-                    raise BCError(f"impossible to convert `{s}` to a REAL!", pos)
+                    self.error(f"impossible to convert `{s}` to a REAL!", pos)
             case "integer":
                 r = float(inner.get_integer())
             case "real":
                 return inner
             case "char":
-                raise BCError(f"impossible to convert a REAL to a CHAR!", pos)
+                self.error(f"impossible to convert a REAL to a CHAR!", pos)
             case "boolean":
                 r = 1.0 if inner.get_boolean() else 0.0
 
@@ -1077,18 +1090,18 @@ class Interpreter:
 
         match inner.kind:
             case "string":
-                raise BCError(
+                self.error(
                     f"cannot convert a STRING to a CHAR! use SUBSTRING(str, begin, 1) to get a character.",
                     pos,
                 )
             case "integer":
                 c = chr(inner.get_integer())
             case "real":
-                raise BCError(f"impossible to convert a CHAR to a REAL!", pos)
+                self.error(f"impossible to convert a CHAR to a REAL!", pos)
             case "char":
                 return inner
             case "boolean":
-                raise BCError(f"impossible to convert a BOOLEAN to a CHAR!", pos)
+                self.error(f"impossible to convert a BOOLEAN to a CHAR!", pos)
 
         return BCValue("char", char=c)
 
@@ -1113,7 +1126,7 @@ class Interpreter:
         inner = self.visit_expr(tc.expr)
 
         if inner.kind == "null":
-            raise BCError("cannot cast anything to NULL!")
+            self.error("cannot cast anything to NULL!")
 
         match tc.typ:
             case "string":
@@ -1137,12 +1150,12 @@ class Interpreter:
         for arr_lit in outer_arr:
             arr = []
             if len(arr_lit.items) != inner_arr_len:
-                raise BCError("all matrix row lengths must be consistent!", arr_lit.pos)
+                self.error("all matrix row lengths must be consistent!", arr_lit.pos)
 
             for val in arr_lit.items:
                 newval = self.visit_expr(val)
                 if newval.kind != typ:
-                    raise BCError(
+                    self.error(
                         "matrix literal may not contain items of multiple types!",
                         val.pos,
                     )
@@ -1166,7 +1179,7 @@ class Interpreter:
         for val in expr.items[1:]:
             newval = self.visit_expr(val)
             if newval.kind != typ:
-                raise BCError(
+                self.error(
                     "array literal may not contain items of multiple types!", val.pos
                 )
             vals.append(newval)
@@ -1186,7 +1199,7 @@ class Interpreter:
         elif isinstance(expr, Negation):
             inner = self.visit_expr(expr.inner)
             if inner.kind not in ["integer", "real"]:
-                raise BCError(
+                self.error(
                     f"attemped to negate a value of type {inner.kind}", expr.inner.pos
                 )
 
@@ -1197,7 +1210,7 @@ class Interpreter:
         elif isinstance(expr, Not):
             inner = self.visit_expr(expr.inner)
             if inner.kind != "boolean":
-                raise BCError(
+                self.error(
                     f"attempted to perform logical NOT on value of type {inner.kind}",
                     expr.inner.pos,
                 )
@@ -1207,7 +1220,7 @@ class Interpreter:
             try:
                 var = self.variables[expr.ident]
             except KeyError:
-                raise BCError(
+                self.error(
                     f"attempted to access nonexistent variable `{expr.ident}`", expr.pos
                 )
             return var.val
@@ -1298,15 +1311,15 @@ class Interpreter:
             self.variables[id] = data
 
         if data.const:
-            raise BCError(
+            self.error(
                 f"attempted to call `INPUT` into constant {id}", stmt.ident.pos
             )
 
         if type(data.val.kind) == BCArrayType:
-            raise BCError(f"attempted to call `INPUT` on an array", stmt.ident.pos)
+            self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)
 
         if inp.strip() == "":
-            raise BCError(f"empty string supplied into variable with type `{data.val.kind.upper()}`", stmt.pos)  # type: ignore
+            self.error(f"empty string supplied into variable with type `{data.val.kind.upper()}`", stmt.pos)  # type: ignore
 
         match data.val.kind:
             case "string":
@@ -1314,7 +1327,7 @@ class Interpreter:
                 self.variables[id].val.string = inp
             case "char":
                 if len(inp) > 1:
-                    raise BCError(
+                    self.error(
                         f"expected single character but got `{inp}` for CHAR", stmt.pos
                     )
 
@@ -1322,7 +1335,7 @@ class Interpreter:
                 self.variables[id].val.char = inp
             case "boolean":
                 if inp.lower() not in ["true", "false", "yes", "no"]:
-                    raise BCError(
+                    self.error(
                         f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got `{inp}`",
                         stmt.pos,
                     )
@@ -1343,9 +1356,9 @@ class Interpreter:
                         self.variables[id].val.kind = "integer"
                         self.variables[id].val.integer = res
                     except ValueError:
-                        raise BCError("expected INTEGER for INPUT", stmt.ident.pos)
+                        self.error("expected INTEGER for INPUT", stmt.ident.pos)
                 else:
-                    raise BCError("expected INTEGER for INPUT", stmt.ident.pos)
+                    self.error("expected INTEGER for INPUT", stmt.ident.pos)
             case "real":
                 inp = inp.lower().strip()
                 p = Parser([])
@@ -1355,29 +1368,29 @@ class Interpreter:
                         self.variables[id].val.kind = "real"
                         self.variables[id].val.real = res
                     except ValueError:
-                        raise BCError("expected REAL for INPUT", stmt.ident.pos)
+                        self.error("expected REAL for INPUT", stmt.ident.pos)
                 else:
-                    raise BCError("expected REAL for INPUT", stmt.ident.pos)
+                    self.error("expected REAL for INPUT", stmt.ident.pos)
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         proc, func = self.can_return()
 
         if not proc and not func:
-            raise BCError(
+            self.error(
                 f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                 stmt.pos,
             )
 
         if func:
             if stmt.expr is None:
-                raise BCError("you must return something from a function!", stmt.pos)
+                self.error("you must return something from a function!", stmt.pos)
 
             res = self.visit_expr(stmt.expr)
             self.retval = res
             self._returned = True
         elif proc:
             if stmt.expr is not None:
-                raise BCError("you cannot return a value from a procedure!", stmt.pos)
+                self.error("you cannot return a value from a procedure!", stmt.pos)
 
             self._returned = True
 
@@ -1394,7 +1407,7 @@ class Interpreter:
                 self.variables[var.name] = Variable(val=val, const=False)
             else:
                 if var.typ is None:
-                    raise BCError(
+                    self.error(
                         "must have either typ, value or both be set in ffi export",
                         stmt.pos,
                     )
@@ -1461,7 +1474,7 @@ class Interpreter:
 
             if not proc and not func:
                 # FIXME: is this even a possible branch?!
-                raise BCError(
+                self.error(
                     f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                     stmt.pos,
                 )
@@ -1498,7 +1511,7 @@ class Interpreter:
                 proc, func = self.can_return()
 
                 if not proc and not func:
-                    raise BCError(
+                    self.error(
                         f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                         stmt.pos,
                     )
@@ -1511,14 +1524,14 @@ class Interpreter:
         begin = self.visit_expr(stmt.begin)
 
         if begin.kind != "integer":
-            raise BCError(
+            self.error(
                 "non-integer expression used for for loop begin", stmt.begin.pos
             )
 
         end = self.visit_expr(stmt.end)
 
         if end.kind != "integer":
-            raise BCError("non-integer expression used for for loop end", stmt.end.pos)
+            self.error("non-integer expression used for for loop end", stmt.end.pos)
 
         if stmt.step is None:
             step = 1
@@ -1527,7 +1540,7 @@ class Interpreter:
 
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
-        intp.calls.append("for")
+        intp.calls.append(("for", None))
         intp.variables = self.variables.copy()
         intp.functions = self.functions.copy()
 
@@ -1551,7 +1564,7 @@ class Interpreter:
                     proc, func = self.can_return()
 
                     if not proc and not func:
-                        raise BCError(
+                        self.error(
                             f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                             stmt.pos,
                         )
@@ -1573,7 +1586,7 @@ class Interpreter:
                     proc, func = self.can_return()
 
                     if not proc and not func:
-                        raise BCError(
+                        self.error(
                             f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                             stmt.pos,
                         )
@@ -1593,7 +1606,7 @@ class Interpreter:
         cond: Expr = stmt.cond  # type: ignore
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
-        intp.calls.append("repeatuntil")
+        intp.calls.append(("repeatuntil", None))
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
 
@@ -1605,7 +1618,7 @@ class Interpreter:
                 proc, func = self.can_return()
 
                 if not proc and not func:
-                    raise BCError(
+                    self.error(
                         f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
                         stmt.pos,
                     )
@@ -1619,7 +1632,7 @@ class Interpreter:
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         intp = self.new(stmt.block, loop=False)
-        intp.calls.append("scope")
+        intp.calls.append(("scope", None))
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.visit_block(None)
@@ -1643,32 +1656,32 @@ class Interpreter:
             key = s.ident.ident.ident
 
             if self.variables[key].val.array is None:
-                raise BCError(
+                self.error(
                     f"tried to index a variable of type {self.variables[key].val.kind} like an array",
                     s.ident.pos,
                 )
 
             tup = self._get_array_index(s.ident)
             if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore
-                raise BCError(f"not enough indices for matrix", s.ident.idx_outer.pos)
+                self.error(f"not enough indices for matrix", s.ident.idx_outer.pos)
 
             val = self.visit_expr(s.value)
             a: BCArray = self.variables[key].val.array  # type: ignore
 
             if a.typ.is_matrix:  # type: ignore
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
-                    raise BCError(
+                    self.error(
                         f"tried to access out of bounds array index {tup[0]}",
                         s.ident.idx_outer.pos,
                     )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
-                    raise BCError(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
+                    self.error(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
 
                 a.matrix[tup[0] - a.matrix_bounds[0]][tup[1] - a.matrix_bounds[2]] = copy.deepcopy(val)  # type: ignore
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
-                    raise BCError(
+                    self.error(
                         f"tried to access out of bounds array index {tup[0]}",
                         s.ident.idx_outer.pos,
                     )
@@ -1685,18 +1698,18 @@ class Interpreter:
                 self.variables[key] = var
 
             if self.variables[key].const:
-                raise BCError(f"attemped to write to constant {key}", s.ident.pos)
+                self.error(f"attemped to write to constant {key}", s.ident.pos)
 
             if isinstance(exp.kind, BCArrayType):
                 if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.array.matrix_bounds:  # type: ignore
-                    raise BCError(
+                    self.error(
                         f"mismatched matrix sizes in matrix assignment", s.pos
                     )
 
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.array.flat_bounds:  # type: ignore
-                    raise BCError(f"mismatched array sizes in array assignment", s.pos)
+                    self.error(f"mismatched array sizes in array assignment", s.pos)
             elif var.val.kind != exp.kind and exp.kind != "null":
-                raise BCError(
+                self.error(
                     f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
                 )
 
@@ -1706,7 +1719,7 @@ class Interpreter:
         key = c.ident.ident
 
         if key in self.variables:
-            raise BCError(f"variable {key} declared!", c.pos)
+            self.error(f"variable {key} declared!", c.pos)
 
         self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
 
@@ -1716,25 +1729,25 @@ class Interpreter:
         if atype.is_matrix:
             inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
             if inner_end.kind != "integer":
-                raise BCError(
+                self.error(
                     f"cannot use type of {inner_end.kind} as array bound!", d.pos
                 )
 
             outer_end = self.visit_expr(atype.matrix_bounds[1])  # type: ignore
             if outer_end.kind != "integer":
-                raise BCError(
+                self.error(
                     f"cannot use type of {outer_end.kind} as array bound!", d.pos
                 )
 
             outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
             if outer_begin.kind != "integer":
-                raise BCError(
+                self.error(
                     f"cannot use type of {outer_begin.kind} as array bound!", d.pos
                 )
 
             inner_begin = self.visit_expr(atype.matrix_bounds[2])  # type: ignore
             if inner_begin.kind != "integer":
-                raise BCError(
+                self.error(
                     f"cannot use type of {inner_begin.kind} as array bound!", d.pos
                 )
 
@@ -1750,11 +1763,11 @@ class Interpreter:
         else:
             begin = self.visit_expr(atype.flat_bounds[0])  # type: ignore
             if begin.kind != "integer":
-                raise BCError(f"cannot use type of {begin.kind} as array bound!", d.pos)
+                self.error(f"cannot use type of {begin.kind} as array bound!", d.pos)
 
             end = self.visit_expr(atype.flat_bounds[1])  # type: ignore
             if end.kind != "integer":
-                raise BCError(f"cannot use type of {end.kind} as array bound!", d.pos)
+                self.error(f"cannot use type of {end.kind} as array bound!", d.pos)
 
             size = end.get_integer() - begin.get_integer()
             arr: BCValue = [BCValue(atype) for _ in range(size + 1)]  # type: ignore
@@ -1771,7 +1784,7 @@ class Interpreter:
         for ident in d.ident:
             key: str = ident.ident
             if key in self.variables:
-                raise BCError(f"variable {key} declared!", d.pos)
+                self.error(f"variable {key} declared!", d.pos)
 
             if isinstance(d.typ, BCArrayType):
                 self._declare_array(d, key)

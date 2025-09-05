@@ -4,6 +4,8 @@ from . import parser
 from . import interpreter as intp
 from . import __version__
 
+from io import StringIO
+
 import sys
 
 def _warn(msg: str):
@@ -70,21 +72,26 @@ class Repl:
     lx: lexer.Lexer
     p: parser.Parser
     i: intp.Interpreter
+    buf: StringIO
+    proc_src: dict[str, str]
+    func_src: dict[str, str]
 
     def __init__(self):
         self.lx = lexer.Lexer(str())
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
+        self.buf = StringIO()
+        self.proc_src = dict()
+        self.func_src = dict()
 
-    def get_continuation(self, so_far: str) -> tuple[ast.Program | None, ContinuationResult]:
-        buf = so_far + "\n" # stupid python input semantics
+    def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
         while True:
             oldrow = self.lx.row
             self.lx.reset()
             self.lx.row = oldrow + 1
 
             inp = input("\033[0m.. ")
-            buf += inp + "\n"
+            self.buf.write(inp + "\n")
 
             if len(inp) == 0:
                 continue
@@ -108,7 +115,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", buf)
+                err.print("(repl)", self.buf.getvalue())
                 print()
                 continue
 
@@ -121,7 +128,7 @@ class Repl:
                 if err.eof:
                     continue
                 else:
-                    err.print("(repl)", buf)
+                    err.print("(repl)", self.buf.getvalue())
                     print()
                     return (None, ContinuationResult.ERROR)
             except BCWarning as w:
@@ -139,6 +146,9 @@ class Repl:
             self.lx.reset()
             self.p.reset()
             self.i.reset()
+
+            self.buf.truncate(0)
+            self.buf.seek(0)
             
             try:
                 inp = input("\033[0;1m>> \033[0m")
@@ -146,6 +156,7 @@ class Repl:
                 print()
                 _warn("type \".exit\" or \".quit\" to exit the REPL.")
                 continue
+            self.buf.write(inp + "\n")
 
             if len(inp) == 0:
                 continue
@@ -168,7 +179,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", inp)
+                err.print("(repl)", self.buf.getvalue())
                 print()
                 continue
 
@@ -178,7 +189,7 @@ class Repl:
                 program = self.p.program()
             except BCError as err:
                 if err.eof:
-                    cont = self.get_continuation(inp)
+                    cont = self.get_continuation()
                     match cont[1]:
                         case ContinuationResult.SUCCESS:
                             program = cont[0]  # type: ignore
@@ -187,7 +198,23 @@ class Repl:
                         case ContinuationResult.ERROR:
                             continue
                 else:
-                    err.print("(repl)", inp)
+                    src: str
+                    if err.proc is not None:
+                        res = self.proc_src.get(err.proc) # type: ignore
+                        if res is None:
+                            _warn(f"could not find source code for procedure \"{err.proc}\"")
+                            continue
+                        src = res # type: ignore
+                    elif err.func is not None:
+                        res = self.func_src.get(err.func) # type: ignore
+                        if res is None:
+                            _warn(f"could not find source code for function \"{err.func}\"")
+                            continue
+                        src = res # type: ignore
+                    else:
+                        src = self.buf.getvalue()
+
+                    err.print("(repl)", src)
                     print()
                     continue
             except BCWarning as w:
@@ -200,12 +227,38 @@ class Repl:
                     w.print("(repl)", inp)
                     continue
 
+            if program.stmts[0].kind == "procedure":
+                proc: ast.ProcedureStatement = program.stmts[0].procedure # type: ignore
+                self.proc_src[proc.name] = self.buf.getvalue()
+            elif program.stmts[0].kind == "function":
+                func: ast.FunctionStatement = program.stmts[0].function # type: ignore
+                self.func_src[func.name] = self.buf.getvalue()
+
             self.i.block = program.stmts
             self.i.toplevel = True
             try:
                 self.i.visit_block(None)
             except BCError as err:
-                err.print("(repl)", inp)
+                src: str
+                repl_txt = "(repl)"
+                if err.proc is not None:
+                    res = self.proc_src.get(err.proc) # type: ignore
+                    if res is None:
+                        _warn(f"could not find source code for procedure \"{err.proc}\"")
+                        continue
+                    src = res # type: ignore
+                    repl_txt = f"(repl \"{err.proc}\")"
+                elif err.func is not None:
+                    res = self.func_src.get(err.func) # type: ignore
+                    if res is None:
+                        _warn(f"could not find source code for function \"{err.func}\"")
+                        continue
+                    src = res # type: ignore
+                    repl_txt = f"(repl {err.func})"
+                else:
+                    src = self.buf.getvalue()
+
+                err.print(repl_txt, src)
                 print()
                 continue
 
