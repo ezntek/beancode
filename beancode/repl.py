@@ -8,9 +8,21 @@ from io import StringIO
 
 import sys
 
+def _info(msg: str):
+    print(
+        f"\033[34;1mwarn:\033[0m {msg}",
+        file=sys.stderr,
+    )
+
 def _warn(msg: str):
     print(
         f"\033[33;1mwarn:\033[0m {msg}",
+        file=sys.stderr,
+    )
+
+def _error(msg: str):
+    print(
+        f"\033[31;1merror:\033[0m {msg}",
         file=sys.stderr,
     )
 
@@ -27,11 +39,17 @@ type ".help" for a list of REPL commands, ".exit" to exit, or start typing some 
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
- .help:    show this help message
- .clear:   clear the screen
- .reset:   reset the interpreter
- .version: print the version
- .exit:    exit the interpreter (.quit also works)
+ .help         show this help message
+ .clear        clear the screen
+ .reset        reset the interpreter
+ .version      print the version
+ .exit         exit the interpreter (.quit also works)
+ .var [name]   get information regarding a variable
+ .vars         get information regarding all variables
+ .proc [name]  get information regarding a procedure
+ .procs        get information regarding all procedures
+ .func [name]  get information regarding a function
+ .funcs        get information regarding all functions
 """
 
 
@@ -46,27 +64,6 @@ class ContinuationResult(Enum):
     BREAK = (0,)
     ERROR = (1,)
     SUCCESS = (2,)
-
-
-def handle_dot_command(s: str) -> DotCommandResult:
-    match s:
-        case "exit" | "quit":
-            print("\033[1mbye\033[0m")
-            return DotCommandResult.BREAK
-        case "clear":
-            sys.stdout.write("\033[2J\033[H")
-            return DotCommandResult.NO_OP
-        case "reset":
-            print("\033[1mreset interpreter\033[0m")
-            return DotCommandResult.RESET
-        case "help":
-            print(HELP)
-            return DotCommandResult.NO_OP
-        case "version":
-            print(f"beancode version \033[1m{__version__}\033[0m")
-            return DotCommandResult.NO_OP
-    return DotCommandResult.UNKNOWN_COMMAND
-
 
 class Repl:
     lx: lexer.Lexer
@@ -84,6 +81,79 @@ class Repl:
         self.proc_src = dict()
         self.func_src = dict()
 
+    def print_var(self, var: intp.Variable):
+        val = var.val
+        rep: str
+        typ: str
+        if isinstance(val.kind, ast.BCArrayType):
+            a = val.get_array()
+            rep = self.i._display_array(a)
+            typ = a.get_type_str()
+        else:
+            rep = repr(val)
+            typ = val.kind
+
+        if isinstance(val.kind, ast.BCArrayType):
+            print(f"'{typ}' {rep}")
+        else:
+            print(f"'{typ.upper()}' ({rep})")
+
+    def _var(self, args: list[str]) -> DotCommandResult:
+        if len(args) < 2:
+            _error("not enough args for var")
+            return DotCommandResult.NO_OP
+
+        var = self.i.variables.get(args[1])
+        if var is None:
+            _error(f"variable \"{args[1]}\" does not exist!")
+            return DotCommandResult.NO_OP
+
+        self.print_var(var)
+        return DotCommandResult.NO_OP
+
+    def _vars(self, args: list[str]) -> DotCommandResult:
+        _ = args
+
+        if len(self.i.variables) == 2: # null, NULL
+            _info("no variables to print")
+
+        for name, var in self.i.variables.items():
+            if name.lower() == "null":
+                continue
+
+            print(f"{name}: ", end='')
+            self.print_var(var)
+
+        return DotCommandResult.NO_OP
+
+    def handle_dot_command(self, s: str) -> DotCommandResult:
+        args = s.split(" ")
+        base = args[0]
+
+        match base:
+            case "exit" | "quit":
+                print("\033[1mbye\033[0m")
+                return DotCommandResult.BREAK
+            case "clear":
+                sys.stdout.write("\033[2J\033[H")
+                return DotCommandResult.NO_OP
+            case "reset":
+                print("\033[1mreset interpreter\033[0m")
+                return DotCommandResult.RESET
+            case "help":
+                print(HELP)
+                return DotCommandResult.NO_OP
+            case "version":
+                print(f"beancode version \033[1m{__version__}\033[0m")
+                return DotCommandResult.NO_OP
+            case "var":
+                return self._var(args)
+            case "vars":
+                return self._vars(args)
+
+        return DotCommandResult.UNKNOWN_COMMAND
+
+
     def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
         while True:
             oldrow = self.lx.row
@@ -97,14 +167,14 @@ class Repl:
                 continue
 
             if inp[0] == ".":
-                match handle_dot_command(inp[1:]):
+                match self.handle_dot_command(inp[1:]):
                     case DotCommandResult.NO_OP:
                         continue
                     case DotCommandResult.BREAK:
                         return (None, ContinuationResult.BREAK)
                     case DotCommandResult.UNKNOWN_COMMAND:
-                        print("\033[1minvalid dot command\033[0m")
-                        print(HELP)
+                        _error("invalid dot command")
+                        print(HELP, file=sys.stderr)
                         continue
                     case DotCommandResult.RESET:
                         self.i.reset_all()
@@ -162,14 +232,14 @@ class Repl:
                 continue
 
             if inp[0] == ".":
-                match handle_dot_command(inp[1:]):
+                match self.handle_dot_command(inp[1:]):
                     case DotCommandResult.NO_OP:
                         continue
                     case DotCommandResult.BREAK:
                         break
                     case DotCommandResult.UNKNOWN_COMMAND:
-                        print("\033[1minvalid dot command\033[0m")
-                        print(HELP)
+                        _error("invalid dot command")
+                        print(HELP, file=sys.stderr)
                         continue
                     case DotCommandResult.RESET:
                         self.i.reset_all()

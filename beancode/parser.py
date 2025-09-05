@@ -122,8 +122,7 @@ class Parser:
                 exprs.append(expr)
 
             self.clean_newlines()
-            comma = self.consume()
-
+            comma = self.peek()
             if comma.separator == "right_curly":
                 break
             elif comma.separator != "comma":
@@ -131,6 +130,7 @@ class Parser:
                     f"expected comma after expression in array literal, found {comma.kind}",
                     comma,
                 )
+            self.consume()
 
             self.clean_newlines()  # allow newlines
 

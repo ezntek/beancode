@@ -34,7 +34,6 @@ class BCArrayType:
             raise BCError("tried to access matrixbounds on array without matrix bounds")
         return self.matrix_bounds
 
-
 @dataclass
 class BCArray:
     typ: BCArrayType
@@ -59,6 +58,23 @@ class BCArray:
             raise BCError("tried to access matrix array from a flat array")
         return self.matrix
 
+    def get_type_str(self) -> str:
+        s = "ARRAY["
+        if self.flat_bounds is not None:
+            s += str(self.flat_bounds[0])
+            s += ":"
+            s += str(self.flat_bounds[1])
+        elif self.matrix_bounds is not None:
+            s += str(self.matrix_bounds[0])
+            s += ":"
+            s += str(self.matrix_bounds[1])
+            s += ","
+            s += str(self.matrix_bounds[2])
+            s += ":"
+            s += str(self.matrix_bounds[3])
+        s += "] OF "
+        s += str(self.typ.inner).upper()
+        return s
 
 BCType = BCArrayType | BCPrimitiveType
 

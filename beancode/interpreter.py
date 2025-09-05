@@ -894,22 +894,7 @@ class Interpreter:
         val = self.visit_expr(stmt.args[0])
         kind = val.kind
         if isinstance(kind, BCArrayType):
-            s += "ARRAY["
-            arr = val.get_array()
-            if arr.flat_bounds is not None:
-                s += str(arr.flat_bounds[0])
-                s += ":"
-                s += str(arr.flat_bounds[1])
-            elif arr.matrix_bounds is not None:
-                s += str(arr.matrix_bounds[0])
-                s += ":"
-                s += str(arr.matrix_bounds[1])
-                s += ","
-                s += str(arr.matrix_bounds[2])
-                s += ":"
-                s += str(arr.matrix_bounds[3])
-            s += "] OF "
-            s += str(arr.typ.inner).upper()
+            s = val.get_array().get_type_str()
         else:
             s = str(kind.upper())
         return BCValue("string", string=s)
@@ -1025,22 +1010,27 @@ class Interpreter:
 
     def _typecast_string(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
         s = ""
-        match inner.kind:
-            case "null":
-                s = "(null)"
-            case "boolean":
-                if inner.get_boolean():
-                    s = "true"
-                else:
-                    s = "false"
-            case "integer":
-                s = str(inner.get_integer())
-            case "real":
-                s = str(inner.get_real())
-            case "char":
-                s = str(inner.get_char()[0])
-            case "string":
-                return inner
+       
+        if isinstance(inner.kind, BCArrayType):
+            arr = inner.get_array()
+            s = self._display_array(arr)
+        else:
+            match inner.kind:
+                case "null":
+                    s = "(null)"
+                case "boolean":
+                    if inner.get_boolean():
+                        s = "true"
+                    else:
+                        s = "false"
+                case "integer":
+                    s = str(inner.get_integer())
+                case "real":
+                    s = str(inner.get_real())
+                case "char":
+                    s = str(inner.get_char()[0])
+                case "string":
+                    return inner
 
         return BCValue("string", string=s)
 
@@ -1126,7 +1116,10 @@ class Interpreter:
         inner = self.visit_expr(tc.expr)
 
         if inner.kind == "null":
-            self.error("cannot cast anything to NULL!")
+            self.error("cannot cast anything to NULL!", tc.pos)
+
+        if isinstance(inner.kind, BCArrayType) and tc.typ != "string":
+            self.error(f"cannot cast an array to a {tc.typ}", tc.pos)
 
         match tc.typ:
             case "string":
@@ -1701,12 +1694,11 @@ class Interpreter:
                 self.error(f"attemped to write to constant {key}", s.ident.pos)
 
             if isinstance(exp.kind, BCArrayType):
-                if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.array.matrix_bounds:  # type: ignore
+                if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.val.array.matrix_bounds:  # type: ignore
                     self.error(
                         f"mismatched matrix sizes in matrix assignment", s.pos
                     )
-
-                elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.array.flat_bounds:  # type: ignore
+                elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             elif var.val.kind != exp.kind and exp.kind != "null":
                 self.error(
