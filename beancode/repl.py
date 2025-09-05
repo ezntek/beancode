@@ -39,17 +39,17 @@ type ".help" for a list of REPL commands, ".exit" to exit, or start typing some 
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
- .help         show this help message
- .clear        clear the screen
- .reset        reset the interpreter
- .version      print the version
- .exit         exit the interpreter (.quit also works)
- .var [name]   get information regarding a variable
- .vars         get information regarding all variables
- .proc [name]  get information regarding a procedure
- .procs        get information regarding all procedures
- .func [name]  get information regarding a function
- .funcs        get information regarding all functions
+ .var [names]   get information regarding a variable
+ .vars          get information regarding all variables
+ .proc [names]  get information regarding a procedure
+ .procs         get information regarding all procedures
+ .func [names]  get information regarding a function
+ .funcs         get information regarding all functions
+ .help      show this help message
+ .clear     clear the screen
+ .reset     reset the interpreter
+ .version   print the version
+ .exit      exit the interpreter (.quit also works)
 """
 
 
@@ -103,12 +103,14 @@ class Repl:
             _error("not enough args for var")
             return DotCommandResult.NO_OP
 
-        var = self.i.variables.get(args[1])
-        if var is None:
-            _error(f"variable \"{args[1]}\" does not exist!")
-            return DotCommandResult.NO_OP
+        for arg in args[1:]:
+            var = self.i.variables.get(arg)
+            if var is None:
+                _error(f"variable \"{arg}\" does not exist!")
+                continue
 
-        self.print_var(var)
+            print(f"{arg}: ", end='')
+            self.print_var(var)
         return DotCommandResult.NO_OP
 
     def _vars(self, args: list[str]) -> DotCommandResult:
