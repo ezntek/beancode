@@ -618,7 +618,10 @@ class Interpreter:
             else:
                 return (index, None)
         else:
-            self.error(f"attemped to index {v.kind}", ind.ident.pos)
+            if v.kind == "string":
+                self.error("cannot index a string! please use the SUBSTRING library routine instead.", ind.ident.pos)
+            else:
+                self.error(f"attempted to index {v.kind}", ind.ident.pos)
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
         index = self.visit_expr(ind.idx_outer).integer
@@ -678,7 +681,10 @@ class Interpreter:
                 else:
                     return res
         else:
-            self.error(f"attempted to index {v.kind}", ind.ident.pos)
+            if v.kind == "string":
+                self.error(f"cannot index a string! please use SUBSTRING({ind.ident.ident}, {index}, 1) instead.", ind.ident.pos)
+            else:
+                self.error(f"attempted to index {v.kind}", ind.ident.pos)
 
     def visit_ucase(self, txt: str) -> BCValue:
         return BCValue("string", string=txt.upper())
@@ -812,7 +818,7 @@ class Interpreter:
                 case "length":
                     [txt, *_] = evargs
                     if isinstance(txt.kind, BCArrayType):
-                        self.error("cannot call LENGTH on an array! please manually access the end index instead.", stmt.pos)
+                        self.error("cannot call LENGTH on an array! please use the end index instead.", stmt.pos)
                     if txt.kind != "string":
                         self.error(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
 
@@ -1700,11 +1706,10 @@ class Interpreter:
                     )
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
-            elif var.val.kind != exp.kind and exp.kind != "null":
+            elif var.val.kind != exp.kind:
                 self.error(
                     f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
                 )
-
             self.variables[key].val = copy.deepcopy(exp)
 
     def visit_constant_stmt(self, c: ConstantStatement):

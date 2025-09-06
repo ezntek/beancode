@@ -10,7 +10,7 @@ import sys
 
 def _info(msg: str):
     print(
-        f"\033[34;1mwarn:\033[0m {msg}",
+        f"\033[34;1minfo:\033[0m {msg}",
         file=sys.stderr,
     )
 
@@ -39,12 +39,10 @@ type ".help" for a list of REPL commands, ".exit" to exit, or start typing some 
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
- .var [names]   get information regarding a variable
- .vars          get information regarding all variables
- .proc [names]  get information regarding a procedure
- .procs         get information regarding all procedures
- .func [names]  get information regarding a function
- .funcs         get information regarding all functions
+ .var [names]   get information regarding a variable/constant
+ .vars          get information regarding all variables/constants
+ .func [names]  get information regarding a procedure/function
+ .funcs         get information regarding all procedures/functions
  .help      show this help message
  .clear     clear the screen
  .reset     reset the interpreter
@@ -116,8 +114,8 @@ class Repl:
     def _vars(self, args: list[str]) -> DotCommandResult:
         _ = args
 
-        if len(self.i.variables) == 2: # null, NULL
-            _info("no variables to print")
+        if len(self.i.variables) <= 2: # null, NULL
+            _info("no variables")
 
         for name, var in self.i.variables.items():
             if name.lower() == "null":
@@ -140,7 +138,7 @@ class Repl:
                 sys.stdout.write("\033[2J\033[H")
                 return DotCommandResult.NO_OP
             case "reset":
-                print("\033[1mreset interpreter\033[0m")
+                _info("reset interpreter")
                 return DotCommandResult.RESET
             case "help":
                 print(HELP)
@@ -305,6 +303,10 @@ class Repl:
             elif program.stmts[0].kind == "function":
                 func: ast.FunctionStatement = program.stmts[0].function # type: ignore
                 self.func_src[func.name] = self.buf.getvalue()
+
+            if program.stmts[0].kind == "fncall":
+                fncall: ast.FunctionCall = program.stmts[0].fncall # type: ignore
+                program.stmts[0] = ast.Statement("output", output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]))
 
             self.i.block = program.stmts
             self.i.toplevel = True
