@@ -5,7 +5,6 @@ procedure write(s: string)
         call putchar(substring(s, i, 1))
     next i
 
-    call flush
 endprocedure
 
 function isPrime(n: integer) returns boolean

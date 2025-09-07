@@ -1,7 +1,7 @@
 import pyray as p
 from beancode.bean_ast import BCArray
 from beancode.bean_ffi import *
-from beancode import BCError
+from beancode.error import BCError
 
 
 def _color(arr: BCValue) -> p.Color:

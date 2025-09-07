@@ -7,8 +7,8 @@ from .repl import Repl
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
-from . import BCError, BCWarning, error, __version__
-
+from .error import BCError, BCWarning
+from . import error, __version__
 
 def main():
     if len(sys.argv) == 1:

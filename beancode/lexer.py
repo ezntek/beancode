@@ -1,6 +1,7 @@
 import typing as t
 from dataclasses import dataclass
-from . import BCError
+from .error import *
+from . import __version__
 
 Keyword = t.Literal[
     "declare",

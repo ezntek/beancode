@@ -1,7 +1,6 @@
 import typing
 from dataclasses import dataclass
-from . import *
-
+from .error import *
 
 @dataclass
 class Expr:

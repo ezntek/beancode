@@ -10,8 +10,8 @@ import math
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
-from . import *
-
+from .error import *
+from . import __version__
 
 @dataclass
 class Variable:
@@ -1395,7 +1395,10 @@ class Interpreter:
 
     def visit_include_ffi_stmt(self, stmt: IncludeStatement):
         # XXX: this is probably the most scuffed code in existence.
-        mod: Exports = importlib.import_module(f"beancode.modules.{stmt.file}").EXPORTS
+        try:
+            mod: Exports = importlib.import_module(f"beancode.modules.{stmt.file}").EXPORTS
+        except ModuleNotFoundError:
+            self.error(f"failed to include module {stmt.file}", stmt.pos)
 
         for const in mod["constants"]:
             self.variables[const.name] = Variable(val=const.value, const=True)

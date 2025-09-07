@@ -3,6 +3,8 @@ from . import *
 
 from .bean_ast import *
 
+from .error import *
+from . import __version__
 
 class Parser:
     tokens: list[l.Token]
@@ -219,6 +221,9 @@ class Parser:
 
     def typ(self) -> BCType | None:
         adv = self.consume()
+
+        if adv.kind == "newline":
+            raise BCError("unexpected newline when scanning for type", adv)
 
         if adv.kind == "type" and adv.typ != "array":
             if adv.typ not in self.PRIM_TYPES:
@@ -841,9 +846,12 @@ class Parser:
         if export == True:
             self.consume()
 
-        ident: Identifier | None = self.ident()  # type: ignore
-        if ident.ident is None or not isinstance(ident, Identifier):  # type: ignore
-            raise BCError("expected ident after constant stmt", self.peek())
+        ident = self.consume()
+        if ident.ident is None:
+            raise BCError(
+                f"expected ident after constant declaration, found `{ident.__repr__()}`",
+                self.peek(),
+            )
 
         arrow = self.consume()
         if arrow.kind != "operator" and arrow.operator != "assign":
@@ -859,7 +867,7 @@ class Parser:
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(begin.pos, ident, literal, export=export)
+        res = ConstantStatement(begin.pos, Identifier(ident.pos, ident.ident), literal, export=export)
         return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
@@ -1203,6 +1211,8 @@ class Parser:
                     self.peek(),
                 )
 
+        self.consume_newlines()
+
         stmts = []
         while self.peek().keyword != "endprocedure":
             stmts.append(self.scan_one_statement())
@@ -1275,6 +1285,8 @@ class Parser:
                 "invalid type after RETURNS for function return value", self.peek()
             )
 
+        self.consume_newlines()
+        
         stmts = []
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()

@@ -1,8 +1,10 @@
-from . import BCError, BCWarning, bean_ast as ast
+from . import bean_ast as ast
 from . import lexer
 from . import parser
 from . import interpreter as intp
+from . import bean_ffi as ffi
 from . import __version__
+from .error import *
 
 from io import StringIO
 
@@ -96,6 +98,73 @@ class Repl:
         else:
             print(f"'{typ.upper()}' ({rep})")
 
+    def _get_args_list(self, args: list[tuple[str, ast.BCType]]) -> str:
+        sio = StringIO()
+        sio.write("(")
+        for i, (name, typ) in enumerate(args):
+            sio.write(f"{name}: ")
+            if isinstance(typ, ast.BCArrayType):
+                sio.write(f"ARRAY OF {typ.inner.upper()}")
+            else:
+                sio.write(typ.upper())
+
+            if i != len(args) - 1:
+                sio.write(", ")
+        sio.write(")")
+        return sio.getvalue()
+
+
+    def print_proc(self, proc: ast.ProcedureStatement | ffi.BCProcedure):
+        sio = StringIO()
+        sio.write("PROCEDURE ")
+        ffi = False
+
+        if isinstance(proc, ast.ProcedureStatement):
+            sio.write(proc.name)
+            if len(proc.args) != 0:
+                args: list[tuple[str, ast.BCType]] = [(arg.name, arg.typ) for arg in proc.args]
+                sio.write(self._get_args_list(args))
+        else:
+            ffi = True
+            sio.write(proc.name)
+            if len(proc.params) != 0:
+                args = list(proc.params.items())
+                sio.write(self._get_args_list(args))
+        
+        if ffi:
+            sio.write(" <FFI>")
+
+        print(sio.getvalue())
+
+
+    def print_func(self, func: ast.FunctionStatement | ffi.BCFunction):
+        sio = StringIO()
+        sio.write("FUNCTION ")
+        ffi = False
+
+        if isinstance(func, ast.FunctionStatement):
+            sio.write(func.name)
+            if len(func.args) != 0:
+                args: list[tuple[str, ast.BCType]] = [(arg.name, arg.typ) for arg in func.args]
+                sio.write(self._get_args_list(args))
+        else:
+            ffi = True
+            sio.write(func.name)
+            if len(func.params) != 0:
+                args = list(func.params.items())
+                sio.write(self._get_args_list(args))
+        
+        sio.write("RETURNS ")
+        if isinstance(func.returns, ast.BCArrayType):
+            sio.write(f"ARRAY OF {func.returns.inner.upper()}")
+        else:
+            sio.write(f"ARRAY OF {func.returns.upper()}")
+        
+        if ffi:
+            sio.write(" <FFI>")
+
+        print(sio.getvalue())
+
     def _var(self, args: list[str]) -> DotCommandResult:
         if len(args) < 2:
             _error("not enough args for var")
@@ -126,6 +195,38 @@ class Repl:
 
         return DotCommandResult.NO_OP
 
+    def _func(self, args: list[str]) -> DotCommandResult:
+        if len(args) < 2:
+            _error("not enough args for func")
+            return DotCommandResult.NO_OP
+
+        for func_name in args[1:]:
+            func = self.i.functions.get(func_name)
+            if func is None:
+                _error(f"no procedure or function named {func} found")
+                continue
+            
+            if isinstance(func, ast.ProcedureStatement) or isinstance(func, ffi.BCProcedure): 
+                self.print_proc(func)
+            else:
+                self.print_func(func)
+
+        return DotCommandResult.NO_OP
+
+    def _funcs(self, args: list[str]) -> DotCommandResult:
+        _ = args
+        
+        if len(self.i.functions) == 0: # null, NULL
+            _info("no functions or procedures")
+
+        for func in self.i.functions.values():
+            if isinstance(func, ast.ProcedureStatement) or isinstance(func, ffi.BCProcedure): 
+                self.print_proc(func)
+            else:
+                self.print_func(func)
+            
+        return DotCommandResult.NO_OP
+
     def handle_dot_command(self, s: str) -> DotCommandResult:
         args = s.split(" ")
         base = args[0]
@@ -150,7 +251,11 @@ class Repl:
                 return self._var(args)
             case "vars":
                 return self._vars(args)
-
+            case "func":
+                return self._func(args)
+            case "funcs":
+                return self._funcs(args)
+        
         return DotCommandResult.UNKNOWN_COMMAND
 
 

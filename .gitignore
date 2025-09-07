@@ -1,3 +1,4 @@
+*.bean
 *.spec
 build
 dist
