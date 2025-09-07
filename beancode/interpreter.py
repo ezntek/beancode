@@ -41,10 +41,9 @@ LIBROUTINES = {
     "length": 1,
     "getchar": 0,
     "random": 0,
-    "sleep": 1,
 }
 
-LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1}
+LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1, "sleep": 1, "flush": 0}
 
 
 class Interpreter:
@@ -866,6 +865,8 @@ class Interpreter:
             case "sleep":
                 [duration, *_] = evargs
                 self.visit_sleep(duration.get_real())
+            case "flush":
+                sys.stdout.flush()
 
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):

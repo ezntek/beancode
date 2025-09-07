@@ -132,7 +132,7 @@ class Repl:
                 sio.write(self._get_args_list(args))
         
         if ffi:
-            sio.write(" <FFI>")
+            sio.write("\033[2m <FFI>\033[0m")
 
         print(sio.getvalue())
 
@@ -154,14 +154,14 @@ class Repl:
                 args = list(func.params.items())
                 sio.write(self._get_args_list(args))
         
-        sio.write("RETURNS ")
+        sio.write(" RETURNS ")
         if isinstance(func.returns, ast.BCArrayType):
             sio.write(f"ARRAY OF {func.returns.inner.upper()}")
         else:
-            sio.write(f"ARRAY OF {func.returns.upper()}")
+            sio.write(func.returns.upper())
         
         if ffi:
-            sio.write(" <FFI>")
+            sio.write("\033[2m <FFI>\033[0m")
 
         print(sio.getvalue())
 
