@@ -38,13 +38,15 @@ class BCError(Exception):
                 j = -1
                 while i < line and j < len(file_content):
                     j += 1
-                    while file_content[j] != '\n':
+                    while file_content[j] != "\n":
                         j += 1
-                    i += 1 
+                    i += 1
                 bol = j + 1
         except IndexError:
             print(self.msg, end="")
-            print("\033[33mhint: \033[0mthis probably happened in a procedure or function in the REPL.")
+            print(
+                "\033[33mhint: \033[0mthis probably happened in a procedure or function in the REPL."
+            )
             return
 
         eol = bol
@@ -113,4 +115,3 @@ class BCWarning(Exception):
         print(tildes)
         indicator = f"{spaces()}\033[35;1m∟ \033[0m\033[1mwarning at line {line} column {col}\033[0m"
         print(indicator)
-

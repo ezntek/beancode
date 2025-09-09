@@ -10,11 +10,13 @@ from io import StringIO
 
 import sys
 
+
 def _info(msg: str):
     print(
         f"\033[34;1minfo:\033[0m {msg}",
         file=sys.stderr,
     )
+
 
 def _warn(msg: str):
     print(
@@ -22,11 +24,13 @@ def _warn(msg: str):
         file=sys.stderr,
     )
 
+
 def _error(msg: str):
     print(
         f"\033[31;1merror:\033[0m {msg}",
         file=sys.stderr,
     )
+
 
 try:
     import readline
@@ -64,6 +68,7 @@ class ContinuationResult(Enum):
     BREAK = (0,)
     ERROR = (1,)
     SUCCESS = (2,)
+
 
 class Repl:
     lx: lexer.Lexer
@@ -113,7 +118,6 @@ class Repl:
         sio.write(")")
         return sio.getvalue()
 
-
     def print_proc(self, proc: ast.ProcedureStatement | ffi.BCProcedure):
         sio = StringIO()
         sio.write("PROCEDURE ")
@@ -122,7 +126,9 @@ class Repl:
         if isinstance(proc, ast.ProcedureStatement):
             sio.write(proc.name)
             if len(proc.args) != 0:
-                args: list[tuple[str, ast.BCType]] = [(arg.name, arg.typ) for arg in proc.args]
+                args: list[tuple[str, ast.BCType]] = [
+                    (arg.name, arg.typ) for arg in proc.args
+                ]
                 sio.write(self._get_args_list(args))
         else:
             ffi = True
@@ -130,12 +136,11 @@ class Repl:
             if len(proc.params) != 0:
                 args = list(proc.params.items())
                 sio.write(self._get_args_list(args))
-        
+
         if ffi:
             sio.write("\033[2m <FFI>\033[0m")
 
         print(sio.getvalue())
-
 
     def print_func(self, func: ast.FunctionStatement | ffi.BCFunction):
         sio = StringIO()
@@ -145,7 +150,9 @@ class Repl:
         if isinstance(func, ast.FunctionStatement):
             sio.write(func.name)
             if len(func.args) != 0:
-                args: list[tuple[str, ast.BCType]] = [(arg.name, arg.typ) for arg in func.args]
+                args: list[tuple[str, ast.BCType]] = [
+                    (arg.name, arg.typ) for arg in func.args
+                ]
                 sio.write(self._get_args_list(args))
         else:
             ffi = True
@@ -153,13 +160,13 @@ class Repl:
             if len(func.params) != 0:
                 args = list(func.params.items())
                 sio.write(self._get_args_list(args))
-        
+
         sio.write(" RETURNS ")
         if isinstance(func.returns, ast.BCArrayType):
             sio.write(f"ARRAY OF {func.returns.inner.upper()}")
         else:
             sio.write(func.returns.upper())
-        
+
         if ffi:
             sio.write("\033[2m <FFI>\033[0m")
 
@@ -173,24 +180,24 @@ class Repl:
         for arg in args[1:]:
             var = self.i.variables.get(arg)
             if var is None:
-                _error(f"variable \"{arg}\" does not exist!")
+                _error(f'variable "{arg}" does not exist!')
                 continue
 
-            print(f"{arg}: ", end='')
+            print(f"{arg}: ", end="")
             self.print_var(var)
         return DotCommandResult.NO_OP
 
     def _vars(self, args: list[str]) -> DotCommandResult:
         _ = args
 
-        if len(self.i.variables) <= 2: # null, NULL
+        if len(self.i.variables) <= 2:  # null, NULL
             _info("no variables")
 
         for name, var in self.i.variables.items():
             if name.lower() == "null":
                 continue
 
-            print(f"{name}: ", end='')
+            print(f"{name}: ", end="")
             self.print_var(var)
 
         return DotCommandResult.NO_OP
@@ -205,8 +212,10 @@ class Repl:
             if func is None:
                 _error(f"no procedure or function named {func} found")
                 continue
-            
-            if isinstance(func, ast.ProcedureStatement) or isinstance(func, ffi.BCProcedure): 
+
+            if isinstance(func, ast.ProcedureStatement) or isinstance(
+                func, ffi.BCProcedure
+            ):
                 self.print_proc(func)
             else:
                 self.print_func(func)
@@ -215,16 +224,18 @@ class Repl:
 
     def _funcs(self, args: list[str]) -> DotCommandResult:
         _ = args
-        
-        if len(self.i.functions) == 0: # null, NULL
+
+        if len(self.i.functions) == 0:  # null, NULL
             _info("no functions or procedures")
 
         for func in self.i.functions.values():
-            if isinstance(func, ast.ProcedureStatement) or isinstance(func, ffi.BCProcedure): 
+            if isinstance(func, ast.ProcedureStatement) or isinstance(
+                func, ffi.BCProcedure
+            ):
                 self.print_proc(func)
             else:
                 self.print_func(func)
-            
+
         return DotCommandResult.NO_OP
 
     def handle_dot_command(self, s: str) -> DotCommandResult:
@@ -255,9 +266,8 @@ class Repl:
                 return self._func(args)
             case "funcs":
                 return self._funcs(args)
-        
-        return DotCommandResult.UNKNOWN_COMMAND
 
+        return DotCommandResult.UNKNOWN_COMMAND
 
     def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
         while True:
@@ -324,12 +334,12 @@ class Repl:
 
             self.buf.truncate(0)
             self.buf.seek(0)
-            
+
             try:
                 inp = input("\033[0;1m>> \033[0m")
             except KeyboardInterrupt:
                 print()
-                _warn("type \".exit\" or \".quit\" to exit the REPL.")
+                _warn('type ".exit" or ".quit" to exit the REPL.')
                 continue
             self.buf.write(inp + "\n")
 
@@ -375,17 +385,21 @@ class Repl:
                 else:
                     src: str
                     if err.proc is not None:
-                        res = self.proc_src.get(err.proc) # type: ignore
+                        res = self.proc_src.get(err.proc)  # type: ignore
                         if res is None:
-                            _warn(f"could not find source code for procedure \"{err.proc}\"")
+                            _warn(
+                                f'could not find source code for procedure "{err.proc}"'
+                            )
                             continue
-                        src = res # type: ignore
+                        src = res  # type: ignore
                     elif err.func is not None:
-                        res = self.func_src.get(err.func) # type: ignore
+                        res = self.func_src.get(err.func)  # type: ignore
                         if res is None:
-                            _warn(f"could not find source code for function \"{err.func}\"")
+                            _warn(
+                                f'could not find source code for function "{err.func}"'
+                            )
                             continue
-                        src = res # type: ignore
+                        src = res  # type: ignore
                     else:
                         src = self.buf.getvalue()
 
@@ -403,15 +417,17 @@ class Repl:
                     continue
 
             if program.stmts[0].kind == "procedure":
-                proc: ast.ProcedureStatement = program.stmts[0].procedure # type: ignore
+                proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
                 self.proc_src[proc.name] = self.buf.getvalue()
             elif program.stmts[0].kind == "function":
-                func: ast.FunctionStatement = program.stmts[0].function # type: ignore
+                func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
                 self.func_src[func.name] = self.buf.getvalue()
 
             if program.stmts[0].kind == "fncall":
-                fncall: ast.FunctionCall = program.stmts[0].fncall # type: ignore
-                program.stmts[0] = ast.Statement("output", output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]))
+                fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
+                program.stmts[0] = ast.Statement(
+                    "output", output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall])
+                )
 
             self.i.block = program.stmts
             self.i.toplevel = True
@@ -421,18 +437,18 @@ class Repl:
                 src: str
                 repl_txt = "(repl)"
                 if err.proc is not None:
-                    res = self.proc_src.get(err.proc) # type: ignore
+                    res = self.proc_src.get(err.proc)  # type: ignore
                     if res is None:
-                        _warn(f"could not find source code for procedure \"{err.proc}\"")
+                        _warn(f"fatal could not find source code for procedure \"{err.proc}\":\n    ({err.msg.strip()})")
                         continue
-                    src = res # type: ignore
-                    repl_txt = f"(repl \"{err.proc}\")"
+                    src = res  # type: ignore
+                    repl_txt = f'(repl "{err.proc}")'
                 elif err.func is not None:
-                    res = self.func_src.get(err.func) # type: ignore
+                    res = self.func_src.get(err.func)  # type: ignore
                     if res is None:
-                        _warn(f"could not find source code for function \"{err.func}\"")
+                        _warn(f"could not find source code for function \"{err.func}\":\n    ({err.msg.strip()})")
                         continue
-                    src = res # type: ignore
+                    src = res  # type: ignore
                     repl_txt = f"(repl {err.func})"
                 else:
                     src = self.buf.getvalue()

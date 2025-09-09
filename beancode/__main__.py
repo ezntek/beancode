@@ -10,6 +10,7 @@ from .parser import Parser
 from .error import BCError, BCWarning
 from . import error, __version__
 
+
 def main():
     if len(sys.argv) == 1:
         try:
@@ -20,7 +21,6 @@ def main():
             sys.exit(1)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", type=str)
     parser.add_argument(
         "-d", "--debug", action="store_true", help="show debugging information"
     )
@@ -30,16 +30,34 @@ def main():
     parser.add_argument(
         "-v", "--version", action="version", version=f"beancode version {__version__}"
     )
+    parser.add_argument(
+        "-i",
+        "--stdin",
+        action="store_true",
+        help="read source from stdin",
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "-c",
+        "--command",
+        help="pass a program in as a string",
+    )
+    group.add_argument("file", nargs="?", type=str)
     args = parser.parse_args()
 
     if args.no_run:
         args.debug = True
 
-    if not os.path.exists(args.file):
-        error(f"file {args.file} does not exist!")
+    if args.command is not None:
+        file_content = args.command
+    elif args.stdin:
+        file_content = sys.stdin.read()
+    else:
+        if not os.path.exists(args.file):
+            error(f"file {args.file} does not exist!")
 
-    with open(args.file, "r+") as f:
-        file_content = f.read()
+        with open(args.file, "r+") as f:
+            file_content = f.read()
 
     lexer = Lexer(file_content)
 

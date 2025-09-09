@@ -6,6 +6,7 @@ from .bean_ast import *
 from .error import *
 from . import __version__
 
+
 class Parser:
     tokens: list[l.Token]
     cur: int
@@ -867,7 +868,9 @@ class Parser:
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(begin.pos, Identifier(ident.pos, ident.ident), literal, export=export)
+        res = ConstantStatement(
+            begin.pos, Identifier(ident.pos, ident.ident), literal, export=export
+        )
         return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
@@ -1286,7 +1289,7 @@ class Parser:
             )
 
         self.consume_newlines()
-        
+
         stmts = []
         while self.peek().keyword != "endfunction":
             stmt = self.scan_one_statement()

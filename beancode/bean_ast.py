@@ -2,6 +2,7 @@ import typing
 from dataclasses import dataclass
 from .error import *
 
+
 @dataclass
 class Expr:
     # location of the token
@@ -32,6 +33,7 @@ class BCArrayType:
         if self.matrix_bounds is None:
             raise BCError("tried to access matrixbounds on array without matrix bounds")
         return self.matrix_bounds
+
 
 @dataclass
 class BCArray:
@@ -74,6 +76,7 @@ class BCArray:
         s += "] OF "
         s += str(self.typ.inner).upper()
         return s
+
 
 BCType = BCArrayType | BCPrimitiveType
 
@@ -142,7 +145,9 @@ class BCValue:
 
     def get_integer(self) -> int:
         if self.kind != "integer":
-            raise BCError(f"tried to access integer value from BCValue of {self._kind()}")
+            raise BCError(
+                f"tried to access integer value from BCValue of {self._kind()}"
+            )
 
         return self.integer  # type: ignore
 
@@ -160,13 +165,17 @@ class BCValue:
 
     def get_string(self) -> str:
         if self.kind != "string":
-            raise BCError(f"tried to access string value from BCValue of {self._kind()}")
+            raise BCError(
+                f"tried to access string value from BCValue of {self._kind()}"
+            )
 
         return self.string  # type: ignore
 
     def get_boolean(self) -> bool:
         if self.kind != "boolean":
-            raise BCError(f"tried to access boolean value from BCValue of {self._kind()}")
+            raise BCError(
+                f"tried to access boolean value from BCValue of {self._kind()}"
+            )
 
         return self.boolean  # type: ignore
 

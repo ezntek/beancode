@@ -13,6 +13,7 @@ from .parser import *
 from .error import *
 from . import __version__
 
+
 @dataclass
 class Variable:
     val: BCValue
@@ -106,7 +107,7 @@ class Interpreter:
                 break
 
         raise BCError(msg, pos, proc=proc, func=func)
-    
+
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         match expr.op:
             case "assign":
@@ -609,16 +610,17 @@ class Interpreter:
 
                 inner_index = self.visit_expr(ind.idx_inner).integer
                 if inner_index is None:
-                    self.error(
-                        "found (null) for inner array index", ind.idx_inner.pos
-                    )
+                    self.error("found (null) for inner array index", ind.idx_inner.pos)
 
                 return (index, inner_index)
             else:
                 return (index, None)
         else:
             if v.kind == "string":
-                self.error("cannot index a string! please use the SUBSTRING library routine instead.", ind.ident.pos)
+                self.error(
+                    "cannot index a string! please use the SUBSTRING library routine instead.",
+                    ind.ident.pos,
+                )
             else:
                 self.error(f"attempted to index {v.kind}", ind.ident.pos)
 
@@ -681,7 +683,10 @@ class Interpreter:
                     return res
         else:
             if v.kind == "string":
-                self.error(f"cannot index a string! please use SUBSTRING({ind.ident.ident}, {index}, 1) instead.", ind.ident.pos)
+                self.error(
+                    f"cannot index a string! please use SUBSTRING({ind.ident.ident}, {index}, 1) instead.",
+                    ind.ident.pos,
+                )
             else:
                 self.error(f"attempted to index {v.kind}", ind.ident.pos)
 
@@ -792,8 +797,12 @@ class Interpreter:
                             stmt.pos,
                         )
 
-                    lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
-                    rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    lhs_val = (
+                        lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                    )
+                    rhs_val = (
+                        rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    )
 
                     return self.visit_div(lhs_val, rhs_val)
                 case "mod":
@@ -810,14 +819,21 @@ class Interpreter:
                             stmt.pos,
                         )
 
-                    lhs_val = lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
-                    rhs_val = rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    lhs_val = (
+                        lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                    )
+                    rhs_val = (
+                        rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                    )
 
                     return self.visit_mod(lhs_val, rhs_val)
                 case "length":
                     [txt, *_] = evargs
                     if isinstance(txt.kind, BCArrayType):
-                        self.error("cannot call LENGTH on an array! please use the end index instead.", stmt.pos)
+                        self.error(
+                            "cannot call LENGTH on an array! please use the end index instead.",
+                            stmt.pos,
+                        )
                     if txt.kind != "string":
                         self.error(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
 
@@ -946,6 +962,7 @@ class Interpreter:
         intp.functions = self.functions
 
         intp.visit_block(func.block)
+        intp.calls.pop()
         if intp._returned is False:
             self.error(f"function did not return a value!", stmt.pos)
 
@@ -1014,10 +1031,11 @@ class Interpreter:
         intp.functions = dict(self.functions)
 
         intp.visit_block(proc.block)
+        intp.calls.pop()
 
     def _typecast_string(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
         s = ""
-       
+
         if isinstance(inner.kind, BCArrayType):
             arr = inner.get_array()
             s = self._display_array(arr)
@@ -1311,9 +1329,7 @@ class Interpreter:
             self.variables[id] = data
 
         if data.const:
-            self.error(
-                f"attempted to call `INPUT` into constant {id}", stmt.ident.pos
-            )
+            self.error(f"attempted to call `INPUT` into constant {id}", stmt.ident.pos)
 
         if type(data.val.kind) == BCArrayType:
             self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)
@@ -1377,7 +1393,7 @@ class Interpreter:
 
         if not proc and not func:
             self.error(
-                f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                f"did not find function or procedure to return from!",
                 stmt.pos,
             )
 
@@ -1397,7 +1413,9 @@ class Interpreter:
     def visit_include_ffi_stmt(self, stmt: IncludeStatement):
         # XXX: this is probably the most scuffed code in existence.
         try:
-            mod: Exports = importlib.import_module(f"beancode.modules.{stmt.file}").EXPORTS
+            mod: Exports = importlib.import_module(
+                f"beancode.modules.{stmt.file}"
+            ).EXPORTS
         except ModuleNotFoundError:
             self.error(f"failed to include module {stmt.file}", stmt.pos)
 
@@ -1470,7 +1488,6 @@ class Interpreter:
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.calls = self.calls
-        intp.calls.append("if")  # type: ignore
         intp.visit_block(None)
         if intp._returned:
             proc, func = self.can_return()
@@ -1478,7 +1495,7 @@ class Interpreter:
             if not proc and not func:
                 # FIXME: is this even a possible branch?!
                 self.error(
-                    f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                    f"did not find function or procedure to return from!",
                     stmt.pos,
                 )
 
@@ -1515,7 +1532,7 @@ class Interpreter:
 
                 if not proc and not func:
                     self.error(
-                        f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                        f"did not find function or procedure to return from!",
                         stmt.pos,
                     )
 
@@ -1527,9 +1544,7 @@ class Interpreter:
         begin = self.visit_expr(stmt.begin)
 
         if begin.kind != "integer":
-            self.error(
-                "non-integer expression used for for loop begin", stmt.begin.pos
-            )
+            self.error("non-integer expression used for for loop begin", stmt.begin.pos)
 
         end = self.visit_expr(stmt.end)
 
@@ -1543,7 +1558,6 @@ class Interpreter:
 
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
-        intp.calls.append(("for", None))
         intp.variables = self.variables.copy()
         intp.functions = self.functions.copy()
 
@@ -1568,7 +1582,7 @@ class Interpreter:
 
                     if not proc and not func:
                         self.error(
-                            f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                            f"did not find function or procedure to return from!",
                             stmt.pos,
                         )
 
@@ -1590,7 +1604,7 @@ class Interpreter:
 
                     if not proc and not func:
                         self.error(
-                            f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                            f"did not find function or procedure to return from!",
                             stmt.pos,
                         )
 
@@ -1609,7 +1623,6 @@ class Interpreter:
         cond: Expr = stmt.cond  # type: ignore
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
-        intp.calls.append(("repeatuntil", None))
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
 
@@ -1622,7 +1635,7 @@ class Interpreter:
 
                 if not proc and not func:
                     self.error(
-                        f"did not find function or procedure to return from! you cannot return from a {self.calls[len(self.calls)-1]}",
+                        f"did not find function or procedure to return from!",
                         stmt.pos,
                     )
 
@@ -1635,7 +1648,6 @@ class Interpreter:
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         intp = self.new(stmt.block, loop=False)
-        intp.calls.append(("scope", None))
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.visit_block(None)
@@ -1705,15 +1717,11 @@ class Interpreter:
 
             if isinstance(exp.kind, BCArrayType):
                 if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.val.array.matrix_bounds:  # type: ignore
-                    self.error(
-                        f"mismatched matrix sizes in matrix assignment", s.pos
-                    )
+                    self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             elif var.val.kind != exp.kind:
-                self.error(
-                    f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos
-                )
+                self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
             self.variables[key].val = copy.deepcopy(exp)
 
     def visit_constant_stmt(self, c: ConstantStatement):

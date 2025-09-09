@@ -4,29 +4,36 @@ import time
 import math
 import sys
 
+
 def _write(args: BCArgsList):
     s = args["s"].get_string()
     sys.stdout.write(s)
     sys.stdout.flush()
+
 
 def _write_err(args: BCArgsList):
     s = args["s"].get_string()
     sys.stderr.write(s)
     sys.stderr.flush()
 
+
 def _flush(_: BCArgsList):
     sys.stdout.flush()
+
 
 def _flush_err(_: BCArgsList):
     sys.stderr.flush()
 
+
 def _writeln(args: BCArgsList):
     s = args["s"].get_string()
-    sys.stdout.write(s+"\n")
+    sys.stdout.write(s + "\n")
+
 
 def _writeln_err(args: BCArgsList):
     s = args["s"].get_string()
-    sys.stderr.write(s+"\n")
+    sys.stderr.write(s + "\n")
+
 
 consts = []
 vars = []

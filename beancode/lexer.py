@@ -178,7 +178,7 @@ class Token:
     def __repr__(self) -> str:
         s, _ = self.get()
         s = s if s != "\n" else "newline"
-        return f"<{s}>" 
+        return f"<{s}>"
 
 
 class Lexer:

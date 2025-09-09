@@ -10,6 +10,7 @@ def say_hello(_: BCArgsList):
 def one_more(args: BCArgsList):
     print(args["n"].get_integer() + 1)
 
+
 def gimme_five(_: BCArgsList) -> BCValue:
     return BCValue.new_integer(5)
 
