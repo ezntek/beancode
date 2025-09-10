@@ -299,7 +299,10 @@ class Lexer:
             self.cur += 2
             while self.cur < len(self.file) and self.file[self.cur] != "\n":
                 self.cur += 1
-            self.cur += 1  # get rid of newline
+            # bump newline
+            self.row += 1
+            self.cur += 1
+            self.bol = self.cur
 
             return self.trim_left()
 
