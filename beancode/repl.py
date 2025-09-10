@@ -10,32 +10,10 @@ from io import StringIO
 
 import sys
 
-
-def _info(msg: str):
-    print(
-        f"\033[34;1minfo:\033[0m {msg}",
-        file=sys.stderr,
-    )
-
-
-def _warn(msg: str):
-    print(
-        f"\033[33;1mwarn:\033[0m {msg}",
-        file=sys.stderr,
-    )
-
-
-def _error(msg: str):
-    print(
-        f"\033[31;1merror:\033[0m {msg}",
-        file=sys.stderr,
-    )
-
-
 try:
     import readline
 except ImportError:
-    _warn("could not import readline, continuing without shell history")
+    warn("could not import readline, continuing without shell history")
 
 from enum import Enum
 
@@ -174,13 +152,13 @@ class Repl:
 
     def _var(self, args: list[str]) -> DotCommandResult:
         if len(args) < 2:
-            _error("not enough args for var")
+            error("not enough args for var")
             return DotCommandResult.NO_OP
 
         for arg in args[1:]:
             var = self.i.variables.get(arg)
             if var is None:
-                _error(f'variable "{arg}" does not exist!')
+                error(f'variable "{arg}" does not exist!')
                 continue
 
             print(f"{arg}: ", end="")
@@ -191,7 +169,7 @@ class Repl:
         _ = args
 
         if len(self.i.variables) <= 2:  # null, NULL
-            _info("no variables")
+            info("no variables")
 
         for name, var in self.i.variables.items():
             if name.lower() == "null":
@@ -204,13 +182,13 @@ class Repl:
 
     def _func(self, args: list[str]) -> DotCommandResult:
         if len(args) < 2:
-            _error("not enough args for func")
+            error("not enough args for func")
             return DotCommandResult.NO_OP
 
         for func_name in args[1:]:
             func = self.i.functions.get(func_name)
             if func is None:
-                _error(f"no procedure or function named {func} found")
+                error(f"no procedure or function named {func} found")
                 continue
 
             if isinstance(func, ast.ProcedureStatement) or isinstance(
@@ -226,7 +204,7 @@ class Repl:
         _ = args
 
         if len(self.i.functions) == 0:  # null, NULL
-            _info("no functions or procedures")
+            info("no functions or procedures")
 
         for func in self.i.functions.values():
             if isinstance(func, ast.ProcedureStatement) or isinstance(
@@ -250,7 +228,7 @@ class Repl:
                 sys.stdout.write("\033[2J\033[H")
                 return DotCommandResult.NO_OP
             case "reset":
-                _info("reset interpreter")
+                info("reset interpreter")
                 return DotCommandResult.RESET
             case "help":
                 print(HELP)
@@ -288,7 +266,7 @@ class Repl:
                     case DotCommandResult.BREAK:
                         return (None, ContinuationResult.BREAK)
                     case DotCommandResult.UNKNOWN_COMMAND:
-                        _error("invalid dot command")
+                        error("invalid dot command")
                         print(HELP, file=sys.stderr)
                         continue
                     case DotCommandResult.RESET:
@@ -339,7 +317,7 @@ class Repl:
                 inp = input("\033[0;1m>> \033[0m")
             except KeyboardInterrupt:
                 print()
-                _warn('type ".exit" or ".quit" to exit the REPL.')
+                warn('type ".exit" or ".quit" to exit the REPL.')
                 continue
             self.buf.write(inp + "\n")
 
@@ -353,7 +331,7 @@ class Repl:
                     case DotCommandResult.BREAK:
                         break
                     case DotCommandResult.UNKNOWN_COMMAND:
-                        _error("invalid dot command")
+                        error("invalid dot command")
                         print(HELP, file=sys.stderr)
                         continue
                     case DotCommandResult.RESET:
@@ -387,7 +365,7 @@ class Repl:
                     if err.proc is not None:
                         res = self.proc_src.get(err.proc)  # type: ignore
                         if res is None:
-                            _warn(
+                            warn(
                                 f'could not find source code for procedure "{err.proc}"'
                             )
                             continue
@@ -395,7 +373,7 @@ class Repl:
                     elif err.func is not None:
                         res = self.func_src.get(err.func)  # type: ignore
                         if res is None:
-                            _warn(
+                            warn(
                                 f'could not find source code for function "{err.func}"'
                             )
                             continue
@@ -439,14 +417,14 @@ class Repl:
                 if err.proc is not None:
                     res = self.proc_src.get(err.proc)  # type: ignore
                     if res is None:
-                        _warn(f"fatal could not find source code for procedure \"{err.proc}\":\n    ({err.msg.strip()})")
+                        warn(f"fatal could not find source code for procedure \"{err.proc}\":\n    ({err.msg.strip()})")
                         continue
                     src = res  # type: ignore
                     repl_txt = f'(repl "{err.proc}")'
                 elif err.func is not None:
                     res = self.func_src.get(err.func)  # type: ignore
                     if res is None:
-                        _warn(f"could not find source code for function \"{err.func}\":\n    ({err.msg.strip()})")
+                        warn(f"could not find source code for function \"{err.func}\":\n    ({err.msg.strip()})")
                         continue
                     src = res  # type: ignore
                     repl_txt = f"(repl {err.func})"

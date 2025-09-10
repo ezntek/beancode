@@ -7,19 +7,11 @@ from .repl import Repl
 from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
-from .error import BCError, BCWarning
+from .error import *
 from . import error, __version__
 
 
-def main():
-    if len(sys.argv) == 1:
-        try:
-            sys.exit(Repl().repl())
-        except KeyboardInterrupt:
-            sys.exit(1)
-        except EOFError:
-            sys.exit(1)
-
+def real_main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d", "--debug", action="store_true", help="show debugging information"
@@ -100,6 +92,18 @@ def main():
         err.print(args.file, file_content)
         exit(1)
 
+def main():
+    if len(sys.argv) == 1:
+        sys.exit(Repl().repl())
+
+    try:
+        real_main()
+    except KeyboardInterrupt:
+        warn("caught keyboard interrupt")
+        exit(1)
+    except EOFError:
+        warn("caught EOF")
+        exit(1)
 
 if __name__ == "__main__":
     main()
