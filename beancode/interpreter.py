@@ -1319,36 +1319,40 @@ class Interpreter:
 
     def visit_input_stmt(self, stmt: InputStatement):
         inp = input()
-        id = stmt.ident.ident
+        target: BCValue
 
-        data: Variable | None = self.variables.get(id)
+        if isinstance(stmt.ident, ArrayIndex):
+            target = self.visit_array_index(stmt.ident)
+        else:
+            id = stmt.ident.ident 
 
-        if data is None:
-            val = self._guess_input_type(inp)
-            data = Variable(val, False, export=False)
-            self.variables[id] = data
+            data: Variable | None = self.variables.get(id)
+            if data is None:
+                val = self._guess_input_type(inp)
+                data = Variable(val, False, export=False)
+            target = data.val # type: ignore
 
-        if data.const:
-            self.error(f"attempted to call `INPUT` into constant {id}", stmt.ident.pos)
+            if data.const:
+                self.error(f"attempted to call `INPUT` into constant {id}", stmt.ident.pos)
 
-        if type(data.val.kind) == BCArrayType:
-            self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)
+            if type(data.val.kind) == BCArrayType:
+                self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)
 
         if inp.strip() == "":
             self.error(f"empty string supplied into variable with type `{data.val.kind.upper()}`", stmt.pos)  # type: ignore
 
-        match data.val.kind:
+        match target.kind:
             case "string":
-                self.variables[id].val.kind = "string"
-                self.variables[id].val.string = inp
+                target.kind = "string"
+                target.string = inp
             case "char":
                 if len(inp) > 1:
                     self.error(
                         f"expected single character but got `{inp}` for CHAR", stmt.pos
                     )
 
-                self.variables[id].val.kind = "char"
-                self.variables[id].val.char = inp
+                target.kind = "char"
+                target.char = inp
             case "boolean":
                 if inp.lower() not in ["true", "false", "yes", "no"]:
                     self.error(
@@ -1358,19 +1362,19 @@ class Interpreter:
 
                 inp = inp.lower()
                 if inp in ["true", "yes"]:
-                    self.variables[id].val.kind = "boolean"
-                    self.variables[id].val.boolean = True
+                    target.kind = "boolean"
+                    target.boolean = True
                 elif inp in ["false", "no"]:
-                    self.variables[id].val.kind = "boolean"
-                    self.variables[id].val.boolean = False
+                    target.kind = "boolean"
+                    target.boolean = False
             case "integer":
                 inp = inp.lower().strip()
                 p = Parser([])
                 if p.is_integer(inp):
                     try:
                         res = int(inp)
-                        self.variables[id].val.kind = "integer"
-                        self.variables[id].val.integer = res
+                        target.kind = "integer"
+                        target.integer = res
                     except ValueError:
                         self.error("expected INTEGER for INPUT", stmt.ident.pos)
                 else:
@@ -1381,8 +1385,8 @@ class Interpreter:
                 if p.is_real(inp) or p.is_integer(inp):
                     try:
                         res = float(inp)
-                        self.variables[id].val.kind = "real"
-                        self.variables[id].val.real = res
+                        target.kind = "real"
+                        target.real = res
                     except ValueError:
                         self.error("expected REAL for INPUT", stmt.ident.pos)
                 else:

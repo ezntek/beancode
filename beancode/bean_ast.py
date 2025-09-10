@@ -335,7 +335,7 @@ class OutputStatement:
 @dataclass
 class InputStatement:
     pos: tuple[int, int, int]
-    ident: Identifier
+    ident: Identifier | ArrayIndex
 
 
 @dataclass

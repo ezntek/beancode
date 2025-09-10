@@ -678,9 +678,16 @@ class Parser:
 
         begin = self.consume()
 
-        ident = self.ident()
-        if not isinstance(ident, Identifier) or ident.ident is None:
-            raise BCError(f"expected identifier after `INPUT` but found {ident}", begin)
+        ident: ArrayIndex | Identifier
+
+        array_index = self.array_index()
+        if array_index is None:
+            ident_exp = self.ident()
+            if not isinstance(ident_exp, Identifier) or ident_exp.ident is None:
+                raise BCError(f"expected identifier after `INPUT` but found {ident_exp}", begin)
+            ident = ident_exp
+        else:
+            ident = array_index # type: ignore
 
         res = InputStatement(begin.pos, ident)
         return Statement("input", input=res)
