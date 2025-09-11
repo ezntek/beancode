@@ -782,6 +782,16 @@ class Interpreter:
                         self.error(f"cannot call LCASE on a {txt.kind}", stmt.pos)
                 case "substring":
                     [txt, begin, length, *_] = evargs
+
+                    if txt.kind != "string":
+                        self.error(f"expected first argument to SUBSTRING to be a STRING", stmt.pos)
+
+                    if begin.kind != "integer":
+                        self.error(f"expected second argument to SUBSTRING to be an INTEGER", stmt.pos)
+
+                    if length.kind != "integer":
+                        self.error(f"expected third argument to SUBSTRING to be an INTEGER", stmt.pos)
+
                     return self.visit_substring(
                         txt.get_string(), begin.get_integer(), length.get_integer()
                     )
@@ -876,12 +886,24 @@ class Interpreter:
         match name:
             case "putchar":
                 [ch, *_] = evargs
+                
+                if ch.kind != "char":
+                    self.error("expected first argument to PUTCHAR to be a CHAR", stmt.pos)
+
                 self.visit_putchar(ch.get_char())
             case "exit":
                 [code, *_] = evargs
+
+                if code.kind != "integer":
+                    self.error("expected first argument to EXIT to be an INTEGER", stmt.pos)
+
                 self.visit_exit(code.get_integer())
             case "sleep":
                 [duration, *_] = evargs
+                
+                if duration.kind != "real":
+                    self.error("expected first argument to SLEEP to be a REAL", stmt.pos)
+
                 self.visit_sleep(duration.get_real())
             case "flush":
                 sys.stdout.flush()
