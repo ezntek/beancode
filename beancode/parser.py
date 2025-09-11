@@ -182,11 +182,13 @@ class Parser:
                             ch = "\v"
                         case "\\":
                             ch = "\\"
+                        case _:
+                            raise BCError(f"invalid escape sequence in literal `{lit.value}`", tok)
                     return Literal(tok.pos, "char", char=ch)
                 else:
                     if len(val) > 1:
                         raise BCError(
-                            f"more than 1 character in char literal `{lit}`", tok
+                            f"more than 1 character in char literal `{lit.value}`", tok
                         )
                     return Literal(tok.pos, "char", char=val[0])
             case "string":
@@ -414,7 +416,7 @@ class Parser:
         while self.peek().separator != "right_paren":
             expr = self.expression()
             if expr is None:
-                raise BCError("invalid expression as function argument", expr)
+                raise BCError("invalid expression as function argument", leftb)
 
             args.append(expr)
 
@@ -736,7 +738,7 @@ class Parser:
                 expr = self.expression()
                 if expr is None:
                     raise BCError(
-                        "invalid expression as procedure argument", self.peek()
+                        "invalid expression as procedure argument", leftb
                     )
 
                 args.append(expr)
