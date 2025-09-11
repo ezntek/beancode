@@ -4,8 +4,6 @@ This is a tree-walking interpreter for IGCSE pseudocode, as shown in the [2023-2
 
 ***IMPORTANT:*** Some examples using [raylib](https://github.com/raysan5/raylib) are provided. They were written entirely for fun; in order to run those examples one must install the `raylib` package for those examples to run, else, you will get an error.
 
-This interpreter is called beancode (aka `beancode1`. `beancode2` does exist, it is a **completely different programming language** featured in the main branch of this repository. Future references to beancode means the current implementation.)
-
 **If youre looking for beancode2, head over to the main branch.**
 
 ***IMPORTANT:*** Consider this project to still be in alpha. I am and will be actively patching bugs I find in the interpreter. Do not consider this stable; please frequently update this software.
@@ -18,6 +16,12 @@ Once I deem it stable enough, I will tag `v1.0.0`.
 * `pipx` if you wish to install it system-wide
 
 ## Installation
+
+### Notice
+
+If you want to enjoy actually good performance, ***please use PyPy!*** It is a Python JIT (Just-in-time) compiler, making it far faster than the usual Python implementation CPython. I would recommend you use PyPy even if you werent using this project for running serious work, but it works really well for this project.
+
+Check the appendix for some stats.
 
 ### Installing from PyPI (pip)
 
@@ -74,6 +78,10 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
 2. Includes can be done with `include "file.bean"`, relative to the file.
  * Mark a declaration, constant, procedure, or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`.
  * Symbols marked as export will be present in whichever scope the include was called.
+ * Use `include_ffi` to include a bundled FFI module. Support for custom external modules will be added later.
+   * `beanray` is an incomplete set of raylib bindings that supports some basic examples.
+   * `demo_ffimod` is just a demo.
+   * `beanstd` will be a standard library to make testing a little easier.
 3. You can declare a manual scope with:
    ```
    SCOPE
@@ -122,6 +130,7 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
   ENDCASE
   ```
   Please put your code into a procedure instead.
+* No-declare assignments are only bound to the `local block-level scope`, they are not global. Please declare it globally if you want to use it like a global variable.
 * ***File IO is completely unsupported.*** You might get cryptic errors if you try.
 * Not more than 1 parse error can be reported at one time.
 * Lowercase keywords are supported.
@@ -140,6 +149,32 @@ This is my foray into compiler engineering; through this project I have finally 
 
 `</rant>`
 
+### Why Python?
+
+Originally this interpreter was only written for me to learn compiler engineering (and how to write a recursive-descent parser and ast walker). However, it quickly spiralled into something usable that I wanted other people to use.
+
+Python was perfect due to its dynamism, and the fact that I could abuse it to the max; and it came in super handy when I realized that students who already have a Python toolchain on their system should only need to run a single `pip install` to use my interpreter. It's meant as a learning tool anyway; it's slow as hell.
+
+### Performance
+
+It's really bad. However, PyPy makes it a lot better. Here's some data for the PrimeTorture benchmark I have, ran on an i7-14700KF with 32GB RAM on Arch Linux:
+
+|Language|Time Taken (s)|
+|--------|----------|
+|beancode (CPython 3.13.5)|148|
+|beancode (PyPy3 7.3.20)|11|
+|beancode (CPython Nuitka)|185|
+|Python (CPython 3.13.5)|0.88|
+|Python (PyPy3)|0.19|
+|C (gcc 15.2.1)|0.1|
+
+beancode+cpython: 148 seconds
+beancode+pypy3:   11 seconds
+beancode+nuitka:  185 seconds
+cpython:          0.88 seconds
+pypy3:            0.19 seconds
+C:                0.1 seconds
+
 ## Errata
 
 * Some errors will report as `unused expression`, like the following:
@@ -148,4 +183,5 @@ for i <- 1 to 10
   output i
 nex ti
 ```
+* Some errors will report as `invalid statement or expression`, which is expected for this parser design.
 
