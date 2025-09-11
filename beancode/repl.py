@@ -406,21 +406,21 @@ class Repl:
                     continue
 
             if len(program.stmts) < 1:
-                if program.stmts[0].kind == "procedure":
-                    proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
-                    self.proc_src[proc.name] = self.buf.getvalue()
-                elif program.stmts[0].kind == "function":
-                    func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
-                    self.func_src[func.name] = self.buf.getvalue()
-
-                if program.stmts[0].kind == "fncall":
-                    fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
-                    program.stmts[0] = ast.Statement(
-                        "output",
-                        output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]),
-                    )
-            else:
                 continue
+
+            if program.stmts[0].kind == "procedure":
+                proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
+                self.proc_src[proc.name] = self.buf.getvalue()
+            elif program.stmts[0].kind == "function":
+                func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
+                self.func_src[func.name] = self.buf.getvalue()
+
+            if program.stmts[0].kind == "fncall":
+                fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
+                program.stmts[0] = ast.Statement(
+                    "output",
+                    output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]),
+                )
 
             self.i.block = program.stmts
             self.i.toplevel = True
