@@ -1,4 +1,4 @@
-__version__ = "0.3.0-alpha5"
+__version__ = "0.3.0"
 
 
 def error(msg: str):

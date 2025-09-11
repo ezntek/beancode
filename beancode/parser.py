@@ -315,10 +315,12 @@ class Parser:
                         "expected right bracket or comma after array bounds declaration",
                         right_bracket,
                     )
+            else:
+                raise BCError("expected opening bracket `[` after `ARRAY` keyword", left_bracket)
 
             of = self.consume()
             if of.kind != "keyword" and of.keyword != "of":
-                raise BCError("expected `OF` after `ARRAY` and/or size declaration", of)
+                raise BCError("expected `OF` after size declaration", of)
 
             # TODO: refactor
             arrtyp = self.consume()
@@ -800,13 +802,14 @@ class Parser:
 
         typ = None
         expr = None
-
-        if self.peek().separator == "colon":
+        
+        colon = self.peek()
+        if colon.separator == "colon":
             self.consume()
 
             typ = self.typ()
             if typ is None:
-                raise BCError("invalid type after DECLARE", self.peek())
+                raise BCError("invalid type after DECLARE", colon)
 
         if self.peek().operator == "assign":
             tok = self.consume()
@@ -823,7 +826,7 @@ class Parser:
         if typ is None and expr is None:
             raise BCError(
                 "must have either a type declaration, expression to assign as, or both",
-                declare_kw,
+                colon,
             )
 
         self.check_newline("variable declaration (DECLARE)")

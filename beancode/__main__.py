@@ -93,10 +93,10 @@ def real_main():
         exit(1)
 
 def main():
-    if len(sys.argv) == 1:
-        sys.exit(Repl().repl())
-
     try:
+        if len(sys.argv) == 1:
+            sys.exit(Repl().repl())
+
         real_main()
     except KeyboardInterrupt:
         warn("caught keyboard interrupt")
