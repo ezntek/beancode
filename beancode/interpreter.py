@@ -1458,6 +1458,7 @@ class Interpreter:
         # TODO: abstract this stuff into another file
         if not os.path.exists(path):
             error(f"file {filename} does not exist!")
+            exit(1)
 
         with open(filename, "r+") as f:
             file_content = f.read()
@@ -1475,7 +1476,14 @@ class Interpreter:
             exit(1)
 
         intp = self.new(program.stmts)
-        intp.visit_block(None)
+        try:
+            intp.visit_block(None)
+        except BCError as err:
+            err.print(filename, file_content)
+            exit(1)
+        except BCWarning as warn:
+            warn.print(filename, file_content)
+            exit(1)
 
         for name, var in intp.variables.items():
             if var.export:
