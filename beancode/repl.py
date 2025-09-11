@@ -449,7 +449,6 @@ class Repl:
                     repl_txt = f"(repl {err.func})"
                 else:
                     src = self.buf.getvalue()
-
                 err.print(repl_txt, src)
                 print()
                 continue

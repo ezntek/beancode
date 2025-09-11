@@ -11,6 +11,11 @@ from .error import *
 from . import __version__
 
 
+def _error(s: str) -> NoReturn:
+    error(s)
+    exit(1)
+
+
 def real_main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -46,15 +51,15 @@ def real_main():
         file_content = sys.stdin.read()
     else:
         if not os.path.exists(args.file):
-            error(f"file {args.file} does not exist!")
+            _error(f"file {args.file} does not exist!")
 
         try:
             with open(args.file, "r+") as f:
                 file_content = f.read()
         except IsADirectoryError:
-            error(f"{args.file} is not a file, but a directory!")
+            _error(f"{args.file} is not a file, but a directory!")
         except Exception as e:
-            error(f"failed to open file {args.file}: {e}")
+            _error(f"failed to open file {args.file}: {e}")
 
     lexer = Lexer(file_content)
 

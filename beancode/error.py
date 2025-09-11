@@ -135,9 +135,8 @@ def warn(msg: str):
     )
 
 
-def error(msg: str) -> NoReturn:
+def error(msg: str):
     print(
         f"\033[31;1merror:\033[0m {msg}",
         file=sys.stderr,
     )
-    exit(1)
