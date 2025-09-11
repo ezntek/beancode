@@ -9,9 +9,19 @@ from .error import *
 from io import StringIO
 
 import sys
+import os
 
 try:
     import readline
+    import atexit
+    histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
+    try:
+        readline.read_history_file(histfile)
+        # default history len is -1 (infinite), which may grow unruly
+        readline.set_history_length(10000)
+    except FileNotFoundError:
+        open(histfile, "wb").close()
+    atexit.register(readline.write_history_file, histfile)
 except ImportError:
     warn("could not import readline, continuing without shell history")
 
@@ -27,11 +37,11 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .vars          get information regarding all variables/constants
  .func [names]  get information regarding a procedure/function
  .funcs         get information regarding all procedures/functions
- .help      show this help message
- .clear     clear the screen
- .reset     reset the interpreter
- .version   print the version
- .exit      exit the interpreter (.quit also works)
+ .help          show this help message
+ .clear         clear the screen
+ .reset         reset the interpreter
+ .version       print the version
+ .exit          exit the interpreter (.quit also works)
 """
 
 
@@ -46,7 +56,6 @@ class ContinuationResult(Enum):
     BREAK = (0,)
     ERROR = (1,)
     SUCCESS = (2,)
-
 
 class Repl:
     lx: lexer.Lexer
