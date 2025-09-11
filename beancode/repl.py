@@ -14,6 +14,7 @@ import os
 try:
     import readline
     import atexit
+
     histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
     try:
         readline.read_history_file(histfile)
@@ -56,6 +57,7 @@ class ContinuationResult(Enum):
     BREAK = (0,)
     ERROR = (1,)
     SUCCESS = (2,)
+
 
 class Repl:
     lx: lexer.Lexer
@@ -403,18 +405,22 @@ class Repl:
                     w.print("(repl)", inp)
                     continue
 
-            if program.stmts[0].kind == "procedure":
-                proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
-                self.proc_src[proc.name] = self.buf.getvalue()
-            elif program.stmts[0].kind == "function":
-                func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
-                self.func_src[func.name] = self.buf.getvalue()
+            if len(program.stmts) > 1:
+                if program.stmts[0].kind == "procedure":
+                    proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
+                    self.proc_src[proc.name] = self.buf.getvalue()
+                elif program.stmts[0].kind == "function":
+                    func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
+                    self.func_src[func.name] = self.buf.getvalue()
 
-            if program.stmts[0].kind == "fncall":
-                fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
-                program.stmts[0] = ast.Statement(
-                    "output", output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall])
-                )
+                if program.stmts[0].kind == "fncall":
+                    fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
+                    program.stmts[0] = ast.Statement(
+                        "output",
+                        output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]),
+                    )
+            else:
+                continue
 
             self.i.block = program.stmts
             self.i.toplevel = True
@@ -426,14 +432,18 @@ class Repl:
                 if err.proc is not None:
                     res = self.proc_src.get(err.proc)  # type: ignore
                     if res is None:
-                        warn(f"fatal could not find source code for procedure \"{err.proc}\":\n    ({err.msg.strip()})")
+                        warn(
+                            f'fatal could not find source code for procedure "{err.proc}":\n    ({err.msg.strip()})'
+                        )
                         continue
                     src = res  # type: ignore
                     repl_txt = f'(repl "{err.proc}")'
                 elif err.func is not None:
                     res = self.func_src.get(err.func)  # type: ignore
                     if res is None:
-                        warn(f"could not find source code for function \"{err.func}\":\n    ({err.msg.strip()})")
+                        warn(
+                            f'could not find source code for function "{err.func}":\n    ({err.msg.strip()})'
+                        )
                         continue
                     src = res  # type: ignore
                     repl_txt = f"(repl {err.func})"

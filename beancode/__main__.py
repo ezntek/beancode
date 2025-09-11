@@ -8,7 +8,7 @@ from .interpreter import Interpreter
 from .lexer import *
 from .parser import Parser
 from .error import *
-from . import error, __version__
+from . import __version__
 
 
 def real_main():
@@ -48,8 +48,13 @@ def real_main():
         if not os.path.exists(args.file):
             error(f"file {args.file} does not exist!")
 
-        with open(args.file, "r+") as f:
-            file_content = f.read()
+        try:
+            with open(args.file, "r+") as f:
+                file_content = f.read()
+        except IsADirectoryError:
+            error(f"{args.file} is not a file, but a directory!")
+        except Exception as e:
+            error(f"failed to open file {args.file}: {e}")
 
     lexer = Lexer(file_content)
 
@@ -92,6 +97,7 @@ def real_main():
         err.print(args.file, file_content)
         exit(1)
 
+
 def main():
     try:
         if len(sys.argv) == 1:
@@ -104,6 +110,7 @@ def main():
     except EOFError:
         warn("caught EOF")
         exit(1)
+
 
 if __name__ == "__main__":
     main()

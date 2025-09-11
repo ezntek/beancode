@@ -1326,16 +1326,18 @@ class Interpreter:
         if isinstance(stmt.ident, ArrayIndex):
             target = self.visit_array_index(stmt.ident)
         else:
-            id = stmt.ident.ident 
+            id = stmt.ident.ident
 
             data: Variable | None = self.variables.get(id)
             if data is None:
                 val = self._guess_input_type(inp)
                 data = Variable(val, False, export=False)
-            target = data.val # type: ignore
+            target = data.val  # type: ignore
 
             if data.const:
-                self.error(f"attempted to call `INPUT` into constant {id}", stmt.ident.pos)
+                self.error(
+                    f"attempted to call `INPUT` into constant {id}", stmt.ident.pos
+                )
 
             if type(data.val.kind) == BCArrayType:
                 self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)

@@ -316,7 +316,9 @@ class Parser:
                         right_bracket,
                     )
             else:
-                raise BCError("expected opening bracket `[` after `ARRAY` keyword", left_bracket)
+                raise BCError(
+                    "expected opening bracket `[` after `ARRAY` keyword", left_bracket
+                )
 
             of = self.consume()
             if of.kind != "keyword" and of.keyword != "of":
@@ -686,10 +688,12 @@ class Parser:
         if array_index is None:
             ident_exp = self.ident()
             if not isinstance(ident_exp, Identifier) or ident_exp.ident is None:
-                raise BCError(f"expected identifier after `INPUT` but found {ident_exp}", begin)
+                raise BCError(
+                    f"expected identifier after `INPUT` but found {ident_exp}", begin
+                )
             ident = ident_exp
         else:
-            ident = array_index # type: ignore
+            ident = array_index  # type: ignore
 
         res = InputStatement(begin.pos, ident)
         return Statement("input", input=res)
@@ -802,7 +806,7 @@ class Parser:
 
         typ = None
         expr = None
-        
+
         colon = self.peek()
         if colon.separator == "colon":
             self.consume()
