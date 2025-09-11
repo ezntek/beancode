@@ -1,19 +1,17 @@
-# beancode1
+# beancode
 
-This is a tree-walking interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf), written in Python.
+This is a tree-walking interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf), written in Python (3.10+).
 
 ***IMPORTANT:*** Some examples using [raylib](https://github.com/raysan5/raylib) are provided. They were written entirely for fun; in order to run those examples one must install the `raylib` package for those examples to run, else, you will get an error.
 
-**If youre looking for beancode2, head over to the main branch.**
-
-***IMPORTANT:*** Consider this project to still be in alpha. I am and will be actively patching bugs I find in the interpreter. Do not consider this stable; please frequently update this software.
+***IMPORTANT:*** I do not guarantee this software to be bug-free; most major bugs have been patched by now, and the interpreter has been tested against various examples and IGCSE Markschemes. Version 0.3.0 and up should be relatively stable, but if you find bugs, please report them and I will fix them promptly.
 
 Once I deem it stable enough, I will tag `v1.0.0`.
 
 ## Dependencies
 
 * `typed-argument-parser`
-* `pipx` if you wish to install it system-wide
+* `pipx` if you wish to install it system-wide while being safe.
 
 ## Installation
 
@@ -25,10 +23,8 @@ Check the appendix for some stats.
 
 ### Installing from PyPI (pip)
 
-* `pipx install beancode` (you should have pipx installed)
-* `pip install --break-system-packages beancode` 
-
-***since this package does not actually have dependencies, you can pass `--break-system-packages` safely.***
+* `pip install --break-system-packages beancode` ***since this package does not actually have dependencies, you can pass `--break-system-packages` safely. It can still be a bad idea.***
+* `pipx install beancode` (the safer way)
 
 ### Installing from this repository
 
