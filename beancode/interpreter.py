@@ -614,6 +614,8 @@ class Interpreter:
 
                 return (index, inner_index)
             else:
+                if ind.idx_inner is not None:
+                    self.error("expected only 1 index for array indexing", ind.pos)
                 return (index, None)
         else:
             if v.kind == "string":

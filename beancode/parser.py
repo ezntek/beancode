@@ -383,7 +383,7 @@ class Parser:
                 "expected right_bracket after expression in array index", rightb
             )
 
-        return ArrayIndex(ident.pos, ident=ident, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
+        return ArrayIndex(leftb.pos, ident=ident, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
 
     def operator(self) -> l.Operator | None:
         o = self.consume()
