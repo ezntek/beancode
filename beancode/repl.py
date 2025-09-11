@@ -405,7 +405,7 @@ class Repl:
                     w.print("(repl)", inp)
                     continue
 
-            if len(program.stmts) > 1:
+            if len(program.stmts) < 1:
                 if program.stmts[0].kind == "procedure":
                     proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
                     self.proc_src[proc.name] = self.buf.getvalue()
