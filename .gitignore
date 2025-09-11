@@ -1,11 +1,10 @@
-*.bean
 *.spec
 build
 dist
 *.build
 *.dist
 *.bin
-./*.bean
+/*.bean
 **/__pycache__
 .zig-cache
 zig-out
