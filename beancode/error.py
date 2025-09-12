@@ -1,5 +1,5 @@
 import sys
-from typing import NoReturn
+import os
 
 
 class BCError(Exception):
@@ -69,7 +69,14 @@ class BCError(Exception):
 
         tildes = f"{spaces()}\033[31;1m{'~' * self.len}\033[0m"
         print(tildes)
-        indicator = f"{spaces()}\033[31;1m∟ \033[0m\033[1merror at line {line} column {col}\033[0m"
+
+        indicator = f"{spaces()}\033[31;1m"
+        if os.name == "nt":
+            indicator += "+-"
+        else:
+            indicator += "∟"
+
+        indicator += f" \033[0m\033[1merror at line {line} column {col}\033[0m"
         print(indicator)
 
 
@@ -117,7 +124,12 @@ class BCWarning(Exception):
 
         tildes = f"{spaces()}\033[35;1m{'~' * self.len}\033[0m"
         print(tildes)
-        indicator = f"{spaces()}\033[35;1m∟ \033[0m\033[1mwarning at line {line} column {col}\033[0m"
+        indicator = f"{spaces()}\033[35;1m"
+        if os.name == "nt":
+            indicator += "+-"
+        else:
+            indicator += "∟"
+        indicator += f" \033[0m\033[1mwarning at line {line} column {col}\033[0m"
         print(indicator)
 
 

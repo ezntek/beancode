@@ -1,6 +1,8 @@
+import io
 import os
 import sys
 import argparse
+from typing import NoReturn
 
 from .repl import Repl
 
@@ -9,7 +11,6 @@ from .lexer import *
 from .parser import Parser
 from .error import *
 from . import __version__
-
 
 def _error(s: str) -> NoReturn:
     error(s)
@@ -104,10 +105,11 @@ def real_main():
 
 
 def main():
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors="replace")
     try:
         if len(sys.argv) == 1:
             sys.exit(Repl().repl())
-
         real_main()
     except KeyboardInterrupt:
         warn("caught keyboard interrupt")
