@@ -440,11 +440,15 @@ class Interpreter:
                         lhs_str_or_char = lhs.get_string()
                     elif lhs.kind == "char":
                         lhs_str_or_char = lhs.get_char()
+                    else:
+                        lhs_str_or_char = str(lhs) 
 
                     if rhs.kind == "string":
                         rhs_str_or_char = rhs.get_string()
                     elif rhs.kind == "char":
                         rhs_str_or_char = rhs.get_char()
+                    else:
+                        rhs_str_or_char = str(rhs)
 
                     if lhs_str_or_char == None:
                         self.error(
@@ -462,7 +466,7 @@ class Interpreter:
                     return BCValue("string", string=res)
 
                 if "boolean" in [lhs.kind, rhs.kind]:
-                    self.error("Cannot add bools, chars, and strings!")
+                    self.error("Cannot add bools, chars, and strings!", expr.pos)
 
                 lhs_num: int | float | None = 0
                 rhs_num: int | float | None = 0
