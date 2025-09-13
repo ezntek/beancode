@@ -227,8 +227,24 @@ class Repl:
 
         return DotCommandResult.NO_OP
 
+    def _delete(self, args: list[str]) -> DotCommandResult:
+        if len(args) == 1:
+            error("not enough args for delete")
+            return DotCommandResult.NO_OP
+
+        for arg in args[1:]:
+            if arg in self.i.variables:
+                self.i.variables.__delitem__(arg)
+                info(f"deleted variable \"{arg}\"")
+            elif arg in self.i.functions:
+                self.i.functions.__delitem__(arg)
+                info(f"deleted function/procedure \"{arg}\"")
+            else:
+                error(f"no name \"{arg}\" found")
+        return DotCommandResult.NO_OP
+
     def handle_dot_command(self, s: str) -> DotCommandResult:
-        args = s.split(" ")
+        args = s.strip().split(" ")
         base = args[0]
 
         match base:
@@ -255,6 +271,8 @@ class Repl:
                 return self._func(args)
             case "funcs":
                 return self._funcs(args)
+            case "delete":
+                return self._delete(args)
 
         return DotCommandResult.UNKNOWN_COMMAND
 

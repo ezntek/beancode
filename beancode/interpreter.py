@@ -1512,6 +1512,9 @@ class Interpreter:
                 self.variables[name] = var
 
         for name, fn in intp.functions.items():
+            if isinstance(fn, BCFunction) or isinstance(fn, BCProcedure):
+                continue
+
             if fn.export:  # type: ignore
                 self.functions[name] = fn
 

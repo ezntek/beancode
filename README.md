@@ -102,7 +102,7 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
  * `STRING -> INTEGER` (returns `null` on failure)
  * `STRING -> REAL` (returns `null` on failure)
  * `INTEGER -> REAL`
- * `REAL -> INTEGER`
+ *`REAL -> INTEGER`
  * `INTEGER -> BOOLEAN` (`0` is false, `1` is true)
  * `BOOLEAN -> INTEGER`
 6. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
@@ -115,6 +115,15 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
    X <- 5
    OUTPUT X // works
    ```
+
+### REPL features
+   
+* `.var` gets information regarding an _existing variable_. It prints its name, type, and value.
+* `.vars` prints information regarding _all variables_.
+* `.func` gets information regarding *existing functions* ***or procedures***. 
+* `.funcs` prints information regarding _all functions and procedures_.
+* Delete a variable if you need to with `.delete [name]`. (Version `0.3.4` and up)
+* Or, reset the entire interpreter's state with `.reset`.
 
 ## quirks
 
@@ -153,7 +162,7 @@ Python was perfect due to its dynamism, and the fact that I could abuse it to th
 
 ### Performance
 
-It's really bad. However, PyPy makes it a lot better. Here's some data for the PrimeTorture benchmark I have, ran on an i7-14700KF with 32GB RAM on Arch Linux:
+It's really bad. However, PyPy makes it a lot better. Here's some data for the PrimeTorture benchmark in the examples, ran on an i7-14700KF with 32GB RAM on Arch Linux:
 
 |Language|Time Taken (s)|
 |--------|----------|
@@ -163,13 +172,6 @@ It's really bad. However, PyPy makes it a lot better. Here's some data for the P
 |Python (CPython 3.13.5)|0.88|
 |Python (PyPy3)|0.19|
 |C (gcc 15.2.1)|0.1|
-
-beancode+cpython: 148 seconds
-beancode+pypy3:   11 seconds
-beancode+nuitka:  185 seconds
-cpython:          0.88 seconds
-pypy3:            0.19 seconds
-C:                0.1 seconds
 
 ## Errata
 
