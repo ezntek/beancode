@@ -234,6 +234,9 @@ class Repl:
             return DotCommandResult.NO_OP
 
         for arg in args[1:]:
+            if arg.lower() == "null":
+                error(f"cannot delete {arg}!")
+
             if arg in self.i.variables:
                 self.i.variables.__delitem__(arg)
                 info(f"deleted variable \"{arg}\"")
