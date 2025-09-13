@@ -34,15 +34,16 @@ type ".help" for a list of REPL commands, ".exit" to exit, or start typing some 
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
- .var [names]   get information regarding a declared variable/constant
- .vars          get information regarding all declared variables/constants
- .func [names]  get information regarding a declared procedure/function
- .funcs         get information regarding all declared procedures/functions
- .help          show this help message
- .clear         clear the screen
- .reset         reset the interpreter
- .version       print the version
- .exit          exit the interpreter (.quit also works)
+ .var [names]     get information regarding a declared variable/constant
+ .vars            get information regarding all declared variables/constants
+ .func [names]    get information regarding a declared procedure/function
+ .funcs           get information regarding all declared procedures/functions
+ .delete [names]  delete a variable/constant/procedure/function 
+ .reset           reset the interpreter
+ .help            show this help message
+ .clear           clear the screen
+ .version         print the version
+ .exit            exit the interpreter (.quit also works)
 """
 
 
