@@ -236,6 +236,7 @@ class Repl:
         for arg in args[1:]:
             if arg.lower() == "null":
                 error(f"cannot delete {arg}!")
+                continue
 
             if arg in self.i.variables:
                 self.i.variables.__delitem__(arg)

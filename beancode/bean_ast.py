@@ -102,7 +102,7 @@ class BCValue:
         )
 
     def is_null(self) -> bool:
-        return self.kind == "null"
+        return self.kind == "null" or self.is_uninitialized()
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":

@@ -65,21 +65,26 @@ class Interpreter:
         self, block: list[Statement], func=False, proc=False, loop=False
     ) -> None:
         self.block = block
-        self.calls = list()
-        self.variables = dict()
-        self.functions = dict()
         self.func = func
         self.proc = proc
         self.loop = loop
-        self._returned = False
-        self.cur_stmt = 0
-
-        self.variables["null"] = Variable(BCValue("null"), True)
-        self.variables["NULL"] = Variable(BCValue("null"), True)
+        self.reset_all()
 
     @classmethod
     def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter":  # type: ignore
         return cls(block, func=func, proc=proc, loop=loop)  # type: ignore
+
+    def reset(self):
+        self.cur_stmt = 0
+
+    def reset_all(self):
+        self.calls = list()
+        self.variables = dict()
+        self.functions = dict()
+        self._returned = False
+        self.cur_stmt = 0
+        self.variables["null"] = Variable(BCValue("null"), True)
+        self.variables["NULL"] = Variable(BCValue("null"), True)
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
@@ -115,12 +120,13 @@ class Interpreter:
             case "equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
-                res = lhs == rhs
+                # a BCValue(INTEGER, NULL) is not a BCValue(NULL, NULL)
+                res = lhs == rhs or (lhs.is_null() and rhs.is_null())
                 return BCValue("boolean", boolean=res)
             case "not_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
-                res = lhs != rhs
+                res = (lhs != rhs) or not (lhs.is_null() and rhs.is_null())
                 return BCValue("boolean", boolean=res)
             case "greater_than":
                 lhs = self.visit_expr(expr.lhs)
@@ -1901,12 +1907,3 @@ class Interpreter:
     def visit_program(self, program: Program):
         if program is not None:
             self.visit_block(program.stmts)
-
-    def reset(self):
-        self.cur_stmt = 0
-
-    def reset_all(self):
-        self.block = list()
-        self.calls = list()
-        self.variables = dict()
-        self.functions = dict()
