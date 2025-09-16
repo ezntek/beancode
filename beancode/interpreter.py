@@ -823,7 +823,7 @@ class Interpreter:
                         lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                        rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
                     )
 
                     return self.visit_div(lhs_val, rhs_val)
@@ -845,7 +845,7 @@ class Interpreter:
                         lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if lhs.kind == "integer" else rhs.get_real()
+                        rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
                     )
 
                     return self.visit_mod(lhs_val, rhs_val)

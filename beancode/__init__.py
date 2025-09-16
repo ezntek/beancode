@@ -1,7 +1,7 @@
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 
-def is_case_consistent( s: str) -> bool:
+def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
 
 def error(msg: str):
