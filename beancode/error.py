@@ -32,6 +32,10 @@ class BCError(Exception):
             print(self.msg, end="")
             return
 
+        if self.pos == (0, 0, 0):
+            print(self.msg, end="")
+            return
+
         line = self.pos[0]
         col = self.pos[1]
         bol = self.pos[2]

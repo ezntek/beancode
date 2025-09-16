@@ -967,7 +967,7 @@ class Interpreter:
             func = self.functions[stmt.ident]
         except KeyError:
             if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(stmt.ident):
-                self.error(f"{stmt.ident} is a procedure, please use CALL instead!")
+                self.error(f"{stmt.ident} is a library routine procedure, please use CALL instead!", stmt.pos)
             else:
                 self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
@@ -1033,7 +1033,7 @@ class Interpreter:
             proc = self.functions[stmt.ident]
         except KeyError:
             if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
-                self.error(f"{stmt.ident} is a function, please remove the CALL!")
+                self.error(f"{stmt.ident} is a library routine function, please remove the CALL!", stmt.pos)
             else:
                 self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
