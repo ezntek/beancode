@@ -1443,7 +1443,10 @@ class Parser:
         cur = self.peek()
         expr = self.expression()
         if expr is not None:
-            raise BCWarning("unused expression", cur, data=expr)
+            if self.cur != len(self.tokens) - 1:
+                raise BCError("trailing tokens after expression", self.peek())
+            else:
+                raise BCWarning("unused expression", cur, data=expr)
         else:
             raise BCError("invalid statement or expression", cur)
 
