@@ -11,7 +11,7 @@ from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
 from .error import *
-from . import __version__
+from . import __version__, is_case_consistent
 
 
 @dataclass
@@ -853,7 +853,7 @@ class Interpreter:
                     [txt, *_] = evargs
                     if isinstance(txt.kind, BCArrayType):
                         self.error(
-                            "cannot call LENGTH on an array! please use the end index instead.",
+                            "cannot call LENGTH on an array!",
                             stmt.pos,
                         )
                     if txt.kind != "string":
@@ -957,16 +957,19 @@ class Interpreter:
         return BCValue("string", string=s)
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
-        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES:
+        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
             return self.visit_libroutine(stmt)
 
-        if stmt.ident.lower() in ["typeof", "type"]:
+        if stmt.ident.lower() in ["typeof", "type"] and is_case_consistent(stmt.ident):
             return self.visit_typeof(stmt)
 
         try:
             func = self.functions[stmt.ident]
         except KeyError:
-            self.error(f"no function named {stmt.ident} exists", stmt.pos)
+            if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(stmt.ident):
+                self.error(f"{stmt.ident} is a procedure, please use CALL instead!")
+            else:
+                self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
         if isinstance(func, ProcedureStatement):
             self.error("cannot call procedure without CALL!", stmt.pos)
@@ -1022,14 +1025,17 @@ class Interpreter:
     def visit_call(self, stmt: CallStatement):
         if (
             stmt.ident not in self.functions
-            and stmt.ident.lower() in LIBROUTINES_NORETURN
+            and stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(stmt.ident)
         ):
             return self.visit_libroutine_noreturn(stmt)
 
         try:
             proc = self.functions[stmt.ident]
         except KeyError:
-            self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
+            if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
+                self.error(f"{stmt.ident} is a function, please remove the CALL!")
+            else:
+                self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
         if isinstance(proc, FunctionStatement):
             self.error(
@@ -1725,7 +1731,7 @@ class Interpreter:
                 self.error(
                     f"tried to index a variable of type {self.variables[key].val.kind} like an array",
                     s.ident.pos,
-                )
+            )
 
             tup = self._get_array_index(s.ident)
             if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore

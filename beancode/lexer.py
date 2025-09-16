@@ -1,7 +1,7 @@
 import typing as t
 from dataclasses import dataclass
 from .error import *
-from . import __version__
+from . import __version__, is_case_consistent
 
 Keyword = t.Literal[
     "declare",
@@ -267,16 +267,13 @@ class Lexer:
                 return False
         return True
 
-    def is_case_consistent(self, s: str) -> bool:
-        return s.isupper() or s.islower()
-
     def is_keyword(self, s: str) -> bool:
-        if self.is_case_consistent(s):
+        if is_case_consistent(s):
             return s.lower() in self.keywords
         return False
 
     def is_type(self, s: str) -> bool:
-        if self.is_case_consistent(s):
+        if is_case_consistent(s):
             return s.lower() in self.types
         return False
 
