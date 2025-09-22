@@ -287,7 +287,12 @@ class Repl:
             self.lx.reset()
             self.lx.row = oldrow + 1
 
-            inp = input("\033[0m.. ")
+            try:
+                inp = input("\033[0m.. ")
+            except KeyboardInterrupt:
+                print()
+                return (None, ContinuationResult.ERROR)
+
             self.buf.write(inp + "\n")
 
             if len(inp) == 0:

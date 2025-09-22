@@ -63,13 +63,19 @@ class BCError(Exception):
 
         line_begin = f" \033[31;1m{line}\033[0m | "
         padding = len(str(line) + "  | ") + col - 1
-        spaces = lambda *_: " " * padding
+        tabs = 0
+        spaces = lambda *_: " " * padding + "\t" * tabs
 
         print(f"\033[0m\033[1m{filename}:{line}: ", end="")
         print(self.msg, end="")
 
         print(line_begin, end="")
         print(file_content[bol:eol])
+
+        for ch in file_content[bol:eol]:
+            if ch == '\t':
+                padding -= 1
+                tabs += 1
 
         tildes = f"{spaces()}\033[31;1m{'~' * self.len}\033[0m"
         print(tildes)
@@ -118,13 +124,19 @@ class BCWarning(Exception):
 
         line_begin = f" \033[35;1m{line}\033[0m | "
         padding = len(str(line) + "  | ") + col - 1
-        spaces = lambda *_: " " * padding
+        tabs = 0
+        spaces = lambda *_: " " * padding + "\t" * tabs
 
         print(f"\033[0m\033[1m{filename}:{line}: ", end="")
         print(self.msg, end="")
 
         print(line_begin, end="")
         print(file_content[bol:eol])
+
+        for ch in file_content[bol:eol]:
+            if ch == '\t':
+                padding -= 1
+                tabs += 1
 
         tildes = f"{spaces()}\033[35;1m{'~' * self.len}\033[0m"
         print(tildes)
