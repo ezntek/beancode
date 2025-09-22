@@ -120,7 +120,7 @@ class Parser:
                 expr = self.expression()
                 if expr is None:
                     raise BCError(
-                        "invalid expression supplied as argument to array literal"
+                        "invalid or no expression supplied as argument to array literal"
                     )
                 exprs.append(expr)
 
@@ -245,7 +245,7 @@ class Parser:
                 begin = self.expression()
                 if begin is None:
                     raise BCError(
-                        "invalid expression as beginning value of array declaration",
+                        "invalid or no expression as beginning value of array declaration",
                         begin,
                     )
 
@@ -259,7 +259,7 @@ class Parser:
                 end = self.expression()
                 if end is None:
                     raise BCError(
-                        "invalid expression as ending value of array declaration", end
+                        "invalid or no expression as ending value of array declaration", end
                     )
 
                 flat_bounds = (begin, end)
@@ -274,7 +274,7 @@ class Parser:
                     inner_begin = self.expression()
                     if inner_begin is None:
                         raise BCError(
-                            "invalid expression as beginning value of array declaration",
+                            "invalid or no expression as beginning value of array declaration",
                             inner_begin,
                         )
 
@@ -291,7 +291,7 @@ class Parser:
                     inner_end = self.expression()
                     if inner_end is None:
                         raise BCError(
-                            "invalid expression as ending value of array declaration",
+                            "invalid or no expression as ending value of array declaration",
                             inner_end,
                         )
 
@@ -416,7 +416,7 @@ class Parser:
         while self.peek().separator != "right_paren":
             expr = self.expression()
             if expr is None:
-                raise BCError("invalid expression as function argument", leftb)
+                raise BCError("invalid or no expression as function argument", leftb)
 
             args.append(expr)
 
@@ -450,7 +450,7 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("invalid expression supplied for type cast", expr)
+            raise BCError("invalid or no expression supplied for type cast", expr)
 
         rbracket = self.consume()
         if rbracket.separator != "right_paren":
@@ -487,7 +487,7 @@ class Parser:
             begin = self.consume()
             e = self.expression()
             if e is None:
-                raise BCError("invalid expression inside grouping", e)
+                raise BCError("invalid or no expression inside grouping", e)
 
             end = self.consume()
 
@@ -499,13 +499,13 @@ class Parser:
             begin = self.consume()
             e = self.unary()
             if e is None:
-                raise BCError("invalid expression for negation", begin)
+                raise BCError("invalid or no expression for negation", begin)
             return Negation(begin.pos, e)
         elif p.kind == "keyword" and p.keyword == "not":
             begin = self.consume()
             e = self.expression()
             if e is None:
-                raise BCError("invalid expression for logical NOT", begin)
+                raise BCError("invalid or no expression for logical NOT", begin)
             return Not(begin.pos, e)
         else:
             return None
@@ -658,7 +658,7 @@ class Parser:
         initial = self.expression()
         if initial is None:
             raise BCError(
-                "found OUTPUT but an invalid expression that follows", self.peek()
+                "found OUTPUT but an invalid or no expression that follows", self.peek()
             )
 
         exprs.append(initial)
@@ -713,7 +713,7 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("invalid expression used as RETURN expression", self.peek())
+            raise BCError("invalid or no expression used as RETURN expression", self.peek())
 
         return Statement("return", return_s=ReturnStatement(begin.pos, expr))
 
@@ -738,7 +738,7 @@ class Parser:
                 expr = self.expression()
                 if expr is None:
                     raise BCError(
-                        "invalid expression as procedure argument", leftb
+                        "invalid or no expression as procedure argument", leftb
                     )
 
                 args.append(expr)
@@ -827,7 +827,7 @@ class Parser:
 
             expr = self.expression()
             if expr is None:
-                raise BCError("invalid expression after assign in declare", tok.pos)
+                raise BCError("invalid or no expression after assign in declare", tok.pos)
 
         if typ is None and expr is None:
             raise BCError(
@@ -938,7 +938,7 @@ class Parser:
 
         cond = self.expression()
         if cond is None:
-            raise BCError("found invalid expression for if condition", self.peek())
+            raise BCError("found invalid or no expression for if condition", self.peek())
 
         # allow stupid igcse stuff
         if self.peek().kind == "newline":
@@ -994,7 +994,7 @@ class Parser:
 
         main_expr = self.expression()
         if main_expr is None:
-            raise BCError("found invalid expression for case of value", self.peek())
+            raise BCError("found invalid or no expression for case of value", self.peek())
 
         self.check_newline("after case of expression")
 
@@ -1007,7 +1007,7 @@ class Parser:
             if not is_otherwise:
                 expr = self.expression() if next_expr is None else next_expr
                 if not expr:
-                    raise BCError("invalid expression for case of branch", self.peek())
+                    raise BCError("invalid or no expression for case of branch", self.peek())
 
                 colon = self.consume()
                 if colon.separator != "colon":
@@ -1046,7 +1046,7 @@ class Parser:
         expr = self.expression()
         if expr is None:
             raise BCError(
-                "found invalid expression for while loop condition", self.peek()
+                "found invalid or no expression for while loop condition", self.peek()
             )
 
         if self.peek().kind == "newline":
@@ -1094,7 +1094,7 @@ class Parser:
 
         begin = self.expression()
         if begin is None:
-            raise BCError("invalid expression as begin in for loop", self.peek())
+            raise BCError("invalid or no expression as begin in for loop", self.peek())
 
         to = self.peek()
         if to.keyword != "to":
@@ -1103,14 +1103,14 @@ class Parser:
 
         end = self.expression()
         if end is None:
-            raise BCError("invalid expression as end in for loop", self.peek())
+            raise BCError("invalid or no expression as end in for loop", self.peek())
 
         step: Expr | None = None
         if self.peek().keyword == "step":
             self.consume()
             step = self.expression()
             if step is None:
-                raise BCError("invalid expression as step in for loop", self.peek())
+                raise BCError("invalid or no expression as step in for loop", self.peek())
 
         stmts = []
         while self.peek().keyword != "next":
@@ -1151,7 +1151,7 @@ class Parser:
         expr = self.expression()
         if expr is None:
             raise BCError(
-                "found invalid expression for repeat-until loop condition", self.peek()
+                "found invalid or no expression for repeat-until loop condition", self.peek()
             )
 
         res = RepeatUntilStatement(begin.pos, expr, stmts)
