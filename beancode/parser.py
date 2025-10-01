@@ -1408,10 +1408,6 @@ class Parser:
         if proc_call is not None:
             return proc_call
 
-        fncall: FunctionCall | None = self.function_call()  # type: ignore
-        if fncall is not None:
-            return Statement("fncall", fncall=fncall)
-
         return_s = self.return_stmt()
         if return_s is not None:
             return return_s
@@ -1461,6 +1457,8 @@ class Parser:
         if expr is not None:
             if self.cur != len(self.tokens) - 1:
                 raise BCError("trailing tokens after expression", self.peek())
+            elif isinstance(expr, FunctionCall):
+                return Statement("fncall", fncall=expr)
             else:
                 raise BCWarning("unused expression", cur, data=expr)
         else:
