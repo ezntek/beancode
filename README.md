@@ -183,3 +183,7 @@ nex ti
 ```
 * Some errors will report as `invalid statement or expression`, which is expected for this parser design.
 
+### Version-specific
+
+* Before `v0.3.6`, equal expressions will actually result in `<>` being true. For example, `5 = 5` is `TRUE`, but `5 <> 5` is also `TRUE`.
+
