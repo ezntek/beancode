@@ -1216,7 +1216,7 @@ class Parser:
 
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            raise BCError("invalid identifier after PROCEDURE declaration", self.peek())
+            raise BCError("invalid identifier after PROCEDURE declaration", begin)
 
         args = []
         leftb = self.peek()
@@ -1312,12 +1312,12 @@ class Parser:
 
         returns = self.consume()
         if returns.keyword != "returns":
-            raise BCError("expected RETURNS after function arguments", self.peek())
+            raise BCError("expected RETURNS after function arguments", begin)
 
         typ = self.typ()
         if typ is None:
             raise BCError(
-                "invalid type after RETURNS for function return value", self.peek()
+                "invalid type after RETURNS for function return value", begin
             )
 
         self.consume_newlines()
