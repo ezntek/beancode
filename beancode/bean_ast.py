@@ -37,6 +37,7 @@ class BCArrayType:
     def __repr__(self) -> str:
         return "ARRAY OF " + self.inner.upper()
 
+
 @dataclass
 class BCArray:
     typ: BCArrayType
@@ -140,9 +141,7 @@ class BCValue:
 
     def get_integer(self) -> int:
         if self.kind != "integer":
-            raise BCError(
-                f"tried to access INTEGER value from BCValue of {self.kind}"
-            )
+            raise BCError(f"tried to access INTEGER value from BCValue of {self.kind}")
 
         return self.integer  # type: ignore
 
@@ -160,17 +159,13 @@ class BCValue:
 
     def get_string(self) -> str:
         if self.kind != "string":
-            raise BCError(
-                f"tried to access STRING value from BCValue of {self.kind}"
-            )
+            raise BCError(f"tried to access STRING value from BCValue of {self.kind}")
 
         return self.string  # type: ignore
 
     def get_boolean(self) -> bool:
         if self.kind != "boolean":
-            raise BCError(
-                f"tried to access BOOLEAN value from BCValue of {self.kind}"
-            )
+            raise BCError(f"tried to access BOOLEAN value from BCValue of {self.kind}")
 
         return self.boolean  # type: ignore
 

@@ -12,6 +12,7 @@ from .parser import Parser
 from .error import *
 from . import __version__
 
+
 def _error(s: str) -> NoReturn:
     error(s)
     exit(1)
@@ -105,8 +106,8 @@ def real_main():
 
 
 def main():
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors="replace")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     try:
         if len(sys.argv) == 1:
             sys.exit(Repl().repl())

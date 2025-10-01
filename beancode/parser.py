@@ -183,7 +183,9 @@ class Parser:
                         case "\\":
                             ch = "\\"
                         case _:
-                            raise BCError(f"invalid escape sequence in literal `{lit.value}`", tok)
+                            raise BCError(
+                                f"invalid escape sequence in literal `{lit.value}`", tok
+                            )
                     return Literal(tok.pos, "char", char=ch)
                 else:
                     if len(val) > 1:
@@ -259,7 +261,8 @@ class Parser:
                 end = self.expression()
                 if end is None:
                     raise BCError(
-                        "invalid or no expression as ending value of array declaration", end
+                        "invalid or no expression as ending value of array declaration",
+                        end,
                     )
 
                 flat_bounds = (begin, end)
@@ -713,7 +716,9 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("invalid or no expression used as RETURN expression", self.peek())
+            raise BCError(
+                "invalid or no expression used as RETURN expression", self.peek()
+            )
 
         return Statement("return", return_s=ReturnStatement(begin.pos, expr))
 
@@ -827,7 +832,9 @@ class Parser:
 
             expr = self.expression()
             if expr is None:
-                raise BCError("invalid or no expression after assign in declare", tok.pos)
+                raise BCError(
+                    "invalid or no expression after assign in declare", tok.pos
+                )
 
         if typ is None and expr is None:
             raise BCError(
@@ -938,7 +945,9 @@ class Parser:
 
         cond = self.expression()
         if cond is None:
-            raise BCError("found invalid or no expression for if condition", self.peek())
+            raise BCError(
+                "found invalid or no expression for if condition", self.peek()
+            )
 
         # allow stupid igcse stuff
         if self.peek().kind == "newline":
@@ -994,7 +1003,9 @@ class Parser:
 
         main_expr = self.expression()
         if main_expr is None:
-            raise BCError("found invalid or no expression for case of value", self.peek())
+            raise BCError(
+                "found invalid or no expression for case of value", self.peek()
+            )
 
         self.check_newline("after case of expression")
 
@@ -1007,7 +1018,9 @@ class Parser:
             if not is_otherwise:
                 expr = self.expression() if next_expr is None else next_expr
                 if not expr:
-                    raise BCError("invalid or no expression for case of branch", self.peek())
+                    raise BCError(
+                        "invalid or no expression for case of branch", self.peek()
+                    )
 
                 colon = self.consume()
                 if colon.separator != "colon":
@@ -1110,7 +1123,9 @@ class Parser:
             self.consume()
             step = self.expression()
             if step is None:
-                raise BCError("invalid or no expression as step in for loop", self.peek())
+                raise BCError(
+                    "invalid or no expression as step in for loop", self.peek()
+                )
 
         stmts = []
         while self.peek().keyword != "next":
@@ -1151,7 +1166,8 @@ class Parser:
         expr = self.expression()
         if expr is None:
             raise BCError(
-                "found invalid or no expression for repeat-until loop condition", self.peek()
+                "found invalid or no expression for repeat-until loop condition",
+                self.peek(),
             )
 
         res = RepeatUntilStatement(begin.pos, expr, stmts)

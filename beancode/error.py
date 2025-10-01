@@ -73,7 +73,7 @@ class BCError(Exception):
         print(file_content[bol:eol])
 
         for ch in file_content[bol:eol]:
-            if ch == '\t':
+            if ch == "\t":
                 padding -= 1
                 tabs += 1
 
@@ -134,7 +134,7 @@ class BCWarning(Exception):
         print(file_content[bol:eol])
 
         for ch in file_content[bol:eol]:
-            if ch == '\t':
+            if ch == "\t":
                 padding -= 1
                 tabs += 1
 

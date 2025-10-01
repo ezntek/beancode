@@ -240,12 +240,12 @@ class Repl:
 
             if arg in self.i.variables:
                 self.i.variables.__delitem__(arg)
-                info(f"deleted variable \"{arg}\"")
+                info(f'deleted variable "{arg}"')
             elif arg in self.i.functions:
                 self.i.functions.__delitem__(arg)
-                info(f"deleted function/procedure \"{arg}\"")
+                info(f'deleted function/procedure "{arg}"')
             else:
-                error(f"no name \"{arg}\" found")
+                error(f'no name "{arg}" found')
         return DotCommandResult.NO_OP
 
     def handle_dot_command(self, s: str) -> DotCommandResult:

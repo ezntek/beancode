@@ -120,7 +120,7 @@ class Interpreter:
             case "equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
-                
+
                 if lhs.kind != rhs.kind:
                     return BCValue.new_boolean(False)
 
@@ -137,7 +137,7 @@ class Interpreter:
                 if lhs.is_null() and rhs.is_null():
                     return BCValue.new_boolean(True)
 
-                res = not (lhs == rhs) # python is RIDICULOUS
+                res = not (lhs == rhs)  # python is RIDICULOUS
                 return BCValue.new_boolean(res)
             case "greater_than":
                 lhs = self.visit_expr(expr.lhs)
@@ -458,7 +458,7 @@ class Interpreter:
                     elif lhs.kind == "char":
                         lhs_str_or_char = lhs.get_char()
                     else:
-                        lhs_str_or_char = str(lhs) 
+                        lhs_str_or_char = str(lhs)
 
                     if rhs.kind == "string":
                         rhs_str_or_char = rhs.get_string()
@@ -805,13 +805,22 @@ class Interpreter:
                     [txt, begin, length, *_] = evargs
 
                     if txt.kind != "string":
-                        self.error(f"expected first argument to SUBSTRING to be a STRING", stmt.pos)
+                        self.error(
+                            f"expected first argument to SUBSTRING to be a STRING",
+                            stmt.pos,
+                        )
 
                     if begin.kind != "integer":
-                        self.error(f"expected second argument to SUBSTRING to be an INTEGER", stmt.pos)
+                        self.error(
+                            f"expected second argument to SUBSTRING to be an INTEGER",
+                            stmt.pos,
+                        )
 
                     if length.kind != "integer":
-                        self.error(f"expected third argument to SUBSTRING to be an INTEGER", stmt.pos)
+                        self.error(
+                            f"expected third argument to SUBSTRING to be an INTEGER",
+                            stmt.pos,
+                        )
 
                     return self.visit_substring(
                         txt.get_string(), begin.get_integer(), length.get_integer()
@@ -907,23 +916,29 @@ class Interpreter:
         match name:
             case "putchar":
                 [ch, *_] = evargs
-                
+
                 if ch.kind != "char":
-                    self.error("expected first argument to PUTCHAR to be a CHAR", stmt.pos)
+                    self.error(
+                        "expected first argument to PUTCHAR to be a CHAR", stmt.pos
+                    )
 
                 self.visit_putchar(ch.get_char())
             case "exit":
                 [code, *_] = evargs
 
                 if code.kind != "integer":
-                    self.error("expected first argument to EXIT to be an INTEGER", stmt.pos)
+                    self.error(
+                        "expected first argument to EXIT to be an INTEGER", stmt.pos
+                    )
 
                 self.visit_exit(code.get_integer())
             case "sleep":
                 [duration, *_] = evargs
-                
+
                 if duration.kind != "real":
-                    self.error("expected first argument to SLEEP to be a REAL", stmt.pos)
+                    self.error(
+                        "expected first argument to SLEEP to be a REAL", stmt.pos
+                    )
 
                 self.visit_sleep(duration.get_real())
             case "flush":
@@ -968,7 +983,11 @@ class Interpreter:
         return BCValue("string", string=s)
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
-        if stmt.ident not in self.functions and stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
+        if (
+            stmt.ident not in self.functions
+            and stmt.ident.lower() in LIBROUTINES
+            and is_case_consistent(stmt.ident)
+        ):
             return self.visit_libroutine(stmt)
 
         if stmt.ident.lower() in ["typeof", "type"] and is_case_consistent(stmt.ident):
@@ -977,8 +996,13 @@ class Interpreter:
         try:
             func = self.functions[stmt.ident]
         except KeyError:
-            if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(stmt.ident):
-                self.error(f"{stmt.ident} is a library routine procedure, please use CALL instead!", stmt.pos)
+            if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
+                stmt.ident
+            ):
+                self.error(
+                    f"{stmt.ident} is a library routine procedure, please use CALL instead!",
+                    stmt.pos,
+                )
             else:
                 self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
@@ -1036,7 +1060,8 @@ class Interpreter:
     def visit_call(self, stmt: CallStatement):
         if (
             stmt.ident not in self.functions
-            and stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(stmt.ident)
+            and stmt.ident.lower() in LIBROUTINES_NORETURN
+            and is_case_consistent(stmt.ident)
         ):
             return self.visit_libroutine_noreturn(stmt)
 
@@ -1044,7 +1069,10 @@ class Interpreter:
             proc = self.functions[stmt.ident]
         except KeyError:
             if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
-                self.error(f"{stmt.ident} is a library routine function, please remove the CALL!", stmt.pos)
+                self.error(
+                    f"{stmt.ident} is a library routine function, please remove the CALL!",
+                    stmt.pos,
+                )
             else:
                 self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
@@ -1742,7 +1770,7 @@ class Interpreter:
                 self.error(
                     f"tried to index a variable of type {self.variables[key].val.kind} like an array",
                     s.ident.pos,
-            )
+                )
 
             tup = self._get_array_index(s.ident)
             if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore
@@ -1783,7 +1811,7 @@ class Interpreter:
             if self.variables[key].const:
                 self.error(f"attemped to write to constant {key}", s.ident.pos)
 
-            if  var.val.kind != exp.kind:
+            if var.val.kind != exp.kind:
                 self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
             elif isinstance(exp.kind, BCArrayType):
                 if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.val.array.matrix_bounds:  # type: ignore
