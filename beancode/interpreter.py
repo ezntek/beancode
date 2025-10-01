@@ -120,14 +120,25 @@ class Interpreter:
             case "equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+                
+                if lhs.kind != rhs.kind:
+                    return BCValue.new_boolean(False)
+
                 # a BCValue(INTEGER, NULL) is not a BCValue(NULL, NULL)
-                res = lhs == rhs or (lhs.is_null() and rhs.is_null())
-                return BCValue("boolean", boolean=res)
+                if lhs.is_null() and rhs.is_null():
+                    return BCValue.new_boolean(True)
+
+                res = lhs == rhs
+                return BCValue.new_boolean(res)
             case "not_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
-                res = (lhs != rhs) or not (lhs.is_null() and rhs.is_null())
-                return BCValue("boolean", boolean=res)
+
+                if lhs.is_null() and rhs.is_null():
+                    return BCValue.new_boolean(True)
+
+                res = not (lhs == rhs) # python is RIDICULOUS
+                return BCValue.new_boolean(res)
             case "greater_than":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -1772,13 +1783,13 @@ class Interpreter:
             if self.variables[key].const:
                 self.error(f"attemped to write to constant {key}", s.ident.pos)
 
-            if isinstance(exp.kind, BCArrayType):
+            if  var.val.kind != exp.kind:
+                self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
+            elif isinstance(exp.kind, BCArrayType):
                 if exp.array.typ.is_matrix and exp.array.matrix_bounds != var.val.array.matrix_bounds:  # type: ignore
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
-            elif var.val.kind != exp.kind:
-                self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
             self.variables[key].val = copy.deepcopy(exp)
 
     def visit_constant_stmt(self, c: ConstantStatement):
