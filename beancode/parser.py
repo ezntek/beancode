@@ -696,7 +696,7 @@ class Parser:
             ident_exp = self.ident()
             if not isinstance(ident_exp, Identifier) or ident_exp.ident is None:
                 raise BCError(
-                    f"expected identifier after `INPUT` but found {ident_exp}", begin
+                    f"found invalid identifier after INPUT", begin
                 )
             ident = ident_exp
         else:

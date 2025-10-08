@@ -58,21 +58,23 @@ class Interpreter:
     proc: bool
     loop: bool
     toplevel: bool
+    rettype: BCValue | None = None
     retval: BCValue | None = None
     _returned: bool
 
     def __init__(
-        self, block: list[Statement], func=False, proc=False, loop=False
+        self, block: list[Statement], func=False, proc=False, loop=False, rettype=None
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
+        self.rettype=rettype
         self.reset_all()
 
     @classmethod
-    def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter":  # type: ignore
-        return cls(block, func=func, proc=proc, loop=loop)  # type: ignore
+    def new(cls, block: list[Statement], func=False, proc=False, loop=False, rettype=None) -> "Interpreter":  # type: ignore
+        return cls(block, func=func, proc=proc, loop=loop, rettype=rettype)  # type: ignore
 
     def reset(self):
         self.cur_stmt = 0
@@ -1017,7 +1019,7 @@ class Interpreter:
         if isinstance(func, BCFunction):
             return self.visit_ffi_fncall(func, stmt)
 
-        intp = self.new(func.block, func=True)
+        intp = self.new(func.block, func=True, rettype=func.returns)
         intp.calls = self.calls
         intp.calls.append(("function", func.name))
         vars = self.variables
@@ -1284,7 +1286,10 @@ class Interpreter:
 
         bounds = (1, len(vals))
 
-        arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=None)  # type: ignore
+        # scuffed but works!
+        expr_bounds = (Literal(None, kind="integer", integer=1), Literal(None, kind="integer", integer=len(vals)))
+
+        arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=expr_bounds)  # type: ignore
         return BCValue(
             kind=arrtyp, array=BCArray(typ=arrtyp, flat=vals, flat_bounds=bounds)
         )
@@ -1410,6 +1415,7 @@ class Interpreter:
             if data is None:
                 val = self._guess_input_type(inp)
                 data = Variable(val, False, export=False)
+                self.variables[id] = data
             target = data.val  # type: ignore
 
             if data.const:
@@ -1488,6 +1494,15 @@ class Interpreter:
                 self.error("you must return something from a function!", stmt.pos)
 
             res = self.visit_expr(stmt.expr)
+
+            print(f"{res.kind.__dict__=} {self.rettype.__dict__=}")
+
+            if isinstance(res.kind, BCArrayType) and isinstance(self.rettype, BCArrayType):
+                pass # TODO: fix array bug, evaluate bounds properly
+            else:
+                if res.kind != self.rettype:
+                    self.error(f"return type {self.rettype} does not match return value's type {res.kind}!", stmt.pos)
+
             self.retval = res
             self._returned = True
         elif proc:
