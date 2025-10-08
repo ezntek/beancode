@@ -1822,9 +1822,9 @@ class Interpreter:
                     self.error(f"cannot assign {a.flat[first].kind} to {val.kind}", s.pos) # type: ignore
                 
                 a.flat[first] = copy.deepcopy(val)  # type: ignore
-        else:
+        elif isinstance(s.ident, Identifier):
             key = s.ident.ident
-
+            
             exp = self.visit_expr(s.value)
             var = self.variables.get(key)
 

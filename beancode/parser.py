@@ -335,7 +335,7 @@ class Parser:
                 raise BCError(
                     "cannot have array as array element type, please use the matrix syntax instead",
                     arrtyp,
-                )
+            )
 
             if arrtyp.typ not in self.PRIM_TYPES:
                 raise BCError("invalid type used as array element type", arrtyp)
@@ -349,8 +349,11 @@ class Parser:
                 inner=inner,
             )
 
-    def ident(self) -> Expr:
+    def ident(self) -> Expr | None:
         c = self.consume()
+
+        if c.kind != "ident":
+            return None 
 
         return Identifier(c.pos, c.ident)  # type: ignore
 
@@ -660,7 +663,7 @@ class Parser:
         initial = self.expression()
         if initial is None:
             raise BCError(
-                "found OUTPUT but an invalid or no expression that follows", self.peek()
+                "found OUTPUT but an invalid or no expression that follows", begin
             )
 
         exprs.append(initial)
@@ -716,7 +719,7 @@ class Parser:
         expr = self.expression()
         if expr is None:
             raise BCError(
-                "invalid or no expression used as RETURN expression", self.peek()
+                "invalid or no expression used as RETURN expression", begin
             )
 
         return Statement("return", return_s=ReturnStatement(begin.pos, expr))
@@ -732,7 +735,7 @@ class Parser:
         # CALL <ident>(<expr>, <expr>)
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            raise BCError("invalid ident after procedure call", self.peek())
+            raise BCError("invalid ident after procedure call", begin)
 
         leftb = self.peek()
         args = []
@@ -759,7 +762,7 @@ class Parser:
             rightb = self.consume()
             if rightb.separator != "right_paren":
                 raise BCError(
-                    "expected right paren after arg list in procedure call", self.peek()
+                    "expected right paren after arg list in procedure call", leftb
                 )
 
         self.check_newline("procedure call")
@@ -879,12 +882,12 @@ class Parser:
         arrow = self.consume()
         if arrow.kind != "operator" and arrow.operator != "assign":
             raise BCError(
-                "expected `<-` after variable name in constant declaration", self.peek()
+                "expected `<-` after variable name in constant declaration", begin
             )
 
         expr = self.expression()
         if expr is None:
-            raise BCError("invalid expression for constant declaration", arrow)
+            raise BCError("invalid or no expression for constant declaration", self.peek())
 
         self.check_newline("constant declaration (CONSTANT)")
 
@@ -919,12 +922,15 @@ class Parser:
         ident = self.array_index()
         if ident is None:
             ident = self.ident()
+            
+            if ident is None:
+                raise BCError("invalid left hand side of assignment", p)
 
         self.consume()  # go past the arrow
 
         expr: Expr | None = self.expression()
         if expr is None:
-            raise BCError("expected expression after `<-` in assignment", self.peek())
+            raise BCError("expected expression after `<-` in assignment", p)
 
         self.check_newline("assignment")
 
@@ -986,9 +992,6 @@ class Parser:
 
     def caseof_stmt(self) -> Statement | None:
         case = self.peek()
-
-        # if case.kind == "keyword" and case.keyword == "case":
-        #    raise BCError("case of not implemented", self.peek())
 
         if case.keyword != "case":
             return
@@ -1092,8 +1095,8 @@ class Parser:
         self.consume()
 
         counter: Identifier | None = self.ident()  # type: ignore
-        if counter.ident is None or not isinstance(counter, Identifier):  # type: ignore
-            raise BCError("expected ident before `<-` in a for loop", self.peek())
+        if counter is None:
+            raise BCError("invalid identifier as counter in for loop", initial)
 
         assign = self.peek()
         if assign.operator != "assign":
@@ -1131,9 +1134,10 @@ class Parser:
         self.consume()  # byebye NEXT
 
         next_counter: Identifier | None = self.ident()  # type: ignore
-        if next_counter is None or not isinstance(counter, Identifier):
-            raise BCError("expected identifier after NEXT in a for loop", self.peek())
-        elif counter.ident != next_counter.ident:
+        if next_counter is None:
+            raise BCError("invalid identifier after NEXT in a for loop", self.peek())
+
+        if counter.ident != next_counter.ident:
             raise BCError(
                 f"initialized counter as {counter.ident} but used {next_counter.ident} after loop",
                 self.prev(),
@@ -1174,7 +1178,7 @@ class Parser:
         # ident : type
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            raise BCError("invalid identifier for function arg", self.peek())
+            raise BCError("invalid identifier for function arg", ident)
 
         colon = self.consume()
         if colon.kind != "separator" and colon.separator != "colon":
@@ -1184,7 +1188,7 @@ class Parser:
 
         typ = self.typ()
         if typ is None:
-            raise BCError("invalid type after colon in function argument", self.peek())
+            raise BCError("invalid type after colon in function argument", colon)
 
         return FunctionArgument(
             pos=ident.pos if ident.pos is not None else (0, 0, 0),
@@ -1277,7 +1281,7 @@ class Parser:
 
         ident = self.ident()
         if not isinstance(ident, Identifier):
-            raise BCError("invalid identifier after FUNCTION declaration", self.peek())
+            raise BCError("invalid identifier after FUNCTION declaration", begin)
 
         args = []
         leftb = self.peek()
