@@ -354,9 +354,6 @@ class Lexer:
                     self.get_pos(back=1),
                 )
 
-            if res == "sub" and self.file[self.cur + 1].isdigit():
-                return None
-
             self.cur += 1
             return Token("operator", self.get_pos(), operator=res)  # type: ignore
 
@@ -390,20 +387,6 @@ class Lexer:
         begin_ch = curr_ch
 
         if not string_or_char_literal:
-            if curr_ch == "-":
-                self.cur += 1  # skip past
-                end += 1
-                curr_ch = self.file[self.cur]
-
-                if (
-                    len(self.res) != 0
-                    and self.res[len(self.res) - 1].kind in ["ident", "literal"]
-                    or self.res[len(self.res) - 1].separator
-                    in ["right_bracket", "right_paren", "right_curly"]
-                ):
-                    res = self.file[begin:end]
-                    return res
-
             while (
                 not curr_ch.isspace()
                 and not self.is_separator(curr_ch)
@@ -508,28 +491,12 @@ class Lexer:
 
         word = self.next_word()
 
-        if len(self.res) != 0:
-            should_be_sub = lambda *_: self.res[len(self.res) - 1].kind in [
-                "ident",
-                "literal",
-            ] or self.res[len(self.res) - 1].separator in [
-                "right_bracket",
-                "right_paren",
-                "right_curly",
-            ]
-
-            if len(word) == 1 and should_be_sub() and word[0] == "-":
-                return Token("operator", self.get_pos(), operator="sub")
-
         if self.is_numeral(word):
             return Token(
                 "literal",
                 (self.row, self.cur - self.bol - len(word) + 1, self.bol),
                 literal=Literal("number", word),
             )
-        elif word[0] == "-" and not word[1].isdigit():  # scuffed
-            self.cur += 1
-            return Token("operator", self.get_pos(), operator="sub")
 
         if t := self.next_keyword(word):
             return t

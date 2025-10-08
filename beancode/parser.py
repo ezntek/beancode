@@ -189,7 +189,7 @@ class Parser:
                             ch = "\\"
                         case _:
                             raise BCError(
-                                f"invalid escape sequence in literal `{lit.value}`", tok
+                                f"invalid escape sequence in literal `{lit.value}`", tok.pos
                             )
                     return Literal(tok.pos, "char", char=ch)
                 else:

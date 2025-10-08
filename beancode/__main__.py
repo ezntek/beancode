@@ -44,6 +44,10 @@ def real_main():
     group.add_argument("file", nargs="?", type=str)
     args = parser.parse_args()
 
+    if args.file is None:
+        Repl(args.debug).repl()
+        return
+
     if args.no_run:
         args.debug = True
 
@@ -109,8 +113,6 @@ def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     try:
-        if len(sys.argv) == 1:
-            sys.exit(Repl().repl())
         real_main()
     except KeyboardInterrupt:
         warn("caught keyboard interrupt")

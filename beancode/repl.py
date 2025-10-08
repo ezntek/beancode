@@ -67,14 +67,16 @@ class Repl:
     buf: StringIO
     proc_src: dict[str, str]
     func_src: dict[str, str]
+    debug: bool
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self.lx = lexer.Lexer(str())
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
         self.buf = StringIO()
         self.proc_src = dict()
         self.func_src = dict()
+        self.debug = debug
 
     def print_var(self, var: intp.Variable):
         val = var.val
@@ -449,6 +451,10 @@ class Repl:
                     "output",
                     output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]),
                 )
+
+            if self.debug:
+                for stmt in program.stmts:
+                    print("\033[2m=== AST ===\n" + str(stmt) + "\n===========\033[0m", file=sys.stderr)
 
             self.i.block = program.stmts
             self.i.toplevel = True
