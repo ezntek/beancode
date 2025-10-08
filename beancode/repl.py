@@ -389,6 +389,11 @@ class Repl:
 
             program: ast.Program
             self.p.tokens = toks
+       
+            if self.debug:
+                for tok in toks:
+                    tok.print(file=sys.stderr)
+
             try:
                 program = self.p.program()
             except BCError as err:

@@ -257,7 +257,7 @@ class Parser:
                     )
 
                 colon = self.consume()
-                if colon.kind != "separator" and colon.separator != "colon":
+                if colon.separator != "colon":
                     raise BCError(
                         "expected colon after beginning value of array declaration",
                         colon,
@@ -275,10 +275,7 @@ class Parser:
                 right_bracket = self.consume()
                 if right_bracket.separator == "right_bracket":
                     pass
-                elif (
-                    right_bracket.kind == "separator"
-                    and right_bracket.separator == "comma"
-                ):
+                elif right_bracket.separator == "comma":
                     inner_begin = self.expression()
                     if inner_begin is None:
                         raise BCError(
@@ -287,10 +284,7 @@ class Parser:
                         )
 
                     inner_colon = self.consume()
-                    if (
-                        inner_colon.kind != "separator"
-                        and inner_colon.separator != "colon"
-                    ):
+                    if inner_colon.separator != "colon":
                         raise BCError(
                             "expected colon after beginning value of array declaration",
                             inner_colon,
@@ -477,10 +471,10 @@ class Parser:
             if pn is None:
                 return None
 
-            if pn.kind == "separator" and pn.separator == "left_bracket":
+            if pn.separator == "left_bracket":
                 return self.array_index()
 
-            if pn.kind == "separator" and pn.separator == "left_paren":
+            if pn.separator == "left_paren":
                 return self.function_call()
 
             return self.ident()
@@ -489,9 +483,9 @@ class Parser:
             if pn is None:
                 return None
 
-            if pn.kind == "separator" and pn.separator == "left_paren":
+            if pn.separator == "left_paren":
                 return self.typecast()
-        elif p.kind == "separator" and p.separator == "left_paren":
+        elif p.separator == "left_paren":
             begin = self.consume()
             e = self.expression()
             if e is None:
@@ -503,13 +497,13 @@ class Parser:
                 raise BCError("expected ending ) delimiter after (", begin)
 
             return Grouping(begin.pos, inner=e)
-        elif p.kind == "operator" and p.operator == "sub":
+        elif p.operator == "sub":
             begin = self.consume()
             e = self.unary()
             if e is None:
                 raise BCError("invalid or no expression for negation", begin)
             return Negation(begin.pos, e)
-        elif p.kind == "keyword" and p.keyword == "not":
+        elif p.keyword == "not":
             begin = self.consume()
             e = self.expression()
             if e is None:

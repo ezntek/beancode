@@ -169,11 +169,11 @@ class Token:
         else:
             raise Exception()  # TODO: fix
 
-    def print(self):
+    def print(self, file=sys.stdout):
         s, kind = self.get()
         s = s if s != "\n" else ""
         pos = f"({self.pos[0]}, {self.pos[1]}, {self.pos[2]})"
-        print(f"token({kind}){pos}: {s}")
+        print(f"token({kind}){pos}: {s}", file=file)
 
     def __repr__(self) -> str:
         s, _ = self.get()
@@ -468,6 +468,23 @@ class Lexer:
     def next_boolean(self, word: str) -> str | None:
         return word if word.lower() in ["true", "false"] else None
 
+    def next_ident(self, word: str) -> Token | None:
+        pos = (self.row, self.cur - self.bol - len(word) + 1, self.bol)
+
+        if not word[0].isalpha():
+            raise BCError("invalid identifier", pos)
+
+        for ch in word[1:]:
+            if not ch.isalnum() and ch != '_':
+                raise BCError("invalid identifier", pos)
+
+        return Token(
+            "ident",
+            pos,
+            ident=word,
+        )
+
+
     def next_token(self) -> Token | None:
         self.trim_left()
 
@@ -509,11 +526,10 @@ class Lexer:
         if (b := self.next_boolean(word)) is not None:
             return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("boolean", b))  # type: ignore
 
-        return Token(
-            "ident",
-            (self.row, self.cur - self.bol - len(word) + 1, self.bol),
-            ident=word,
-        )
+        if t := self.next_ident(word):
+            return t
+
+        return None
 
     def reset(self):
         self.cur = 0
