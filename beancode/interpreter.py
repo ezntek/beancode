@@ -674,13 +674,13 @@ class Interpreter:
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
                     self.error(
-                        f"cannot access out of bounds array element `{tup[0]}`",
+                        f"cannot access out of bounds array element \"{tup[0]}\"",
                         ind.idx_outer.pos,
                     )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     self.error(
-                        f"cannot access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
+                        f"cannot access out of bounds array element \"{tup[1]}\"", ind.idx_inner.pos  # type: ignore
                     )
 
                 res = a.matrix[tup[0] - a.matrix_bounds[0]][inner - a.matrix_bounds[2]]  # type: ignore
@@ -1147,7 +1147,7 @@ class Interpreter:
                 try:
                     i = int(s.strip())
                 except ValueError:
-                    self.error(f"impossible to convert `{s}` to an INTEGER!", pos)
+                    self.error(f"impossible to convert \"{s}\" to an INTEGER!", pos)
             case "integer":
                 return inner
             case "real":
@@ -1168,7 +1168,7 @@ class Interpreter:
                 try:
                     r = float(s.strip())
                 except ValueError:
-                    self.error(f"impossible to convert `{s}` to a REAL!", pos)
+                    self.error(f"impossible to convert \"{s}\" to a REAL!", pos)
             case "integer":
                 r = float(inner.get_integer())
             case "real":
@@ -1319,7 +1319,7 @@ class Interpreter:
                 var = self.variables[expr.ident]
             except KeyError:
                 self.error(
-                    f"cannot access nonexistent variable `{expr.ident}`", expr.pos
+                    f"cannot access nonexistent variable \"{expr.ident}\"", expr.pos
                 )
             return var.val
         elif isinstance(expr, Literal):
@@ -1414,14 +1414,14 @@ class Interpreter:
 
             if data.const:
                 self.error(
-                    f"cannot call `INPUT` into constant {id}", stmt.ident.pos
+                    f"cannot call \"INPUT\" into constant {id}", stmt.ident.pos
                 )
 
             if type(data.val.kind) == BCArrayType:
-                self.error(f"cannot call `INPUT` on an array", stmt.ident.pos)
+                self.error(f"cannot call \"INPUT\" on an array", stmt.ident.pos)
 
         if inp.strip() == "":
-            self.error(f"empty string supplied into variable with type `{data.val.kind.upper()}`", stmt.pos)  # type: ignore
+            self.error(f"empty string supplied into variable with type \"{data.val.kind.upper()}\"", stmt.pos)  # type: ignore
 
         match target.kind:
             case "string":
@@ -1430,7 +1430,7 @@ class Interpreter:
             case "char":
                 if len(inp) > 1:
                     self.error(
-                        f"expected single character but got `{inp}` for CHAR", stmt.pos
+                        f"expected single character but got \"{inp}\" for CHAR", stmt.pos
                     )
 
                 target.kind = "char"
@@ -1438,7 +1438,7 @@ class Interpreter:
             case "boolean":
                 if inp.lower() not in ["true", "false", "yes", "no"]:
                     self.error(
-                        f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got `{inp}`",
+                        f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got \"{inp}\"",
                         stmt.pos,
                     )
 
@@ -1761,11 +1761,17 @@ class Interpreter:
         if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
             self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
 
+        if stmt.name in self.variables:
+            self.error(f"cannot redefine variable \"{stmt.name}\" as a procedure", stmt.pos)
+
         self.functions[stmt.name] = stmt
 
     def visit_function(self, stmt: FunctionStatement):
         if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
             self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
+
+        if stmt.name in self.variables:
+            self.error(f"cannot redefine variable \"{stmt.name}\" as a function", stmt.pos)
 
         self.functions[stmt.name] = stmt
 
