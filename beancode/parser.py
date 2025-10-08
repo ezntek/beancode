@@ -160,6 +160,9 @@ class Parser:
 
         match lit.kind:
             case "char":
+                if len(lit.value) == 0:
+                    raise BCError("CHAR literal cannot have no characters in it!", tok.pos)
+
                 val = lit.value
                 if val[0] == "\\":
                     if len(val) == 1:
@@ -180,6 +183,8 @@ class Parser:
                             ch = "\f"
                         case "v":
                             ch = "\v"
+                        case "0":
+                            ch = "\0"
                         case "\\":
                             ch = "\\"
                         case _:
