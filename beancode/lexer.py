@@ -51,9 +51,9 @@ Keyword = t.Literal[
 ]
 
 # lexer types
-LType = t.Literal["number", "boolean", "string", "char", "array"]
+LType = t.Literal["number", "boolean", "string", "char", "array", "null"]
 
-Type = t.Literal["integer", "real", "boolean", "string", "char", "array"]
+Type = t.Literal["integer", "real", "boolean", "string", "char", "array", "null"]
 
 Operator = t.Literal[
     "assign",
@@ -484,7 +484,6 @@ class Lexer:
             ident=word,
         )
 
-
     def next_token(self) -> Token | None:
         self.trim_left()
 
@@ -522,9 +521,13 @@ class Lexer:
         if t := self.next_string_or_char_literal(word):
             return t
 
+        wpos = (self.row, self.cur - self.bol - len(word) + 1, self.bol)
         b: str | None
         if (b := self.next_boolean(word)) is not None:
-            return Token("literal", (self.row, self.cur - self.bol - len(word) + 1, self.bol), literal=Literal("boolean", b))  # type: ignore
+            return Token("literal", wpos, literal=Literal("boolean", b))  # type: ignore
+
+        if word.lower() == "null" and is_case_consistent(word):
+            return Token("literal", wpos, literal=Literal("null", ""))
 
         if t := self.next_ident(word):
             return t

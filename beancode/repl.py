@@ -182,13 +182,10 @@ class Repl:
     def _vars(self, args: list[str]) -> DotCommandResult:
         _ = args
 
-        if len(self.i.variables) <= 2:  # null, NULL
+        if len(self.i.variables) == 0:  # null, NULL
             info("no variables")
 
         for name, var in self.i.variables.items():
-            if name.lower() == "null":
-                continue
-
             print(f"{name}: ", end="")
             self.print_var(var)
 
@@ -217,7 +214,7 @@ class Repl:
     def _funcs(self, args: list[str]) -> DotCommandResult:
         _ = args
 
-        if len(self.i.functions) == 0:  # null, NULL
+        if len(self.i.functions) == 0: 
             info("no functions or procedures")
 
         for func in self.i.functions.values():
@@ -236,10 +233,6 @@ class Repl:
             return DotCommandResult.NO_OP
 
         for arg in args[1:]:
-            if arg.lower() == "null":
-                error(f"cannot delete {arg}!")
-                continue
-
             if arg in self.i.variables:
                 self.i.variables.__delitem__(arg)
                 info(f'deleted variable "{arg}"')

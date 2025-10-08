@@ -159,6 +159,8 @@ class Parser:
         lit = tok.literal  # type: ignore
 
         match lit.kind:
+            case "null":
+                return Literal(tok.pos, "null")
             case "char":
                 if len(lit.value) == 0:
                     raise BCError("CHAR literal cannot have no characters in it!", tok.pos)

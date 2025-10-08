@@ -85,8 +85,6 @@ class Interpreter:
         self.functions = dict()
         self._returned = False
         self.cur_stmt = 0
-        self.variables["null"] = Variable(BCValue("null"), True)
-        self.variables["NULL"] = Variable(BCValue("null"), True)
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
