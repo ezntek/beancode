@@ -332,7 +332,7 @@ class InputStatement:
 class ConstantStatement:
     pos: tuple[int, int, int]
     ident: Identifier
-    value: Literal
+    value: Expr 
     export: bool = False
 
 

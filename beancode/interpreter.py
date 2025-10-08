@@ -693,7 +693,7 @@ class Interpreter:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
                         self.error(
-                            "attemped to access the 0th array element, which is disallowed in pseudocode",
+                            "attempted to access the 0th array element, which is disallowed in pseudocode",
                             ind.idx_outer.pos,
                         )
                     else:
@@ -1298,7 +1298,7 @@ class Interpreter:
             inner = self.visit_expr(expr.inner)
             if inner.kind not in ["integer", "real"]:
                 self.error(
-                    f"attemped to negate a value of type {inner.kind}", expr.inner.pos
+                    f"attempted to negate a value of type {inner.kind}", expr.inner.pos
                 )
 
             if inner.kind == "integer":
@@ -1827,7 +1827,7 @@ class Interpreter:
                 self.variables[key] = var
 
             if self.variables[key].const:
-                self.error(f"attemped to write to constant {key}", s.ident.pos)
+                self.error(f"attempted to assign constant {key}", s.ident.pos)
 
             if var.val.kind != exp.kind:
                 self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
@@ -1844,7 +1844,8 @@ class Interpreter:
         if key in self.variables:
             self.error(f"variable {key} declared!", c.pos)
 
-        self.variables[key] = Variable(c.value.to_bcvalue(), True, export=c.export)
+        val = self.visit_expr(c.value)
+        self.variables[key] = Variable(val, True, export=c.export)
 
     def _declare_array(self, d: DeclareStatement, key: str):
         atype: BCArrayType = d.typ  # type: ignore

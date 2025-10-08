@@ -882,16 +882,14 @@ class Parser:
                 "expected `<-` after variable name in constant declaration", self.peek()
             )
 
-        literal: Literal | None = self.literal()  # type: ignore
-        if literal is None:
-            raise BCError(
-                "expected literal after `<-` in constant declaration", self.peek()
-            )
+        expr = self.expression()
+        if expr is None:
+            raise BCError("invalid expression for constant declaration", arrow)
 
         self.check_newline("constant declaration (CONSTANT)")
 
         res = ConstantStatement(
-            begin.pos, Identifier(ident.pos, ident.ident), literal, export=export
+            begin.pos, Identifier(ident.pos, ident.ident), expr, export=export
         )
         return Statement("constant", constant=res)
 
