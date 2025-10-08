@@ -653,7 +653,10 @@ class Interpreter:
         if index is None:
             self.error("found (null) for array index", ind.idx_outer.pos)
 
-        v = self.variables[ind.ident.ident].val
+        temp = self.variables.get(ind.ident.ident)
+        if temp is None:
+            self.error(f"array \"{ind.ident.ident}\" not found for indexing", ind.pos)
+        v = temp.val
 
         if isinstance(v.kind, BCArrayType):
             if v.array is None:
@@ -984,8 +987,7 @@ class Interpreter:
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if (
-            stmt.ident not in self.functions
-            and stmt.ident.lower() in LIBROUTINES
+            stmt.ident.lower() in LIBROUTINES
             and is_case_consistent(stmt.ident)
         ):
             return self.visit_libroutine(stmt)
@@ -1059,8 +1061,7 @@ class Interpreter:
 
     def visit_call(self, stmt: CallStatement):
         if (
-            stmt.ident not in self.functions
-            and stmt.ident.lower() in LIBROUTINES_NORETURN
+            stmt.ident.lower() in LIBROUTINES_NORETURN
             and is_case_consistent(stmt.ident)
         ):
             return self.visit_libroutine_noreturn(stmt)
@@ -1757,9 +1758,15 @@ class Interpreter:
                 self.functions[name] = fn
 
     def visit_procedure(self, stmt: ProcedureStatement):
+        if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
+            self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
+
         self.functions[stmt.name] = stmt
 
     def visit_function(self, stmt: FunctionStatement):
+        if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
+            self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
+
         self.functions[stmt.name] = stmt
 
     def visit_assign_stmt(self, s: AssignStatement):
@@ -1789,7 +1796,13 @@ class Interpreter:
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     self.error(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
 
-                a.matrix[tup[0] - a.matrix_bounds[0]][tup[1] - a.matrix_bounds[2]] = copy.deepcopy(val)  # type: ignore
+                first = tup[0] - a.matrix_bounds[0] # type: ignore
+                second = tup[1] - a.matrix_bounds[2] # type: ignore
+
+                if a.matrix[first][second].kind.inner != val.kind: # type: ignore
+                    self.error(f"cannot assign {a.matrix[first][second].kind} to {val.kind}", s.pos) # type: ignore
+
+                a.matrix[first][second] = copy.deepcopy(val)  # type: ignore
             else:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     self.error(
@@ -1797,7 +1810,12 @@ class Interpreter:
                         s.ident.idx_outer.pos,
                     )
 
-                a.flat[tup[0] - a.flat_bounds[0]] = copy.deepcopy(val)  # type: ignore
+                first = tup[0] - a.flat_bounds[0] # type: ignore
+                
+                if a.flat[first].kind.inner != val.kind: # type: ignore
+                    self.error(f"cannot assign {a.flat[first].kind} to {val.kind}", s.pos) # type: ignore
+                
+                a.flat[first] = copy.deepcopy(val)  # type: ignore
         else:
             key = s.ident.ident
 

@@ -370,7 +370,7 @@ class Parser:
 
         exp = self.expression()
         if exp is None:
-            raise BCError("expected expression as array index", exp)
+            raise BCError("expected expression as array index", leftb)
 
         rightb = self.consume()
         exp_inner = None
