@@ -645,7 +645,7 @@ class Interpreter:
                     ind.ident.pos,
                 )
             else:
-                self.error(f"attempted to index {v.kind}", ind.ident.pos)
+                self.error(f"cannot index {v.kind}", ind.ident.pos)
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
         index = self.visit_expr(ind.idx_outer).integer
@@ -674,13 +674,13 @@ class Interpreter:
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
                     self.error(
-                        f"attempted to access out of bounds array element `{tup[0]}`",
+                        f"cannot access out of bounds array element `{tup[0]}`",
                         ind.idx_outer.pos,
                     )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     self.error(
-                        f"attempted to access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
+                        f"cannot access out of bounds array element `{tup[1]}`", ind.idx_inner.pos  # type: ignore
                     )
 
                 res = a.matrix[tup[0] - a.matrix_bounds[0]][inner - a.matrix_bounds[2]]  # type: ignore
@@ -693,12 +693,12 @@ class Interpreter:
                 if tup[0] not in range(a.flat_bounds[0], a.flat_bounds[1] + 1):  # type: ignore
                     if tup[0] == 0:
                         self.error(
-                            "attempted to access the 0th array element, which is disallowed in pseudocode",
+                            "cannot access the 0th array element, which is disallowed in pseudocode",
                             ind.idx_outer.pos,
                         )
                     else:
                         self.error(
-                            f"attempted to access out of bounds array element {tup[0]}",
+                            f"cannot access out of bounds array element {tup[0]}",
                             ind.idx_outer.pos,
                         )
 
@@ -714,7 +714,7 @@ class Interpreter:
                     ind.ident.pos,
                 )
             else:
-                self.error(f"attempted to index {v.kind}", ind.ident.pos)
+                self.error(f"cannot index {v.kind}", ind.ident.pos)
 
     def visit_ucase(self, txt: str) -> BCValue:
         return BCValue("string", string=txt.upper())
@@ -1298,7 +1298,7 @@ class Interpreter:
             inner = self.visit_expr(expr.inner)
             if inner.kind not in ["integer", "real"]:
                 self.error(
-                    f"attempted to negate a value of type {inner.kind}", expr.inner.pos
+                    f"cannot negate a value of type {inner.kind}", expr.inner.pos
                 )
 
             if inner.kind == "integer":
@@ -1309,7 +1309,7 @@ class Interpreter:
             inner = self.visit_expr(expr.inner)
             if inner.kind != "boolean":
                 self.error(
-                    f"attempted to perform logical NOT on value of type {inner.kind}",
+                    f"cannot perform logical NOT on value of type {inner.kind}",
                     expr.inner.pos,
                 )
 
@@ -1319,7 +1319,7 @@ class Interpreter:
                 var = self.variables[expr.ident]
             except KeyError:
                 self.error(
-                    f"attempted to access nonexistent variable `{expr.ident}`", expr.pos
+                    f"cannot access nonexistent variable `{expr.ident}`", expr.pos
                 )
             return var.val
         elif isinstance(expr, Literal):
@@ -1414,11 +1414,11 @@ class Interpreter:
 
             if data.const:
                 self.error(
-                    f"attempted to call `INPUT` into constant {id}", stmt.ident.pos
+                    f"cannot call `INPUT` into constant {id}", stmt.ident.pos
                 )
 
             if type(data.val.kind) == BCArrayType:
-                self.error(f"attempted to call `INPUT` on an array", stmt.ident.pos)
+                self.error(f"cannot call `INPUT` on an array", stmt.ident.pos)
 
         if inp.strip() == "":
             self.error(f"empty string supplied into variable with type `{data.val.kind.upper()}`", stmt.pos)  # type: ignore
@@ -1823,11 +1823,15 @@ class Interpreter:
             var = self.variables.get(key)
 
             if var is None:
+                is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+                if key in self.functions or is_libroutine:
+                    self.error(f"cannot shadow existing function or procedure named \"{key}\"", s.pos)
+
                 var = Variable(exp, False, export=False)
                 self.variables[key] = var
 
             if self.variables[key].const:
-                self.error(f"attempted to assign constant {key}", s.ident.pos)
+                self.error(f"cannot assign constant {key}", s.ident.pos)
 
             if var.val.kind != exp.kind:
                 self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
@@ -1843,6 +1847,10 @@ class Interpreter:
 
         if key in self.variables:
             self.error(f"variable {key} declared!", c.pos)
+
+        is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+        if key in self.functions or is_libroutine:
+            self.error(f"cannot shadow existing function or procedure named \"{key}\"", c.pos)
 
         val = self.visit_expr(c.value)
         self.variables[key] = Variable(val, True, export=c.export)
@@ -1910,6 +1918,10 @@ class Interpreter:
             if key in self.variables:
                 self.error(f"variable {key} declared!", d.pos)
 
+            is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+            if key in self.functions or is_libroutine:
+                self.error(f"cannot shadow existing function or procedure named \"{key}\"", d.pos)
+                
             if isinstance(d.typ, BCArrayType):
                 self._declare_array(d, key)
             else:
