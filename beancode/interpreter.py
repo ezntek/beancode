@@ -145,6 +145,9 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in ordered comparison!", expr.pos)
+
                 lhs_num: int | float | None
                 rhs_num: int | float | None | None
 
@@ -188,6 +191,9 @@ class Interpreter:
             case "less_than":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in ordered comparison!", expr.pos)
 
                 lhs_num: int | float | None
                 rhs_num: int | float | None | None
@@ -233,6 +239,9 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in ordered comparison!", expr.pos)
+                
                 lhs_num: int | float | None
                 rhs_num: int | float | None | None
 
@@ -276,6 +285,9 @@ class Interpreter:
             case "less_than_or_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+                
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in ordered comparison!", expr.pos)
 
                 lhs_num: int | float | None
                 rhs_num: int | float | None | None
@@ -318,6 +330,9 @@ class Interpreter:
             case "mul":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+ 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -362,6 +377,9 @@ class Interpreter:
             case "pow":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+ 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -407,6 +425,9 @@ class Interpreter:
             case "div":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+ 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -449,6 +470,9 @@ class Interpreter:
             case "add":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+ 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
                 if lhs.kind in ["char", "string"] or rhs.kind in ["char", "string"]:
                     # concatenate instead
@@ -517,6 +541,9 @@ class Interpreter:
             case "sub":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
+ 
+                if "null" in [lhs.kind, rhs.kind]:
+                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error("Cannot subtract bools, chars, and strings!")
@@ -1223,7 +1250,7 @@ class Interpreter:
         inner = self.visit_expr(tc.expr)
 
         if inner.kind == "null":
-            self.error("cannot cast anything to NULL!", tc.pos)
+            self.error("cannot cast NULL to anything!", tc.pos)
 
         if isinstance(inner.kind, BCArrayType) and tc.typ != "string":
             self.error(f"cannot cast an array to a {tc.typ}", tc.pos)
@@ -1592,6 +1619,9 @@ class Interpreter:
     def visit_if_stmt(self, stmt: IfStatement):
         cond: BCValue = self.visit_expr(stmt.cond)
 
+        if cond.kind != "boolean":
+            self.error("condition of while loop must be a boolean!", stmt.cond.pos)
+
         if cond.boolean:
             intp: Interpreter = self.new(stmt.if_block)
         else:
@@ -1635,7 +1665,13 @@ class Interpreter:
         intp.variables = dict(self.variables)  # scope
         intp.functions = dict(self.functions)
 
-        while self.visit_expr(cond).boolean:
+        while True:
+            evcond = self.visit_expr(cond)
+            if evcond.kind != "boolean":
+                self.error("condition of while loop must be a boolean!", stmt.cond.pos)
+            if not evcond:
+                break
+
             intp.visit_block(block)
             # FIXME: barbaric aah
             intp.variables = self.variables.copy()
@@ -1755,7 +1791,10 @@ class Interpreter:
                 self.retval = intp.retval
                 return
 
-            if self.visit_expr(cond).boolean:
+            evcond = self.visit_expr(cond)
+            if evcond.kind != "boolean":
+                self.error("condition of repeat-until loop must be a boolean!", stmt.cond.pos)
+            if not evcond:
                 break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
