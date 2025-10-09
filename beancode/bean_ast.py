@@ -35,8 +35,10 @@ class BCArrayType:
         return self.matrix_bounds
 
     def __repr__(self) -> str:
-        return "ARRAY OF " + self.inner.upper()
-
+        if self.is_matrix:
+            return "ARRAY[2D] OF " + self.inner.upper()
+        else:
+            return "ARRAY OF " + self.inner.upper()
 
 @dataclass
 class BCArray:

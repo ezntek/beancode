@@ -120,6 +120,8 @@ def main():
     except EOFError:
         warn("caught EOF")
         exit(1)
+    except RecursionError:
+        warn("Python recursion depth exceeded! did you forget your base case?")
 
 
 if __name__ == "__main__":

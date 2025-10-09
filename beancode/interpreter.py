@@ -450,6 +450,9 @@ class Interpreter:
                 elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
+                if rhs_num == 0:
+                    self.error("cannot divide by zero!", expr.rhs.pos)
+
                 if lhs_num == None:
                     self.error(
                         "left hand side in numerical operation is null!", expr.lhs.pos
@@ -1698,7 +1701,10 @@ class Interpreter:
             self.error("non-integer expression used for for loop end", stmt.end.pos)
 
         if stmt.step is None:
-            step = 1
+            if begin.get_integer() > end.get_integer():
+                step = -1
+            else:
+                step = 1
         else:
             step = self.visit_expr(stmt.step).get_integer()
 
@@ -1858,7 +1864,7 @@ class Interpreter:
                 second = tup[1] - a.matrix_bounds[2] # type: ignore
 
                 if a.matrix[first][second].kind != val.kind: # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind}", s.pos) # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind} in a 2D array", s.pos) # type: ignore
 
                 a.matrix[first][second] = copy.deepcopy(val)  # type: ignore
             else:
@@ -1871,7 +1877,7 @@ class Interpreter:
                 first = tup[0] - a.flat_bounds[0] # type: ignore
 
                 if a.flat[first].kind != val.kind: # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind}", s.pos) # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind} in an array", s.pos) # type: ignore
                 
                 a.flat[first] = copy.deepcopy(val)  # type: ignore
         elif isinstance(s.ident, Identifier):

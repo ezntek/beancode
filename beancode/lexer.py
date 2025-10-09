@@ -391,6 +391,7 @@ class Lexer:
                 not curr_ch.isspace()
                 and not self.is_separator(curr_ch)
                 and not self.is_operator_start(curr_ch)
+                and curr_ch not in "\"'"
             ):
                 self.cur += 1
                 end += 1
