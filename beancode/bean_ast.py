@@ -1,3 +1,4 @@
+from io import StringIO
 import typing
 from dataclasses import dataclass
 from .error import *
@@ -40,6 +41,12 @@ class BCArrayType:
         else:
             return "ARRAY OF " + self.inner.upper()
 
+def array_bounds_to_string(bounds: tuple[int, int]) -> str:
+    return f"{bounds[0]}:{bounds[1]}"
+
+def matrix_bounds_to_string(bounds: tuple[int, int, int, int]) -> str:
+    return f"{bounds[0]}:{bounds[1]},{bounds[2]}:{bounds[3]}"
+
 @dataclass
 class BCArray:
     typ: BCArrayType
@@ -65,22 +72,15 @@ class BCArray:
         return self.matrix
 
     def get_type_str(self) -> str:
-        s = "ARRAY["
+        s = StringIO()
+        s.write("ARRAY[")
         if self.flat_bounds is not None:
-            s += str(self.flat_bounds[0])
-            s += ":"
-            s += str(self.flat_bounds[1])
+            s.write(array_bounds_to_string(self.flat_bounds))
         elif self.matrix_bounds is not None:
-            s += str(self.matrix_bounds[0])
-            s += ":"
-            s += str(self.matrix_bounds[1])
-            s += ","
-            s += str(self.matrix_bounds[2])
-            s += ":"
-            s += str(self.matrix_bounds[3])
-        s += "] OF "
-        s += str(self.typ.inner).upper()
-        return s
+            s.write(matrix_bounds_to_string(self.matrix_bounds))
+        s.write("] OF ")
+        s.write(str(self.typ.inner).upper())
+        return s.getvalue()
 
 
 BCType = BCArrayType | BCPrimitiveType

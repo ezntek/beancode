@@ -100,10 +100,7 @@ class Repl:
         sio.write("(")
         for i, (name, typ) in enumerate(args):
             sio.write(f"{name}: ")
-            if isinstance(typ, ast.BCArrayType):
-                sio.write(f"ARRAY OF {typ.inner.upper()}")
-            else:
-                sio.write(typ.upper())
+            sio.write(str(typ).upper())
 
             if i != len(args) - 1:
                 sio.write(", ")
@@ -154,10 +151,7 @@ class Repl:
                 sio.write(self._get_args_list(args))
 
         sio.write(" RETURNS ")
-        if isinstance(func.returns, ast.BCArrayType):
-            sio.write(f"ARRAY OF {func.returns.inner.upper()}")
-        else:
-            sio.write(func.returns.upper())
+        sio.write(str(func.returns).upper())
 
         if ffi:
             sio.write("\033[2m <FFI>\033[0m")

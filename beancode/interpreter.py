@@ -69,7 +69,7 @@ class Interpreter:
         self.func = func
         self.proc = proc
         self.loop = loop
-        self.rettype=rettype
+        self.rettype = rettype
         self.reset_all()
 
     @classmethod
@@ -239,7 +239,7 @@ class Interpreter:
 
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in ordered comparison!", expr.pos)
-                
+
                 lhs_num: int | float | None
                 rhs_num: int | float | None | None
 
@@ -283,7 +283,7 @@ class Interpreter:
             case "less_than_or_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
-                
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in ordered comparison!", expr.pos)
 
@@ -328,7 +328,7 @@ class Interpreter:
             case "mul":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
- 
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
@@ -375,7 +375,7 @@ class Interpreter:
             case "pow":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
- 
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
@@ -423,7 +423,7 @@ class Interpreter:
             case "div":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
- 
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
@@ -471,7 +471,7 @@ class Interpreter:
             case "add":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
- 
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
@@ -542,7 +542,7 @@ class Interpreter:
             case "sub":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
- 
+
                 if "null" in [lhs.kind, rhs.kind]:
                     self.error("cannot have NULL in arithmetic expression!", expr.pos)
 
@@ -685,7 +685,7 @@ class Interpreter:
 
         temp = self.variables.get(ind.ident.ident)
         if temp is None:
-            self.error(f"array \"{ind.ident.ident}\" not found for indexing", ind.pos)
+            self.error(f'array "{ind.ident.ident}" not found for indexing', ind.pos)
         v = temp.val
 
         if isinstance(v.kind, BCArrayType):
@@ -704,13 +704,13 @@ class Interpreter:
 
                 if tup[0] not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
                     self.error(
-                        f"cannot access out of bounds array element \"{tup[0]}\"",
+                        f'cannot access out of bounds array element "{tup[0]}"',
                         ind.idx_outer.pos,
                     )
 
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     self.error(
-                        f"cannot access out of bounds array element \"{tup[1]}\"", ind.idx_inner.pos  # type: ignore
+                        f'cannot access out of bounds array element "{tup[1]}"', ind.idx_inner.pos  # type: ignore
                     )
 
                 res = a.matrix[tup[0] - a.matrix_bounds[0]][inner - a.matrix_bounds[2]]  # type: ignore
@@ -755,7 +755,7 @@ class Interpreter:
     def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
         begin = begin - 1
         s = txt[begin : begin + length]
-        
+
         if len(s) == 0:
             return BCValue("null")
 
@@ -1018,10 +1018,7 @@ class Interpreter:
         return BCValue("string", string=s)
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
-        if (
-            stmt.ident.lower() in LIBROUTINES
-            and is_case_consistent(stmt.ident)
-        ):
+        if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
             return self.visit_libroutine(stmt)
 
         if stmt.ident.lower() in ["typeof", "type"] and is_case_consistent(stmt.ident):
@@ -1092,9 +1089,8 @@ class Interpreter:
         proc.fn(args)
 
     def visit_call(self, stmt: CallStatement):
-        if (
-            stmt.ident.lower() in LIBROUTINES_NORETURN
-            and is_case_consistent(stmt.ident)
+        if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
+            stmt.ident
         ):
             return self.visit_libroutine_noreturn(stmt)
 
@@ -1179,7 +1175,7 @@ class Interpreter:
                 try:
                     i = int(s.strip())
                 except ValueError:
-                    self.error(f"impossible to convert \"{s}\" to an INTEGER!", pos)
+                    self.error(f'impossible to convert "{s}" to an INTEGER!', pos)
             case "integer":
                 return inner
             case "real":
@@ -1200,7 +1196,7 @@ class Interpreter:
                 try:
                     r = float(s.strip())
                 except ValueError:
-                    self.error(f"impossible to convert \"{s}\" to a REAL!", pos)
+                    self.error(f'impossible to convert "{s}" to a REAL!', pos)
             case "integer":
                 r = float(inner.get_integer())
             case "real":
@@ -1317,7 +1313,10 @@ class Interpreter:
         bounds = (1, len(vals))
 
         # scuffed but works!
-        expr_bounds = (Literal(None, kind="integer", integer=1), Literal(None, kind="integer", integer=len(vals)))
+        expr_bounds = (
+            Literal(None, kind="integer", integer=1),
+            Literal(None, kind="integer", integer=len(vals)),
+        )
 
         arrtyp = BCArrayType(inner=typ, is_matrix=False, flat_bounds=expr_bounds)  # type: ignore
         return BCValue(
@@ -1354,7 +1353,7 @@ class Interpreter:
                 var = self.variables[expr.ident]
             except KeyError:
                 self.error(
-                    f"cannot access nonexistent variable \"{expr.ident}\"", expr.pos
+                    f'cannot access nonexistent variable "{expr.ident}"', expr.pos
                 )
             return var.val
         elif isinstance(expr, Literal):
@@ -1449,15 +1448,13 @@ class Interpreter:
             target = data.val  # type: ignore
 
             if data.const:
-                self.error(
-                    f"cannot call \"INPUT\" into constant {id}", stmt.ident.pos
-                )
+                self.error(f'cannot call "INPUT" into constant {id}', stmt.ident.pos)
 
             if type(data.val.kind) == BCArrayType:
-                self.error(f"cannot call \"INPUT\" on an array", stmt.ident.pos)
+                self.error(f'cannot call "INPUT" on an array', stmt.ident.pos)
 
         if inp.strip() == "":
-            self.error(f"empty string supplied into variable with type \"{data.val.kind.upper()}\"", stmt.pos)  # type: ignore
+            self.error(f'empty string supplied into variable with type "{data.val.kind.upper()}"', stmt.pos)  # type: ignore
 
         match target.kind:
             case "string":
@@ -1466,7 +1463,7 @@ class Interpreter:
             case "char":
                 if len(inp) > 1:
                     self.error(
-                        f"expected single character but got \"{inp}\" for CHAR", stmt.pos
+                        f'expected single character but got "{inp}" for CHAR', stmt.pos
                     )
 
                 target.kind = "char"
@@ -1474,7 +1471,7 @@ class Interpreter:
             case "boolean":
                 if inp.lower() not in ["true", "false", "yes", "no"]:
                     self.error(
-                        f"expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got \"{inp}\"",
+                        f'expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got "{inp}"',
                         stmt.pos,
                     )
 
@@ -1525,11 +1522,45 @@ class Interpreter:
 
             res = self.visit_expr(stmt.expr)
 
-            if isinstance(res.kind, BCArrayType) and isinstance(self.rettype, BCArrayType):
-                pass # TODO: fix array bug, evaluate bounds properly
+            if isinstance(res.kind, BCArrayType) and isinstance(
+                self.rettype, BCArrayType
+            ):
+                if (res.kind.is_matrix != self.rettype.is_matrix) or (res.kind.inner != self.rettype.inner):
+                    self.error(
+                        f"return type {self.rettype} does not match return value's type {res.kind}!",
+                        stmt.pos,
+                    )
+
+                if res.kind.is_matrix:
+                    rtype_bounds: tuple[int, int, int, int] = tuple(self.visit_expr(e).get_integer() for e in self.rettype.matrix_bounds)  # type: ignore
+                    res_bounds: tuple[int, int, int, int] = res.array.matrix_bounds  # type: ignore
+                    if not (rtype_bounds == res_bounds):
+                        atype_str = res.array.get_type_str()  # type: ignore
+                        self.error(
+                            "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
+                                atype_str,
+                                matrix_bounds_to_string(rtype_bounds), # type: ignore
+                                self.rettype.inner,
+                            ), stmt.pos
+                        )
+                else:
+                    rtype_bounds: tuple[int, int] = tuple(self.visit_expr(e).get_integer() for e in self.rettype.flat_bounds)  # type: ignore
+                    res_bounds: tuple[int, int] = res.array.flat_bounds  # type: ignore
+                    if not (rtype_bounds == res_bounds):
+                        atype_str = res.array.get_type_str()  # type: ignore
+                        self.error(
+                            "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
+                                atype_str,
+                                array_bounds_to_string(rtype_bounds), # type: ignore
+                                self.rettype.inner,
+                            ), stmt.pos
+                        )
             else:
                 if res.kind != self.rettype:
-                    self.error(f"return type {self.rettype} does not match return value's type {res.kind}!", stmt.pos)
+                    self.error(
+                        f"return type {self.rettype} does not match return value's type {res.kind}!",
+                        stmt.pos,
+                    )
 
             self.retval = res
             self._returned = True
@@ -1797,7 +1828,9 @@ class Interpreter:
 
             evcond = self.visit_expr(cond)
             if evcond.kind != "boolean":
-                self.error("condition of repeat-until loop must be a boolean!", stmt.cond.pos)
+                self.error(
+                    "condition of repeat-until loop must be a boolean!", stmt.cond.pos
+                )
             if not evcond:
                 break
 
@@ -1817,19 +1850,27 @@ class Interpreter:
 
     def visit_procedure(self, stmt: ProcedureStatement):
         if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
-            self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
+            self.error(
+                f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos
+            )
 
         if stmt.name in self.variables:
-            self.error(f"cannot redefine variable \"{stmt.name}\" as a procedure", stmt.pos)
+            self.error(
+                f'cannot redefine variable "{stmt.name}" as a procedure', stmt.pos
+            )
 
         self.functions[stmt.name] = stmt
 
     def visit_function(self, stmt: FunctionStatement):
         if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
-            self.error(f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos)
+            self.error(
+                f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos
+            )
 
         if stmt.name in self.variables:
-            self.error(f"cannot redefine variable \"{stmt.name}\" as a function", stmt.pos)
+            self.error(
+                f'cannot redefine variable "{stmt.name}" as a function', stmt.pos
+            )
 
         self.functions[stmt.name] = stmt
 
@@ -1860,11 +1901,11 @@ class Interpreter:
                 if tup[1] not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
                     self.error(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
 
-                first = tup[0] - a.matrix_bounds[0] # type: ignore
-                second = tup[1] - a.matrix_bounds[2] # type: ignore
+                first = tup[0] - a.matrix_bounds[0]  # type: ignore
+                second = tup[1] - a.matrix_bounds[2]  # type: ignore
 
-                if a.matrix[first][second].kind != val.kind: # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind} in a 2D array", s.pos) # type: ignore
+                if a.matrix[first][second].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind} in a 2D array", s.pos)  # type: ignore
 
                 a.matrix[first][second] = copy.deepcopy(val)  # type: ignore
             else:
@@ -1874,22 +1915,27 @@ class Interpreter:
                         s.ident.idx_outer.pos,
                     )
 
-                first = tup[0] - a.flat_bounds[0] # type: ignore
+                first = tup[0] - a.flat_bounds[0]  # type: ignore
 
-                if a.flat[first].kind != val.kind: # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind} in an array", s.pos) # type: ignore
-                
+                if a.flat[first].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind} in an array", s.pos)  # type: ignore
+
                 a.flat[first] = copy.deepcopy(val)  # type: ignore
         elif isinstance(s.ident, Identifier):
             key = s.ident.ident
-            
+
             exp = self.visit_expr(s.value)
             var = self.variables.get(key)
 
             if var is None:
-                is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+                is_libroutine = (
+                    key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+                ) and is_case_consistent(key)
                 if key in self.functions or is_libroutine:
-                    self.error(f"cannot shadow existing function or procedure named \"{key}\"", s.pos)
+                    self.error(
+                        f'cannot shadow existing function or procedure named "{key}"',
+                        s.pos,
+                    )
 
                 var = Variable(exp, False, export=False)
                 self.variables[key] = var
@@ -1912,9 +1958,13 @@ class Interpreter:
         if key in self.variables:
             self.error(f"variable {key} declared!", c.pos)
 
-        is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+        is_libroutine = (
+            key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+        ) and is_case_consistent(key)
         if key in self.functions or is_libroutine:
-            self.error(f"cannot shadow existing function or procedure named \"{key}\"", c.pos)
+            self.error(
+                f'cannot shadow existing function or procedure named "{key}"', c.pos
+            )
 
         val = self.visit_expr(c.value)
         self.variables[key] = Variable(val, True, export=c.export)
@@ -1982,10 +2032,14 @@ class Interpreter:
             if key in self.variables:
                 self.error(f"variable {key} declared!", d.pos)
 
-            is_libroutine = ((key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN) and is_case_consistent(key))
+            is_libroutine = (
+                key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+            ) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
-                self.error(f"cannot shadow existing function or procedure named \"{key}\"", d.pos)
-                
+                self.error(
+                    f'cannot shadow existing function or procedure named "{key}"', d.pos
+                )
+
             if isinstance(d.typ, BCArrayType):
                 self._declare_array(d, key)
             else:
