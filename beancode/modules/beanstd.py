@@ -1,7 +1,5 @@
 from beancode.bean_ffi import *
 
-import time
-import math
 import sys
 
 

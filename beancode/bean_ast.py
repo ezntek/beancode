@@ -41,11 +41,14 @@ class BCArrayType:
         else:
             return "ARRAY OF " + self.inner.upper()
 
+
 def array_bounds_to_string(bounds: tuple[int, int]) -> str:
     return f"{bounds[0]}:{bounds[1]}"
 
+
 def matrix_bounds_to_string(bounds: tuple[int, int, int, int]) -> str:
     return f"{bounds[0]}:{bounds[1]},{bounds[2]}:{bounds[3]}"
+
 
 @dataclass
 class BCArray:
@@ -334,7 +337,7 @@ class InputStatement:
 class ConstantStatement:
     pos: tuple[int, int, int]
     ident: Identifier
-    value: Expr 
+    value: Expr
     export: bool = False
 
 

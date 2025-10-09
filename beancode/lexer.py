@@ -476,7 +476,7 @@ class Lexer:
             raise BCError("invalid identifier", pos)
 
         for ch in word[1:]:
-            if not ch.isalnum() and ch != '_':
+            if not ch.isalnum() and ch != "_":
                 raise BCError("invalid identifier", pos)
 
         return Token(

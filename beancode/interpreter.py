@@ -808,7 +808,13 @@ class Interpreter:
     def visit_sleep(self, duration: float):
         time.sleep(duration)
 
-    def _eval_libroutine_args(self, args: list[Expr], lr: Libroutine, name: str, pos: tuple[int, int, int] | None) -> list[BCValue]:
+    def _eval_libroutine_args(
+        self,
+        args: list[Expr],
+        lr: Libroutine,
+        name: str,
+        pos: tuple[int, int, int] | None,
+    ) -> list[BCValue]:
         if len(args) < len(lr):
             self.error(
                 f"expected {len(lr)} args, but got {len(args)} in call to library routine {name.upper()}",
@@ -820,7 +826,10 @@ class Interpreter:
             new = self.visit_expr(arg)
 
             if new.is_null():
-                self.error(f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!", pos)
+                self.error(
+                    f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
+                    pos,
+                )
 
             mismatch = False
             if isinstance(arg_type, tuple):
@@ -828,7 +837,7 @@ class Interpreter:
                     mismatch = True
             elif arg_type != new.kind:
                 mismatch = True
-        
+
             if mismatch:
                 err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
                 if isinstance(arg_type, tuple):
@@ -896,7 +905,8 @@ class Interpreter:
                         or (begin_v + length_v - 1 > txt_len)
                     ):
                         self.error(
-                            f"invalid SUBSTRING from {begin_v} with length {length_v} on text with length {txt_len}!", stmt.pos
+                            f"invalid SUBSTRING from {begin_v} with length {length_v} on text with length {txt_len}!",
+                            stmt.pos,
                         )
 
                     return self.visit_substring(txt_v, begin_v, length_v)

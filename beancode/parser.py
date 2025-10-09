@@ -163,7 +163,9 @@ class Parser:
                 return Literal(tok.pos, "null")
             case "char":
                 if len(lit.value) == 0:
-                    raise BCError("CHAR literal cannot have no characters in it!", tok.pos)
+                    raise BCError(
+                        "CHAR literal cannot have no characters in it!", tok.pos
+                    )
 
                 val = lit.value
                 if val[0] == "\\":
@@ -191,7 +193,8 @@ class Parser:
                             ch = "\\"
                         case _:
                             raise BCError(
-                                f"invalid escape sequence in literal `{lit.value}`", tok.pos
+                                f"invalid escape sequence in literal `{lit.value}`",
+                                tok.pos,
                             )
                     return Literal(tok.pos, "char", char=ch)
                 else:
@@ -337,7 +340,7 @@ class Parser:
                 raise BCError(
                     "cannot have array as array element type, please use the matrix syntax instead",
                     arrtyp,
-            )
+                )
 
             if arrtyp.typ not in self.PRIM_TYPES:
                 raise BCError("invalid type used as array element type", arrtyp)
@@ -355,7 +358,7 @@ class Parser:
         c = self.consume()
 
         if c.kind != "ident":
-            return None 
+            return None
 
         return Identifier(c.pos, c.ident)  # type: ignore
 
@@ -697,9 +700,7 @@ class Parser:
         if array_index is None:
             ident_exp = self.ident()
             if not isinstance(ident_exp, Identifier) or ident_exp.ident is None:
-                raise BCError(
-                    f"found invalid identifier after INPUT", begin
-                )
+                raise BCError(f"found invalid identifier after INPUT", begin)
             ident = ident_exp
         else:
             ident = array_index  # type: ignore
@@ -720,9 +721,7 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError(
-                "invalid or no expression used as RETURN expression", begin
-            )
+            raise BCError("invalid or no expression used as RETURN expression", begin)
 
         return Statement("return", return_s=ReturnStatement(begin.pos, expr))
 
@@ -889,7 +888,9 @@ class Parser:
 
         expr = self.expression()
         if expr is None:
-            raise BCError("invalid or no expression for constant declaration", self.peek())
+            raise BCError(
+                "invalid or no expression for constant declaration", self.peek()
+            )
 
         self.check_newline("constant declaration (CONSTANT)")
 
@@ -924,7 +925,7 @@ class Parser:
         ident = self.array_index()
         if ident is None:
             ident = self.ident()
-            
+
             if ident is None:
                 raise BCError("invalid left hand side of assignment", p)
 
@@ -1319,9 +1320,7 @@ class Parser:
 
         typ = self.typ()
         if typ is None:
-            raise BCError(
-                "invalid type after RETURNS for function return value", begin
-            )
+            raise BCError("invalid type after RETURNS for function return value", begin)
 
         self.consume_newlines()
 

@@ -208,7 +208,7 @@ class Repl:
     def _funcs(self, args: list[str]) -> DotCommandResult:
         _ = args
 
-        if len(self.i.functions) == 0: 
+        if len(self.i.functions) == 0:
             info("no functions or procedures")
 
         for func in self.i.functions.values():
@@ -376,7 +376,7 @@ class Repl:
 
             program: ast.Program
             self.p.tokens = toks
-       
+
             if self.debug:
                 print("\033[2m=== TOKENS ===", file=sys.stderr)
                 for tok in toks:
@@ -449,7 +449,7 @@ class Repl:
             if self.debug:
                 print("\033[2m=== AST ===", file=sys.stderr)
                 for stmt in program.stmts:
-                     print(stmt, file=sys.stderr) 
+                    print(stmt, file=sys.stderr)
                 print("===========\033[0m", file=sys.stderr)
 
             self.i.block = program.stmts
