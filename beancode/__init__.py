@@ -1,5 +1,27 @@
 __version__ = "0.4.0-dev"
 
+def prefix_string_with_article(s: str) -> str:
+    if s[0].lower() in "aeiou":
+        return "an " + s
+    else:
+        return "a " + s
+
+def humanize_index(idx: int) -> str:
+    s = str(idx)
+    last = s[-1]
+
+    if len(s) == 1 or (len(s) > 1 and s[-2] != '1'):
+        match last:
+            case "1":
+                return s + "st"
+            case "2":
+                return s + "nd"
+            case "3":
+                return s + "rd"
+            case _:
+                return s + "th"
+
+    return s + "th"
 
 def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()

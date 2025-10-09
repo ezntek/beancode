@@ -31,20 +31,28 @@ BlockType = t.Literal[
     "if", "while", "for", "repeatuntil", "function", "procedure", "scope"
 ]
 
-LIBROUTINES = {
-    "ucase": 1,
-    "lcase": 1,
-    "div": 2,
-    "mod": 2,
-    "substring": 3,
-    "round": 2,
-    "sqrt": 1,
-    "length": 1,
-    "getchar": 0,
-    "random": 0,
+Libroutine = list[tuple[BCType, ...] | BCType]
+Libroutines = dict[str, Libroutine]
+
+LIBROUTINES: Libroutines = {
+    "ucase": ["string"],
+    "lcase": ["string"],
+    "div": [("integer", "real"), ("integer", "real")],
+    "mod": [("integer", "real"), ("integer", "real")],
+    "substring": ["string", "integer", "integer"],
+    "round": ["real", "integer"],
+    "sqrt": [("integer", "real")],
+    "length": ["string"],
+    "getchar": [],
+    "random": [],
 }
 
-LIBROUTINES_NORETURN = {"putchar": 1, "exit": 1, "sleep": 1, "flush": 0}
+LIBROUTINES_NORETURN: Libroutines = {
+    "putchar": ["string"],
+    "exit": ["integer"],
+    "sleep": ["integer"],
+    "flush": [],
+}
 
 
 class Interpreter:
@@ -756,9 +764,6 @@ class Interpreter:
         begin = begin - 1
         s = txt[begin : begin + length]
 
-        if len(s) == 0:
-            return BCValue("null")
-
         if len(s) == 1:
             return BCValue("char", char=s[0])
         else:
@@ -803,20 +808,60 @@ class Interpreter:
     def visit_sleep(self, duration: float):
         time.sleep(duration)
 
-    def visit_libroutine(self, stmt: FunctionCall) -> BCValue:  # type: ignore
-        name = stmt.ident.lower()
-        args = stmt.args
-        nargs = LIBROUTINES[name.lower()]
-
-        if len(args) < nargs:
+    def _eval_libroutine_args(self, args: list[Expr], lr: Libroutine, name: str, pos: tuple[int, int, int] | None) -> list[BCValue]:
+        if len(args) < len(lr):
             self.error(
-                f"expected {nargs} args, but got {len(args)} in call to library routine {name}",
-                stmt.pos,
+                f"expected {len(lr)} args, but got {len(args)} in call to library routine {name.upper()}",
+                pos,
             )
 
         evargs: list[BCValue] = []
-        for _, arg in zip(range(nargs), args):
-            evargs.append(self.visit_expr(arg))
+        for idx, (arg, arg_type) in enumerate(zip(args, lr)):
+            new = self.visit_expr(arg)
+
+            if new.is_null():
+                self.error(f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!", pos)
+
+            mismatch = False
+            if isinstance(arg_type, tuple):
+                if new.kind not in arg_type:
+                    mismatch = True
+            elif arg_type != new.kind:
+                mismatch = True
+        
+            if mismatch:
+                err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                if isinstance(arg_type, tuple):
+                    err_base += "either "
+
+                    for i, expected in enumerate(arg_type):
+                        if i == len(arg_type) - 1:
+                            err_base += "or "
+
+                        err_base += prefix_string_with_article(str(expected).upper())
+                        err_base += " "
+                else:
+                    if str(new.kind)[0] in "aeiou":
+                        err_base += "a "
+                    else:
+                        err_base += "an "
+
+                    err_base += prefix_string_with_article(str(arg_type).upper())
+                    err_base += " "
+
+                wanted = str(new.kind).upper()
+                err_base += f"but found {wanted}"
+                self.error(err_base, pos)
+
+            evargs.append(new)
+
+        return evargs
+
+    def visit_libroutine(self, stmt: FunctionCall) -> BCValue:  # type: ignore
+        name = stmt.ident.lower()
+        lr = LIBROUTINES[name.lower()]
+
+        evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
 
         try:
             match name.lower():
@@ -826,53 +871,37 @@ class Interpreter:
                         return self.visit_ucase(txt.get_char())
                     elif txt.kind == "string":
                         return self.visit_ucase(txt.get_string())
-                    else:
-                        self.error(f"cannot call UCASE on a {txt.kind}", stmt.pos)
                 case "lcase":
                     [txt, *_] = evargs
                     if txt.kind == "char":
                         return self.visit_lcase(txt.get_char())
                     elif txt.kind == "string":
                         return self.visit_lcase(txt.get_string())
-                    else:
-                        self.error(f"cannot call LCASE on a {txt.kind}", stmt.pos)
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
-                    if txt.kind != "string":
+                    txt_v = txt.get_string()
+                    begin_v = begin.get_integer()
+                    length_v = length.get_integer()
+                    txt_len = len(txt_v)
+
+                    if txt_len == 0:
+                        self.error("cannot SUBSTRING an empty string!", stmt.pos)
+
+                    if (
+                        (begin_v > txt_len)
+                        or (length_v > txt_len)
+                        or (begin_v < 1)
+                        or (length_v < 1)
+                        or (begin_v + length_v - 1 > txt_len)
+                    ):
                         self.error(
-                            f"expected first argument to SUBSTRING to be a STRING",
-                            stmt.pos,
+                            f"invalid SUBSTRING from {begin_v} with length {length_v} on text with length {txt_len}!", stmt.pos
                         )
 
-                    if begin.kind != "integer":
-                        self.error(
-                            f"expected second argument to SUBSTRING to be an INTEGER",
-                            stmt.pos,
-                        )
-
-                    if length.kind != "integer":
-                        self.error(
-                            f"expected third argument to SUBSTRING to be an INTEGER",
-                            stmt.pos,
-                        )
-
-                    return self.visit_substring(
-                        txt.get_string(), begin.get_integer(), length.get_integer()
-                    )
+                    return self.visit_substring(txt_v, begin_v, length_v)
                 case "div":
                     [lhs, rhs, *_] = evargs
-
-                    if lhs.kind not in ["integer", "real"]:
-                        self.error(
-                            f"expected INTEGER or REAL for the lhs of DIV, get {lhs.kind}",
-                            stmt.pos,
-                        )
-                    if rhs.kind not in ["integer", "real"]:
-                        self.error(
-                            f"expected INTEGER or REAL for the rhs of DIV, get {rhs.kind}",
-                            stmt.pos,
-                        )
 
                     lhs_val = (
                         lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
@@ -885,17 +914,6 @@ class Interpreter:
                 case "mod":
                     [lhs, rhs, *_] = evargs
 
-                    if lhs.kind not in ["integer", "real"]:
-                        self.error(
-                            f"expected INTEGER or REAL for the lhs of MOD, get {lhs.kind}",
-                            stmt.pos,
-                        )
-                    if rhs.kind not in ["integer", "real"]:
-                        self.error(
-                            f"expected INTEGER or REAL for the rhs of MOD, get {rhs.kind}",
-                            stmt.pos,
-                        )
-
                     lhs_val = (
                         lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
                     )
@@ -906,25 +924,12 @@ class Interpreter:
                     return self.visit_mod(lhs_val, rhs_val)
                 case "length":
                     [txt, *_] = evargs
-                    if isinstance(txt.kind, BCArrayType):
-                        self.error(
-                            "cannot call LENGTH on an array!",
-                            stmt.pos,
-                        )
-                    if txt.kind != "string":
-                        self.error(f"cannot call LENGTH on a {txt.kind}", stmt.pos)
-
                     return self.visit_length(txt.get_string())
                 case "round":
                     [val_r, places, *_] = evargs
                     return self.visit_round(val_r.get_real(), places.get_integer())
                 case "sqrt":
                     [val, *_] = evargs
-                    if val.kind not in ["integer", "real"]:
-                        self.error(
-                            f"cannot perform a square root on object of type {val.kind}",
-                            stmt.pos,
-                        )
                     return self.visit_sqrt(val)
                 case "getchar":
                     return self.visit_getchar()
@@ -936,17 +941,9 @@ class Interpreter:
 
     def visit_libroutine_noreturn(self, stmt: CallStatement):
         name = stmt.ident.lower()
-        args = stmt.args
-        nargs = LIBROUTINES_NORETURN[name.lower()]
+        lr = LIBROUTINES_NORETURN[name.lower()]
 
-        if len(args) < nargs:
-            self.error(
-                f"expected {nargs} args, but got {len(args)} in call to library routine {name}"
-            )
-
-        evargs: list[BCValue] = []
-        for _, arg in zip(range(nargs), args):
-            evargs.append(self.visit_expr(arg))
+        evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
 
         match name:
             case "putchar":
@@ -1353,7 +1350,7 @@ class Interpreter:
                 var = self.variables[expr.ident]
             except KeyError:
                 self.error(
-                    f'cannot access nonexistent variable "{expr.ident}"', expr.pos
+                    f'cannot access undeclared variable "{expr.ident}"', expr.pos
                 )
             return var.val
         elif isinstance(expr, Literal):
@@ -1525,7 +1522,9 @@ class Interpreter:
             if isinstance(res.kind, BCArrayType) and isinstance(
                 self.rettype, BCArrayType
             ):
-                if (res.kind.is_matrix != self.rettype.is_matrix) or (res.kind.inner != self.rettype.inner):
+                if (res.kind.is_matrix != self.rettype.is_matrix) or (
+                    res.kind.inner != self.rettype.inner
+                ):
                     self.error(
                         f"return type {self.rettype} does not match return value's type {res.kind}!",
                         stmt.pos,
@@ -1539,9 +1538,10 @@ class Interpreter:
                         self.error(
                             "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
                                 atype_str,
-                                matrix_bounds_to_string(rtype_bounds), # type: ignore
+                                matrix_bounds_to_string(rtype_bounds),  # type: ignore
                                 self.rettype.inner,
-                            ), stmt.pos
+                            ),
+                            stmt.pos,
                         )
                 else:
                     rtype_bounds: tuple[int, int] = tuple(self.visit_expr(e).get_integer() for e in self.rettype.flat_bounds)  # type: ignore
@@ -1551,9 +1551,10 @@ class Interpreter:
                         self.error(
                             "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
                                 atype_str,
-                                array_bounds_to_string(rtype_bounds), # type: ignore
+                                array_bounds_to_string(rtype_bounds),  # type: ignore
                                 self.rettype.inner,
-                            ), stmt.pos
+                            ),
+                            stmt.pos,
                         )
             else:
                 if res.kind != self.rettype:
@@ -1612,8 +1613,11 @@ class Interpreter:
             error(f"file {filename} does not exist!")
             exit(1)
 
-        with open(filename, "r+") as f:
-            file_content = f.read()
+        try:
+            with open(filename, "r+") as f:
+                file_content = f.read()
+        except IsADirectoryError:
+            self.error(f'"{stmt.file}" is a directory', stmt.pos)
 
         lexer = Lexer(file_content)
         toks = lexer.tokenize()
