@@ -752,8 +752,10 @@ class Interpreter:
     def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
         begin = begin - 1
         s = txt[begin : begin + length]
+        
         if len(s) == 0:
             return BCValue("null")
+
         if len(s) == 1:
             return BCValue("char", char=s[0])
         else:
@@ -1855,8 +1857,8 @@ class Interpreter:
                 first = tup[0] - a.matrix_bounds[0] # type: ignore
                 second = tup[1] - a.matrix_bounds[2] # type: ignore
 
-                if a.matrix[first][second].kind.inner != val.kind: # type: ignore
-                    self.error(f"cannot assign {a.matrix[first][second].kind} to {val.kind}", s.pos) # type: ignore
+                if a.matrix[first][second].kind != val.kind: # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind}", s.pos) # type: ignore
 
                 a.matrix[first][second] = copy.deepcopy(val)  # type: ignore
             else:
@@ -1867,9 +1869,9 @@ class Interpreter:
                     )
 
                 first = tup[0] - a.flat_bounds[0] # type: ignore
-                
-                if a.flat[first].kind.inner != val.kind: # type: ignore
-                    self.error(f"cannot assign {a.flat[first].kind} to {val.kind}", s.pos) # type: ignore
+
+                if a.flat[first].kind != val.kind: # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind}", s.pos) # type: ignore
                 
                 a.flat[first] = copy.deepcopy(val)  # type: ignore
         elif isinstance(s.ident, Identifier):
@@ -1958,7 +1960,7 @@ class Interpreter:
                 self.error(f"cannot use type of {end.kind} as array bound!", d.pos)
 
             size = end.get_integer() - begin.get_integer()
-            arr: BCValue = [BCValue(atype) for _ in range(size + 1)]  # type: ignore
+            arr: BCValue = [BCValue(atype.inner) for _ in range(size + 1)]  # type: ignore
 
             bounds = (begin.integer, end.integer)  # type: ignore
             atype.is_matrix = False
