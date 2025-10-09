@@ -1835,7 +1835,7 @@ class Interpreter:
                 self.error(
                     "condition of repeat-until loop must be a boolean!", stmt.cond.pos
                 )
-            if not evcond:
+            if evcond:
                 break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
