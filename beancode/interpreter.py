@@ -158,7 +158,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
+                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
                     if lhs_num == None:
                         self.error(
                             "left hand side in comparison operation is null!",
@@ -205,7 +205,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
+                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
                     if lhs_num == None:
                         self.error(
                             "left hand side in comparison operation is null!",
@@ -252,7 +252,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
+                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
                     if lhs_num == None:
                         self.error(
                             "left hand side in comparison operation is null!",
@@ -299,7 +299,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else lhs.real  # type: ignore
+                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
                     if lhs_num == None:
                         self.error(
                             "left hand side in comparison operation is null!",
@@ -401,7 +401,7 @@ class Interpreter:
 
                 if rhs.kind == "integer":
                     rhs_num = rhs.get_integer()
-                elif lhs.kind == "real":
+                elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
@@ -447,7 +447,7 @@ class Interpreter:
 
                 if rhs.kind == "integer":
                     rhs_num = rhs.get_integer()
-                elif lhs.kind == "real":
+                elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
@@ -519,7 +519,7 @@ class Interpreter:
 
                 if rhs.kind == "integer":
                     rhs_num = rhs.get_integer()
-                elif lhs.kind == "real":
+                elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
@@ -559,7 +559,7 @@ class Interpreter:
 
                 if rhs.kind == "integer":
                     rhs_num = rhs.get_integer()
-                elif lhs.kind == "real":
+                elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
                 if lhs_num == None:
@@ -1519,8 +1519,6 @@ class Interpreter:
                 self.error("you must return something from a function!", stmt.pos)
 
             res = self.visit_expr(stmt.expr)
-
-            print(f"{res.kind.__dict__=} {self.rettype.__dict__=}")
 
             if isinstance(res.kind, BCArrayType) and isinstance(self.rettype, BCArrayType):
                 pass # TODO: fix array bug, evaluate bounds properly

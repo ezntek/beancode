@@ -384,8 +384,10 @@ class Repl:
             self.p.tokens = toks
        
             if self.debug:
+                print("\033[2m=== TOKENS ===", file=sys.stderr)
                 for tok in toks:
                     tok.print(file=sys.stderr)
+                print("==============\033[0m\n", file=sys.stderr)
 
             try:
                 program = self.p.program()
@@ -451,8 +453,10 @@ class Repl:
                 )
 
             if self.debug:
+                print("\033[2m=== AST ===", file=sys.stderr)
                 for stmt in program.stmts:
-                    print("\033[2m=== AST ===\n" + str(stmt) + "\n===========\033[0m", file=sys.stderr)
+                     print(stmt, file=sys.stderr) 
+                print("===========\033[0m", file=sys.stderr)
 
             self.i.block = program.stmts
             self.i.toplevel = True
