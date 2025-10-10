@@ -76,9 +76,11 @@ def real_main():
         exit(1)
 
     if args.debug:
+        print("\033[1m=== TOKENS ===\033[0m", file=sys.stderr)
         for tok in toks:
-            tok.print()
-
+            tok.print(file=sys.stderr)
+        print("\033[1m==============\033[0m", file=sys.stderr)
+            
     parser = Parser(toks)
 
     try:
@@ -91,11 +93,11 @@ def real_main():
         exit(1)
 
     if args.debug:
-        print("\033[1m----- BEGINNING OF AST -----\033[0m", file=sys.stderr)
+        print("\033[1m=== AST ===\033[0m", file=sys.stderr)
         for stmt in program.stmts:
             print(stmt)
             print()
-        print("\033[0m\033[1m----- END OF AST -----\033[0m", file=sys.stderr)
+        print("\033[0m\033[1m=== AST ===\033[0m", file=sys.stderr)
 
     if args.no_run:
         return
@@ -122,7 +124,9 @@ def main():
         exit(1)
     except RecursionError:
         warn("Python recursion depth exceeded! did you forget your base case?")
-
+    except Exception as e:
+        error(f"Python exception caught ({e})! Please report this to the developers.")
+    
 
 if __name__ == "__main__":
     main()
