@@ -48,7 +48,7 @@ LIBROUTINES: Libroutines = {
 }
 
 LIBROUTINES_NORETURN: Libroutines = {
-    "putchar": ["string"],
+    "putchar": ["char"],
     "exit": ["integer"],
     "sleep": ["integer"],
     "flush": [],
@@ -1701,7 +1701,7 @@ class Interpreter:
         if cond.kind != "boolean":
             self.error("condition of while loop must be a boolean!", stmt.cond.pos)
 
-        if cond.boolean:
+        if cond.get_boolean():
             intp: Interpreter = self.new(stmt.if_block)
         else:
             intp: Interpreter = self.new(stmt.else_block)
@@ -1748,7 +1748,7 @@ class Interpreter:
             evcond = self.visit_expr(cond)
             if evcond.kind != "boolean":
                 self.error("condition of while loop must be a boolean!", stmt.cond.pos)
-            if not evcond:
+            if not evcond.get_boolean():
                 break
 
             intp.visit_block(block)
@@ -1878,7 +1878,7 @@ class Interpreter:
                 self.error(
                     "condition of repeat-until loop must be a boolean!", stmt.cond.pos
                 )
-            if evcond:
+            if evcond.get_boolean():
                 break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):

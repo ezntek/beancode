@@ -17,7 +17,7 @@ FOR i <- 1 TO maxsize
 NEXT i
 
 DECLARE pc: INTEGER
-pc <- 0
+pc <- 1
 DECLARE ptr: INTEGER
 ptr <- 1
 
@@ -94,13 +94,14 @@ ENDPROCEDURE
 
 PROCEDURE debug
     IF dbg THEN
-        OUTPUT "pc=", pc, " ptr=", ptr, " instr=", substring(src, pc, 1), " loopslen=", loopslen
+        OUTPUT ""
+        OUTPUT "(pc=", pc, " ptr=", ptr, " instr=", substring(src, pc, 1), " loopslen=", loopslen, ")"
     ENDIF
 ENDPROCEDURE
 
 WHILE pc < srclen DO
     CALL debug
-    CASE of substring(src, pc, 1)
+    CASE OF SUBSTRING(src, pc, 1)
         '<': CALL dec
         '>': CALL inc
         '+': cells[ptr] <- wrapinc(cells[ptr])

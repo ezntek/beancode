@@ -482,5 +482,8 @@ class Repl:
                 err.print(repl_txt, src)
                 print()
                 continue
+            except KeyboardInterrupt:
+                warn("caught keyboard interrupt during REPL code execution")
+                continue
 
         return 0
