@@ -105,7 +105,7 @@ class Parser:
     def array_literal(self, nested=False) -> Expr | None:
         lbrace = self.consume()  # TODO: allow other braced literals later
         if lbrace.separator != "left_curly":
-            raise BCError("expected left curly brace for array or matrix literal!")
+            raise BCError("expected left curly brace for array or matrix literal!", lbrace)
 
         exprs = []
         while self.peek().separator != "right_curly":
@@ -113,14 +113,14 @@ class Parser:
 
             if self.peek().separator == "left_curly":
                 if nested:
-                    raise BCError("cannot nest array literals over 2 dimensions!")
+                    raise BCError("cannot nest array literals over 2 dimensions!", self.peek())
                 arrlit = self.array_literal(nested=True)
                 exprs.append(arrlit)
             else:
                 expr = self.expression()
                 if expr is None:
                     raise BCError(
-                        "invalid or no expression supplied as argument to array literal"
+                        "invalid or no expression supplied as argument to array literal", self.peek()
                     )
                 exprs.append(expr)
 

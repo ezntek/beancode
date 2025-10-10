@@ -44,17 +44,16 @@ def real_main():
     group.add_argument("file", nargs="?", type=str)
     args = parser.parse_args()
 
-    if args.file is None:
-        Repl(args.debug).repl()
-        return
 
     if args.no_run:
         args.debug = True
-
     if args.command is not None:
         file_content = args.command
     elif args.stdin:
         file_content = sys.stdin.read()
+    elif args.file is None:
+        Repl(args.debug).repl()
+        return
     else:
         if not os.path.exists(args.file):
             _error(f"file {args.file} does not exist!")
@@ -117,16 +116,17 @@ def main():
     try:
         real_main()
     except KeyboardInterrupt:
-        warn("caught keyboard interrupt")
+        warn("Caught keyboard interrupt")
         exit(1)
     except EOFError:
-        warn("caught EOF")
+        warn("Caught EOF")
         exit(1)
     except RecursionError:
-        warn("Python recursion depth exceeded! did you forget your base case?")
+        warn("Python recursion depth exceeded! Did you forget your base case?")
+    except ValueError:
+        warn("Unexpected Python ValueError! Did you work with a very long number?")
     except Exception as e:
-        error(f"Python exception caught ({e})! Please report this to the developers.")
-
+        error(f"Python exception caught ({type(e)}: \"{e}\")! Please report this to the developers.")
 
 if __name__ == "__main__":
     main()
