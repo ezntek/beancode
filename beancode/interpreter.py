@@ -2032,10 +2032,10 @@ class Interpreter:
         atype: BCArrayType = d.typ  # type: ignore
         inner_type = atype.inner
         if atype.is_matrix:
-            inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
-            if inner_end.kind != "integer":
+            outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
+            if outer_begin.kind != "integer":
                 self.error(
-                    f"cannot use type of {inner_end.kind} as array bound!", d.pos
+                    f"cannot use type of {outer_begin.kind} as array bound!", d.pos
                 )
 
             outer_end = self.visit_expr(atype.matrix_bounds[1])  # type: ignore
@@ -2044,21 +2044,44 @@ class Interpreter:
                     f"cannot use type of {outer_end.kind} as array bound!", d.pos
                 )
 
-            outer_begin = self.visit_expr(atype.matrix_bounds[0])  # type: ignore
-            if outer_begin.kind != "integer":
-                self.error(
-                    f"cannot use type of {outer_begin.kind} as array bound!", d.pos
-                )
-
             inner_begin = self.visit_expr(atype.matrix_bounds[2])  # type: ignore
             if inner_begin.kind != "integer":
                 self.error(
                     f"cannot use type of {inner_begin.kind} as array bound!", d.pos
                 )
 
+            inner_end = self.visit_expr(atype.matrix_bounds[3])  # type: ignore
+            if inner_end.kind != "integer":
+                self.error(
+                    f"cannot use type of {inner_end.kind} as array bound!", d.pos
+                )
+
+            outer_begin_v = outer_begin.get_integer()
+            outer_end_v = outer_end.get_integer()
+            inner_begin_v = inner_begin.get_integer()
+            inner_end_v = inner_end.get_integer()
+
+            if outer_begin_v < 0:
+                self.error("outer beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[0].pos) # type: ignore
+
+            if outer_end_v < 0:
+                self.error("outer ending value for array bound declaration cannot be <0!", atype.matrix_bounds[1].pos) # type: ignore
+
+            if inner_begin_v < 0:
+                self.error("inner beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[2].pos) # type: ignore
+
+            if inner_end_v < 0:
+                self.error("inner ending value for array bound declaration cannot be <0!", atype.matrix_bounds[3].pos) # type: ignore
+
+            if outer_begin_v >= outer_end_v:
+                self.error("invalid outer range for 2D array bound declaration", d.pos)
+
+            if inner_begin_v >= inner_end_v:
+                self.error("invalid inner range for 2D array bound declaration", d.pos)
+
             # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
-            in_size = inner_end.get_integer() - inner_begin.get_integer()
-            out_size = outer_end.get_integer() - outer_begin.get_integer()
+            in_size = inner_end_v - inner_begin_v
+            out_size = outer_end_v - outer_begin_v
             # array bound declarations are inclusive
             outer_arr = [[BCValue(inner_type) for _ in range(in_size + 1)] for _ in range(out_size + 1)]  # type: ignore
 
@@ -2074,7 +2097,19 @@ class Interpreter:
             if end.kind != "integer":
                 self.error(f"cannot use type of {end.kind} as array bound!", d.pos)
 
-            size = end.get_integer() - begin.get_integer()
+            begin_v = begin.get_integer()
+            end_v = end.get_integer()
+
+            if begin_v < 0:
+                self.error("beginning value for array bound declaration cannot be <0!", atype.flat_bounds[0].pos) # type: ignore
+
+            if end_v < 0:
+                self.error("ending value for array bound declaration cannot be <0!", atype.flat_bounds[1].pos) # type: ignore
+
+            if begin_v >= end_v:
+                self.error("invalid range for array bound declaration", atype.flat_bounds[0].pos) # type: ignore
+
+            size = end_v - begin_v
             arr: BCValue = [BCValue(atype.inner) for _ in range(size + 1)]  # type: ignore
 
             bounds = (begin.integer, end.integer)  # type: ignore
