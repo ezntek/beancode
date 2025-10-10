@@ -38,7 +38,6 @@ class BCFunction:  # ffi variant of a function
     params: BCParamSpec
     returns: BCPrimitiveType
     fn: Callable[[BCArgsList], BCValue]
-    libroutine: bool = False
 
 
 @dataclass
@@ -46,7 +45,6 @@ class BCProcedure:  # ffi variant of a function
     name: str
     params: BCParamSpec  # spec of arg names and types
     fn: Callable[[BCArgsList], None]
-    libroutine: bool = False
 
 
 @dataclass

@@ -1068,6 +1068,9 @@ class Interpreter:
         if stmt.ident.lower() in ["typeof", "type"] and is_case_consistent(stmt.ident):
             return self.visit_typeof(stmt)
 
+        if stmt.ident in self.variables:
+            self.error(f'"{stmt.ident}" is a variable, not a function!', stmt.pos)
+
         try:
             func = self.functions[stmt.ident]
         except KeyError:
@@ -1140,6 +1143,9 @@ class Interpreter:
             stmt.ident
         ):
             return self.visit_libroutine_noreturn(stmt)
+
+        if stmt.ident in self.variables:
+            self.error(f'"{stmt.ident}" is a variable, not a procedure!', stmt.pos)
 
         try:
             proc = self.functions[stmt.ident]
@@ -1396,6 +1402,13 @@ class Interpreter:
 
             return BCValue.new_boolean(not inner.get_boolean())
         elif isinstance(expr, Identifier):
+            if expr.ident in self.functions:
+                obj = self.functions[expr.ident]
+                if isinstance(obj, BCProcedure) or isinstance(obj, ProcedureStatement):
+                    self.error(f'"{expr.ident}" is a procedure, not a variable!', expr.pos)
+                else:
+                    self.error(f'"{expr.ident}" is a function, not a variable!', expr.pos)
+
             try:
                 var = self.variables[expr.ident]
             except KeyError:
@@ -2131,7 +2144,7 @@ class Interpreter:
             ) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
                 self.error(
-                    f'cannot shadow existing function or procedure named "{key}"', d.pos
+                    f'cannot shadow existing function or procedure named "{key}" with variable of the same name', d.pos
                 )
 
             if isinstance(d.typ, BCArrayType):
