@@ -54,6 +54,11 @@ LIBROUTINES_NORETURN: Libroutines = {
     "flush": [],
 }
 
+@dataclass
+class CallStackEntry:
+    name: str
+    rtype: BCType | None
+    func: bool = False
 
 class Interpreter:
     block: list[Statement]
@@ -61,28 +66,26 @@ class Interpreter:
     functions: dict[
         str, ProcedureStatement | FunctionStatement | BCProcedure | BCFunction
     ]
-    calls: list[tuple[BlockType, str | None]]
+    calls: list[CallStackEntry]
     func: bool
     proc: bool
     loop: bool
     toplevel: bool
-    rettype: BCValue | None = None
     retval: BCValue | None = None
     _returned: bool
 
     def __init__(
-        self, block: list[Statement], func=False, proc=False, loop=False, rettype=None
+        self, block: list[Statement], func=False, proc=False, loop=False,
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
-        self.rettype = rettype
         self.reset_all()
 
     @classmethod
-    def new(cls, block: list[Statement], func=False, proc=False, loop=False, rettype=None) -> "Interpreter":  # type: ignore
-        return cls(block, func=func, proc=proc, loop=loop, rettype=rettype)  # type: ignore
+    def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter":  # type: ignore
+        return cls(block, func=func, proc=proc, loop=loop)  # type: ignore
 
     def reset(self):
         self.cur_stmt = 0
@@ -99,11 +102,11 @@ class Interpreter:
         func = False
 
         for item in reversed(self.calls):
-            if item[0] == "procedure":
-                proc = True
-                break
-            elif item[0] == "function":
+            if item.func:
                 func = True
+                break
+            else:
+                proc = True
                 break
 
         return (proc, func)
@@ -112,14 +115,17 @@ class Interpreter:
         proc = None
         func = None
         for item in reversed(self.calls):
-            if item[0] == "procedure":
-                proc = item[1]
+            if not item.func:
+                proc = item.name
                 break
-            elif item[0] == "function":
-                func = item[1]
+            else:
+                func = item.name
                 break
 
         raise BCError(msg, pos, proc=proc, func=func)
+
+    def get_return_type(self) -> BCType | None:
+        return self.calls[-1].rtype
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         match expr.op:
@@ -1053,9 +1059,9 @@ class Interpreter:
         if isinstance(func, BCFunction):
             return self.visit_ffi_fncall(func, stmt)
 
-        intp = self.new(func.block, func=True, rettype=func.returns)
+        intp = self.new(func.block, func=True)
         intp.calls = self.calls
-        intp.calls.append(("function", func.name))
+        intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
         vars = self.variables
 
         if len(func.args) != len(stmt.args):
@@ -1129,7 +1135,7 @@ class Interpreter:
 
         intp = self.new(proc.block, proc=True)
         intp.calls = self.calls
-        intp.calls.append(("procedure", proc.name))
+        intp.calls.append(CallStackEntry(proc.name, None))
         vars = self.variables
 
         if len(proc.args) != len(stmt.args):
@@ -1528,20 +1534,24 @@ class Interpreter:
                 self.error("you must return something from a function!", stmt.pos)
 
             res = self.visit_expr(stmt.expr)
+            rtype = self.get_return_type()
+
+            if rtype is None:
+                self.error("return type for function not set! this is an internal error, please report it.", stmt.pos)
 
             if isinstance(res.kind, BCArrayType) and isinstance(
-                self.rettype, BCArrayType
+                rtype, BCArrayType
             ):
-                if (res.kind.is_matrix != self.rettype.is_matrix) or (
-                    res.kind.inner != self.rettype.inner
+                if (res.kind.is_matrix != rtype.is_matrix) or (
+                    res.kind.inner != rtype.inner
                 ):
                     self.error(
-                        f"return type {self.rettype} does not match return value's type {res.kind}!",
+                        f"return type {rtype} does not match return value's type {res.kind}!",
                         stmt.pos,
                     )
 
                 if res.kind.is_matrix:
-                    rtype_bounds: tuple[int, int, int, int] = tuple(self.visit_expr(e).get_integer() for e in self.rettype.matrix_bounds)  # type: ignore
+                    rtype_bounds: tuple[int, int, int, int] = tuple(self.visit_expr(e).get_integer() for e in rtype.matrix_bounds)  # type: ignore
                     res_bounds: tuple[int, int, int, int] = res.array.matrix_bounds  # type: ignore
                     if not (rtype_bounds == res_bounds):
                         atype_str = res.array.get_type_str()  # type: ignore
@@ -1549,12 +1559,12 @@ class Interpreter:
                             "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
                                 atype_str,
                                 matrix_bounds_to_string(rtype_bounds),  # type: ignore
-                                self.rettype.inner,
+                                rtype.inner,
                             ),
                             stmt.pos,
                         )
                 else:
-                    rtype_bounds: tuple[int, int] = tuple(self.visit_expr(e).get_integer() for e in self.rettype.flat_bounds)  # type: ignore
+                    rtype_bounds: tuple[int, int] = tuple(self.visit_expr(e).get_integer() for e in rtype.flat_bounds)  # type: ignore
                     res_bounds: tuple[int, int] = res.array.flat_bounds  # type: ignore
                     if not (rtype_bounds == res_bounds):
                         atype_str = res.array.get_type_str()  # type: ignore
@@ -1562,14 +1572,14 @@ class Interpreter:
                             "bounds of {} do not match the bounds of return type ARRAY[{}] OF {}".format(
                                 atype_str,
                                 array_bounds_to_string(rtype_bounds),  # type: ignore
-                                self.rettype.inner,
+                                rtype.inner,
                             ),
                             stmt.pos,
                         )
             else:
-                if res.kind != self.rettype:
+                if res.kind != rtype:
                     self.error(
-                        f"return type {self.rettype} does not match return value's type {res.kind}!",
+                        f"return type {rtype} does not match return value's type {res.kind}!",
                         stmt.pos,
                     )
 
