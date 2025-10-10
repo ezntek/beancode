@@ -80,7 +80,7 @@ def real_main():
         for tok in toks:
             tok.print(file=sys.stderr)
         print("\033[1m==============\033[0m", file=sys.stderr)
-            
+
     parser = Parser(toks)
 
     try:
@@ -126,7 +126,7 @@ def main():
         warn("Python recursion depth exceeded! did you forget your base case?")
     except Exception as e:
         error(f"Python exception caught ({e})! Please report this to the developers.")
-    
+
 
 if __name__ == "__main__":
     main()

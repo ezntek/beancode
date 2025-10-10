@@ -1,3 +1,5 @@
+import os
+from beancode.bean_ast import BCArray
 from beancode.bean_ffi import *
 
 import sys
@@ -33,6 +35,10 @@ def _writeln_err(args: BCArgsList):
     sys.stderr.write(s + "\n")
 
 
+def _get_env(args: BCArgsList) -> BCValue:
+    s = args["s"].get_string()
+    return BCValue.new_string(os.environ[s])
+
 consts = []
 vars = []
 procs = [
@@ -43,7 +49,9 @@ procs = [
     BCProcedure("WriteLn", {"s": "string"}, _writeln),
     BCProcedure("WriteLnErr", {"s": "string"}, _writeln_err),
 ]
-funcs = []
+funcs = [
+    BCFunction("GetEnv", {"s": "string"}, "string", _get_env),
+]
 
 EXPORTS: Exports = {
     "constants": consts,

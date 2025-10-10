@@ -1,7 +1,7 @@
 PROCEDURE BubbleSort(Array: ARRAY[1:End] of INTEGER, End: INTEGER)
     DECLARE Temp: INTEGER
 
-    FOR i <- 1 TO End
+    FOR i <- 1 TO End - 1
         FOR j <- 1 TO End - i
             IF Array[j] > Array[j+1] THEN
                 Temp <- Array[j]

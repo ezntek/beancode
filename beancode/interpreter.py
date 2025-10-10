@@ -54,11 +54,13 @@ LIBROUTINES_NORETURN: Libroutines = {
     "flush": [],
 }
 
+
 @dataclass
 class CallStackEntry:
     name: str
     rtype: BCType | None
     func: bool = False
+
 
 class Interpreter:
     block: list[Statement]
@@ -75,7 +77,11 @@ class Interpreter:
     _returned: bool
 
     def __init__(
-        self, block: list[Statement], func=False, proc=False, loop=False,
+        self,
+        block: list[Statement],
+        func=False,
+        proc=False,
+        loop=False,
     ) -> None:
         self.block = block
         self.func = func
@@ -953,7 +959,7 @@ class Interpreter:
                     return self.visit_length(txt.get_string())
                 case "round":
                     [val_r, places, *_] = evargs
-                    
+
                     places_v = places.get_integer()
 
                     if places_v < 0:
@@ -967,7 +973,9 @@ class Interpreter:
                         val.get_integer() if val.kind == "integer" else val.get_real()
                     )
                     if val_v < 0:
-                        self.error("cannot calculate the square root of a negative!", stmt.pos)
+                        self.error(
+                            "cannot calculate the square root of a negative!", stmt.pos
+                        )
 
                     return self.visit_sqrt(val)
                 case "getchar":
@@ -1103,7 +1111,10 @@ class Interpreter:
         intp.visit_block(func.block)
         intp.calls.pop()
         if intp._returned is False:
-            self.error(f"function with return type {func.returns} did not return a value!", stmt.pos)
+            self.error(
+                f"function with return type {func.returns} did not return a value!",
+                stmt.pos,
+            )
 
         if intp.retval is None:
             self.error(f"function's return value is None!", stmt.pos)
@@ -1560,11 +1571,12 @@ class Interpreter:
             rtype = self.get_return_type()
 
             if rtype is None:
-                self.error("return type for function not set! this is an internal error, please report it.", stmt.pos)
+                self.error(
+                    "return type for function not set! this is an internal error, please report it.",
+                    stmt.pos,
+                )
 
-            if isinstance(res.kind, BCArrayType) and isinstance(
-                rtype, BCArrayType
-            ):
+            if isinstance(res.kind, BCArrayType) and isinstance(rtype, BCArrayType):
                 if (res.kind.is_matrix != rtype.is_matrix) or (
                     res.kind.inner != rtype.inner
                 ):
