@@ -184,7 +184,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    return BCValue("boolean", boolean=(lhs_num > rhs_num))
+                    return BCValue.new_boolean((lhs_num > rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         self.error(
@@ -231,7 +231,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    return BCValue("boolean", boolean=(lhs_num < rhs_num))
+                    return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         self.error(
@@ -278,7 +278,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    return BCValue("boolean", boolean=(lhs_num >= rhs_num))
+                    return BCValue.new_boolean((lhs_num >= rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         self.error(
@@ -325,7 +325,7 @@ class Interpreter:
                             expr.rhs.pos,
                         )
 
-                    return BCValue("boolean", boolean=(lhs_num < rhs_num))
+                    return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         self.error(
@@ -383,9 +383,9 @@ class Interpreter:
                 res = lhs_num * rhs_num
 
                 if isinstance(res, int):
-                    return BCValue("integer", integer=res)
+                    return BCValue.new_integer(res)
                 elif isinstance(res, float):
-                    return BCValue("real", real=res)
+                    return BCValue.new_real(res)
             case "pow":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -430,9 +430,9 @@ class Interpreter:
                 res = lhs_num**rhs_num
 
                 if isinstance(res, int):
-                    return BCValue("integer", integer=res)
+                    return BCValue.new_integer(res)
                 elif isinstance(res, float):
-                    return BCValue("real", real=res)
+                    return BCValue.new_real(res)
 
             case "div":
                 lhs = self.visit_expr(expr.lhs)
@@ -479,9 +479,9 @@ class Interpreter:
                 res = lhs_num / rhs_num
 
                 if isinstance(res, int):
-                    return BCValue("integer", integer=res)
+                    return BCValue.new_integer(res)
                 elif isinstance(res, float):
-                    return BCValue("real", real=res)
+                    return BCValue.new_real(res)
             case "add":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -521,7 +521,7 @@ class Interpreter:
                         )
 
                     res = str(lhs_str_or_char + rhs_str_or_char)
-                    return BCValue("string", string=res)
+                    return BCValue.new_string(res)
 
                 if "boolean" in [lhs.kind, rhs.kind]:
                     self.error("Cannot add bools, chars, and strings!", expr.pos)
@@ -550,9 +550,9 @@ class Interpreter:
                 res = lhs_num + rhs_num
 
                 if isinstance(res, int):
-                    return BCValue("integer", integer=res)
+                    return BCValue.new_integer(res)
                 elif isinstance(res, float):
-                    return BCValue("real", real=res)
+                    return BCValue.new_real(res)
             case "sub":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -590,9 +590,9 @@ class Interpreter:
                 res = lhs_num - rhs_num
 
                 if isinstance(res, int):
-                    return BCValue("integer", integer=res)
+                    return BCValue.new_integer(res)
                 elif isinstance(res, float):
-                    return BCValue("real", real=res)
+                    return BCValue.new_real(res)
             case "and":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -623,7 +623,7 @@ class Interpreter:
                     )
 
                 res = lhs_b and rhs_b
-                return BCValue("boolean", boolean=res)
+                return BCValue.new_boolean(res)
             case "or":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -656,7 +656,7 @@ class Interpreter:
                 # python does: False or True = False... <redacted> you
                 res = lhs_b or rhs_b
 
-                return BCValue("boolean", boolean=res)
+                return BCValue.new_boolean(res)
 
     def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
         index = self.visit_expr(ind.idx_outer).integer
@@ -761,29 +761,33 @@ class Interpreter:
                 self.error(f"cannot index {v.kind}", ind.ident.pos)
 
     def visit_ucase(self, txt: str) -> BCValue:
-        return BCValue("string", string=txt.upper())
+        return BCValue.new_string(txt.upper())
 
     def visit_lcase(self, txt: str) -> BCValue:
-        return BCValue("string", string=txt.lower())
+        return BCValue.new_string(txt.lower())
 
     def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
         begin = begin - 1
         s = txt[begin : begin + length]
 
         if len(s) == 1:
-            return BCValue("char", char=s[0])
+            return BCValue.new_char(s[0])
         else:
-            return BCValue("string", string=s)
+            return BCValue.new_string(s)
 
     def visit_length(self, txt: str) -> BCValue:
-        return BCValue("integer", integer=len(txt))
+        return BCValue.new_integer(len(txt))
 
     def visit_round(self, val: float, places: int) -> BCValue:
-        return BCValue("real", real=round(val, places))
+        res = round(val, places)
+        if places == 0:
+            return BCValue.new_integer(int(res))
+        else:
+            return BCValue.new_real(res)
 
     def visit_getchar(self) -> BCValue:
         s = sys.stdin.read(1)[0]  # get ONE character
-        return BCValue("char", char=s)
+        return BCValue.new_char(s)
 
     def visit_putchar(self, ch: str):
         print(ch[0], end="")
@@ -792,24 +796,24 @@ class Interpreter:
         sys.exit(code)
 
     def visit_div(self, lhs: int | float, rhs: int | float) -> BCValue:
-        return BCValue("integer", integer=int(lhs // rhs))
+        return BCValue.new_integer(int(lhs // rhs))
 
     def visit_mod(self, lhs: int | float, rhs: int | float) -> BCValue:
         if type(rhs) == float:
-            return BCValue("real", real=float(rhs % rhs))
+            return BCValue.new_real(float(rhs % rhs))
         else:
-            return BCValue("integer", integer=int(lhs % rhs))
+            return BCValue.new_integer(int(lhs % rhs))
 
     def visit_sqrt(self, val: BCValue) -> BCValue:  # type: ignore
         if val.kind == "integer":
             num = val.get_integer()
-            return BCValue("real", real=math.sqrt(num))
+            return BCValue.new_real(math.sqrt(num))
         elif val.kind == "real":
             num = val.get_real()
-            return BCValue("real", real=math.sqrt(num))
+            return BCValue.new_real(math.sqrt(num))
 
     def visit_random(self) -> BCValue:
-        return BCValue("real", real=random.random())
+        return BCValue.new_real(random.random())
 
     def visit_sleep(self, duration: float):
         time.sleep(duration)
@@ -926,6 +930,9 @@ class Interpreter:
                         rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
                     )
 
+                    if rhs_val == 0:
+                        self.error("cannot divide by zero!", stmt.pos)
+
                     return self.visit_div(lhs_val, rhs_val)
                 case "mod":
                     [lhs, rhs, *_] = evargs
@@ -937,15 +944,31 @@ class Interpreter:
                         rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
                     )
 
+                    if rhs_val == 0:
+                        self.error("cannot divide by zero!", stmt.pos)
+
                     return self.visit_mod(lhs_val, rhs_val)
                 case "length":
                     [txt, *_] = evargs
                     return self.visit_length(txt.get_string())
                 case "round":
                     [val_r, places, *_] = evargs
-                    return self.visit_round(val_r.get_real(), places.get_integer())
+                    
+                    places_v = places.get_integer()
+
+                    if places_v < 0:
+                        self.error("cannot round to negative places!", stmt.pos)
+
+                    return self.visit_round(val_r.get_real(), places_v)
                 case "sqrt":
                     [val, *_] = evargs
+
+                    val_v = (
+                        val.get_integer() if val.kind == "integer" else val.get_real()
+                    )
+                    if val_v < 0:
+                        self.error("cannot calculate the square root of a negative!", stmt.pos)
+
                     return self.visit_sqrt(val)
                 case "getchar":
                     return self.visit_getchar()
@@ -1028,7 +1051,7 @@ class Interpreter:
             s = val.get_array().get_type_str()
         else:
             s = str(kind.upper())
-        return BCValue("string", string=s)
+        return BCValue.new_string(s)
 
     def visit_fncall(self, stmt: FunctionCall) -> BCValue:
         if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
@@ -1080,7 +1103,7 @@ class Interpreter:
         intp.visit_block(func.block)
         intp.calls.pop()
         if intp._returned is False:
-            self.error(f"function did not return a value!", stmt.pos)
+            self.error(f"function with return type {func.returns} did not return a value!", stmt.pos)
 
         if intp.retval is None:
             self.error(f"function's return value is None!", stmt.pos)
@@ -1178,7 +1201,7 @@ class Interpreter:
                 case "string":
                     return inner
 
-        return BCValue("string", string=s)
+        return BCValue.new_string(s)
 
     def _typecast_integer(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
         i = 0
@@ -1198,7 +1221,7 @@ class Interpreter:
             case "boolean":
                 i = 1 if inner.get_boolean() else 0
 
-        return BCValue("integer", integer=i)
+        return BCValue.new_integer(i)
 
     def _typecast_real(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
         r = 0.0
@@ -1219,7 +1242,7 @@ class Interpreter:
             case "boolean":
                 r = 1.0 if inner.get_boolean() else 0.0
 
-        return BCValue("real", real=r)
+        return BCValue.new_real(r)
 
     def _typecast_char(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
         c = ""
@@ -1239,7 +1262,7 @@ class Interpreter:
             case "boolean":
                 self.error(f"impossible to convert a BOOLEAN to a CHAR!", pos)
 
-        return BCValue("char", char=c)
+        return BCValue.new_char(c)
 
     def _typecast_boolean(self, inner: BCValue) -> BCValue:
         b = False
@@ -1256,7 +1279,7 @@ class Interpreter:
             case "boolean":
                 return inner
 
-        return BCValue("boolean", boolean=b)
+        return BCValue.new_boolean(b)
 
     def visit_typecast(self, tc: Typecast) -> BCValue:  # type: ignore
         inner = self.visit_expr(tc.expr)
@@ -1349,9 +1372,9 @@ class Interpreter:
                 )
 
             if inner.kind == "integer":
-                return BCValue("integer", integer=-inner.integer)  # type: ignore
+                return BCValue.new_integer(-inner.integer)  # type: ignore
             elif inner.kind == "real":
-                return BCValue("real", real=-inner.real)  # type: ignore
+                return BCValue.new_real(-inner.real)  # type: ignore
         elif isinstance(expr, Not):
             inner = self.visit_expr(expr.inner)
             if inner.kind != "boolean":
@@ -1360,7 +1383,7 @@ class Interpreter:
                     expr.inner.pos,
                 )
 
-            return BCValue("boolean", boolean=not inner.get_boolean())
+            return BCValue.new_boolean(not inner.get_boolean())
         elif isinstance(expr, Identifier):
             try:
                 var = self.variables[expr.ident]
