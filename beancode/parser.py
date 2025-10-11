@@ -785,7 +785,7 @@ class Parser:
             return None
 
         # consume the keyword
-        declare_kw = self.consume()
+        self.consume()
         if export == True:
             self.consume()
 

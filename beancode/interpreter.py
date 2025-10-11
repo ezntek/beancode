@@ -163,11 +163,13 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in ordered comparison!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
 
-                lhs_num: int | float | None
-                rhs_num: int | float | None | None
+                lhs_num: int | float = 0 
+                rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
@@ -179,16 +181,6 @@ class Interpreter:
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
-                    if lhs_num == None:
-                        self.error(
-                            "left hand side in comparison operation is null!",
-                            expr.lhs.pos,
-                        )
-                    if rhs_num == None:
-                        self.error(
-                            "right hand side in comparison operation is null!",
-                            expr.rhs.pos,
-                        )
 
                     return BCValue.new_boolean((lhs_num > rhs_num))
                 else:
@@ -210,11 +202,14 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in ordered comparison!", expr.pos)
 
-                lhs_num: int | float | None
-                rhs_num: int | float | None | None
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
+
+                lhs_num: int | float = 0 
+                rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
@@ -226,16 +221,6 @@ class Interpreter:
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
-                    if lhs_num == None:
-                        self.error(
-                            "left hand side in comparison operation is null!",
-                            expr.lhs.pos,
-                        )
-                    if rhs_num == None:
-                        self.error(
-                            "right hand side in comparison operation is null!",
-                            expr.rhs.pos,
-                        )
 
                     return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
@@ -257,11 +242,13 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in ordered comparison!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
 
-                lhs_num: int | float | None
-                rhs_num: int | float | None | None
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
@@ -273,16 +260,6 @@ class Interpreter:
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
-                    if lhs_num == None:
-                        self.error(
-                            "left hand side in comparison operation is null!",
-                            expr.lhs.pos,
-                        )
-                    if rhs_num == None:
-                        self.error(
-                            "right hand side in comparison operation is null!",
-                            expr.rhs.pos,
-                        )
 
                     return BCValue.new_boolean((lhs_num >= rhs_num))
                 else:
@@ -304,11 +281,13 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in ordered comparison!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
 
-                lhs_num: int | float | None
-                rhs_num: int | float | None | None
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
                     lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
@@ -320,16 +299,6 @@ class Interpreter:
                         )
 
                     rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
-                    if lhs_num == None:
-                        self.error(
-                            "left hand side in comparison operation is null!",
-                            expr.lhs.pos,
-                        )
-                    if rhs_num == None:
-                        self.error(
-                            "right hand side in comparison operation is null!",
-                            expr.rhs.pos,
-                        )
 
                     return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
@@ -349,8 +318,10 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -364,8 +335,8 @@ class Interpreter:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float | None = 0
-                rhs_num: int | float | None = 0
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind == "integer":
                     lhs_num = lhs.get_integer()
@@ -376,15 +347,6 @@ class Interpreter:
                     rhs_num = rhs.get_integer()
                 elif lhs.kind == "real":
                     rhs_num = rhs.get_real()
-
-                if lhs_num == None:
-                    self.error(
-                        "left hand side in numerical operation is null!", expr.lhs.pos
-                    )
-                if rhs_num == None:
-                    self.error(
-                        "right hand side in numerical operation is null!", expr.rhs.pos
-                    )
 
                 res = lhs_num * rhs_num
 
@@ -396,8 +358,10 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -411,8 +375,8 @@ class Interpreter:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float | None = 0
-                rhs_num: int | float | None = 0
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind == "integer":
                     lhs_num = lhs.get_integer()
@@ -423,15 +387,6 @@ class Interpreter:
                     rhs_num = rhs.get_integer()
                 elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
-
-                if lhs_num == None:
-                    self.error(
-                        "left hand side in numerical operation is null!", expr.lhs.pos
-                    )
-                if rhs_num == None:
-                    self.error(
-                        "right hand side in numerical operation is null!", expr.rhs.pos
-                    )
 
                 res = lhs_num**rhs_num
 
@@ -444,8 +399,10 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -457,8 +414,8 @@ class Interpreter:
                         "Cannot divide between bools, chars, and strings!", expr.rhs.pos
                     )
 
-                lhs_num: int | float | None = 0
-                rhs_num: int | float | None | None = 0
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind == "integer":
                     lhs_num = lhs.get_integer()
@@ -473,15 +430,6 @@ class Interpreter:
                 if rhs_num == 0:
                     self.error("cannot divide by zero!", expr.rhs.pos)
 
-                if lhs_num == None:
-                    self.error(
-                        "left hand side in numerical operation is null!", expr.lhs.pos
-                    )
-                if rhs_num == None:
-                    self.error(
-                        "right hand side in numerical operation is null!", expr.rhs.pos
-                    )
-
                 res = lhs_num / rhs_num
 
                 if isinstance(res, int):
@@ -492,8 +440,10 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
 
                 if lhs.kind in ["char", "string"] or rhs.kind in ["char", "string"]:
                     # concatenate instead
@@ -514,26 +464,14 @@ class Interpreter:
                     else:
                         rhs_str_or_char = str(rhs)
 
-                    if lhs_str_or_char == None:
-                        self.error(
-                            "left hand side in string/char concatenation is null!",
-                            expr.lhs.pos,
-                        )
-
-                    if rhs_str_or_char == None:
-                        self.error(
-                            "right hand side in string/char concatenation is null!",
-                            expr.rhs.pos,
-                        )
-
                     res = str(lhs_str_or_char + rhs_str_or_char)
                     return BCValue.new_string(res)
 
                 if "boolean" in [lhs.kind, rhs.kind]:
                     self.error("Cannot add bools, chars, and strings!", expr.pos)
 
-                lhs_num: int | float | None = 0
-                rhs_num: int | float | None = 0
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind == "integer":
                     lhs_num = lhs.get_integer()
@@ -545,14 +483,6 @@ class Interpreter:
                 elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
-                if lhs_num == None:
-                    self.error(
-                        "left hand side in numerical operation is null!", expr.lhs.pos
-                    )
-                if rhs_num == None:
-                    self.error(
-                        "right hand side in numerical operation is null!", expr.rhs.pos
-                    )
                 res = lhs_num + rhs_num
 
                 if isinstance(res, int):
@@ -563,8 +493,10 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if "null" in [lhs.kind, rhs.kind]:
-                    self.error("cannot have NULL in arithmetic expression!", expr.pos)
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of a binary expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of a binary expression!", expr.rhs.pos)
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error("Cannot subtract bools, chars, and strings!")
@@ -572,8 +504,8 @@ class Interpreter:
                 if rhs.kind in ["boolean", "char", "string"]:
                     self.error("Cannot subtract bools, chars, and strings!")
 
-                lhs_num: int | float | None = 0
-                rhs_num: int | float | None = 0
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
 
                 if lhs.kind == "integer":
                     lhs_num = lhs.get_integer()
@@ -585,14 +517,6 @@ class Interpreter:
                 elif rhs.kind == "real":
                     rhs_num = rhs.get_real()
 
-                if lhs_num == None:
-                    self.error(
-                        "left hand side in numerical operation is null!", expr.lhs.pos
-                    )
-                if rhs_num == None:
-                    self.error(
-                        "right hand side in numerical operation is null!", expr.rhs.pos
-                    )
                 res = lhs_num - rhs_num
 
                 if isinstance(res, int):
@@ -1195,6 +1119,7 @@ class Interpreter:
         intp.calls.pop()
 
     def _typecast_string(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
+        _ = pos # shut up the type checker
         s = ""
 
         if isinstance(inner.kind, BCArrayType):
