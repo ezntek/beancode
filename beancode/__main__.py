@@ -127,6 +127,7 @@ def main():
         warn("Unexpected Python ValueError! Did you work with a very long number?")
     except Exception as e:
         error(f"Python exception caught ({type(e)}: \"{e}\")! Please report this to the developers.")
+        raise e
 
 if __name__ == "__main__":
     main()

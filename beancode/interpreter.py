@@ -2185,14 +2185,14 @@ class Interpreter:
                 self.visit_include_stmt(stmt.include)  # type: ignore
             case "call":
                 self.visit_call(stmt.call)  # type: ignore
-            case "fncall":
-                self.visit_fncall(stmt.fncall)  # type: ignore
             case "assign":
                 self.visit_assign_stmt(stmt.assign)  # type: ignore
             case "constant":
                 self.visit_constant_stmt(stmt.constant)  # type: ignore
             case "declare":
                 self.visit_declare_stmt(stmt.declare)  # type: ignore
+            case "expr":
+                self.visit_expr(stmt.expr) # type: ignore
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

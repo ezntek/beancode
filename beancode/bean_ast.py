@@ -301,10 +301,10 @@ StatementKind = typing.Literal[
     "function",
     "procedure",
     "call",
-    "fncall",
     "return",
     "scope",
     "include",
+    "expr",
 ]
 
 
@@ -465,10 +465,10 @@ class Statement:
     function: FunctionStatement | None = None
     procedure: ProcedureStatement | None = None
     call: CallStatement | None = None
-    fncall: FunctionCall | None = None  # Impostor! expr as statement?!
     return_s: ReturnStatement | None = None
     scope: ScopeStatement | None = None
     include: IncludeStatement | None = None
+    expr: Expr | None = None
 
     def __repr__(self) -> str:
         match self.kind:
@@ -500,13 +500,12 @@ class Statement:
                 return self.call.__repr__()
             case "return":
                 return self.return_s.__repr__()
-            case "fncall":
-                return self.fncall.__repr__()
             case "scope":
                 return self.scope.__repr__()
             case "include":
                 return self.include.__repr__()
-
+            case "expr":
+                return self.expr.__repr__()
 
 @dataclass
 class Program:

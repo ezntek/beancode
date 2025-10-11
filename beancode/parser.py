@@ -525,16 +525,13 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match([("operator", "pow")]):
-            op = self.prev().operator
+        if self.peek().operator == "pow":
+            op = self.consume().operator
 
             if op is None:
                 raise BCError("pow: op is None", op)
 
-            right = self.unary()
-
-            if right is None:
-                return None
+            right = self.pow()
 
             expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
 
@@ -1457,12 +1454,7 @@ class Parser:
         cur = self.peek()
         expr = self.expression()
         if expr is not None:
-            if self.cur != len(self.tokens) - 1:
-                raise BCError("trailing tokens after expression", self.peek())
-            elif isinstance(expr, FunctionCall):
-                return Statement("fncall", fncall=expr)
-            else:
-                raise BCWarning("unused expression", cur, data=expr)
+            return Statement("expr", expr=expr)
         else:
             raise BCError("invalid statement or expression", cur)
 

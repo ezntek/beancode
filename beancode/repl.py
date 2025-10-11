@@ -420,14 +420,9 @@ class Repl:
                     print()
                     continue
             except BCWarning as w:
-                if isinstance(w.data, ast.Expr):
-                    exp: ast.Expr = w.data  # type: ignore
-                    output_stmt = ast.OutputStatement(pos=(0, 0, 0), items=[exp])
-                    s = ast.Statement(kind="output", output=output_stmt)
-                    program = ast.Program([s])
-                else:
-                    w.print("(repl)", inp)
-                    continue
+                w.print("(repl)", inp)
+                continue
+
 
             if len(program.stmts) < 1:
                 continue
@@ -439,12 +434,10 @@ class Repl:
                 func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
                 self.func_src[func.name] = self.buf.getvalue()
 
-            if program.stmts[0].kind == "fncall":
-                fncall: ast.FunctionCall = program.stmts[0].fncall  # type: ignore
-                program.stmts[0] = ast.Statement(
-                    "output",
-                    output=ast.OutputStatement(pos=(0, 0, 0), items=[fncall]),
-                )
+            if program.stmts[-1].kind == "expr":
+                exp: ast.Expr = program.stmts[-1].expr # type: ignore 
+                output_stmt = ast.OutputStatement(pos=(0, 0, 0), items=[exp])
+                program.stmts[-1] = ast.Statement(kind="output", output=output_stmt)
 
             if self.debug:
                 print("\033[2m=== AST ===", file=sys.stderr)
