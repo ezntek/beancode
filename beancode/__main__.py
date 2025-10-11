@@ -87,9 +87,6 @@ def real_main():
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)
-    except BCWarning as w:
-        w.print(args.file, file_content)
-        exit(1)
 
     if args.debug:
         print("\033[1m=== AST ===\033[0m", file=sys.stderr)
