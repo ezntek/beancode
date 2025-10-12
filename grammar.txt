@@ -1,0 +1,139 @@
+// informal bnf/ebnf-like grammar spec for beancode
+// is not comprehensive in terms of newline placement
+
+// informal bnf/ebnf-like grammar spec for beancode
+// is not comprehensive in terms of newline placement
+
+OneNewline = ("\n") | ("\r\n") | ";" ;
+
+Newline = OneNewline, {OneNewline} ;
+
+Identifier = alpha, {alphanumeric} ;
+
+StringLiteral = '"', {all displayable characters including escape sequences}, '"' ;
+
+CharLiteral = "'", all displayable characters including escape sequences, "'" ; 
+
+IntegerLiteral = digit, {digit} ; 
+
+RealLiteral = {digit}, ".", digit, {digit} ; 
+
+BooleanLiteral = ("TRUE" | "FALSE" | "true" | "false") ;
+
+ArrayLiteral = "{", Expr, {"," , Expr}, "}" ;
+
+MatrixLiteral = "{", ArrayLiteral, {"," , ArrayLiteral}, "}" ;
+
+PrimitiveType = ("INTEGER" | "BOOLEAN" | "REAL" | "STRING" | "CHAR" | "NULL"
+              | "integer" | "boolean" | "real" | "string" | "char" | "null") ;
+
+ArrayRange = IntegerLiteral, ":", IntegerLiteral ; 
+ArrayType = "ARRAY", "[", ArrayRange, [",", ArrayRange], "]", "OF", PrimitiveType ;
+
+Type = ArrayType | PrimitiveType ;
+
+Literal = StringLiteral
+        | CharLiteral
+        | IntegerLiteral
+        | RealLiteral
+        | BooleanLiteral
+        | ArrayLiteral 
+        | MatrixLiteral ;
+
+Negation = "-", Expr ; 
+
+Not = ( "NOT" | "not" ), Expr ;
+
+Grouping = "(", Expr, ")" ;
+
+Typecast = Type, "(", Expr, ")" ;
+
+BinaryOp = "+" | "-" | "*" | "/" | "^" 
+         | "<" | ">" | "<>" | "=" | ">=" | "<="
+         | "AND" | "OR" | "and" | "or" ;
+
+BinaryExpr = Expr, {BinaryOp, Expr} ; 
+
+ArrayIndex = Expr, "[", Expr, [",", Expr], "]" ;
+
+ArgumentList = "(", ([Expr] | Expr, {",", Expr}), ")" ;
+
+FunctionCall = Expr, ArgumentList ;
+
+Expr = Identifier
+         | Literal
+         | Negation
+         | Not
+         | Grouping
+         | Typecast
+         | ArrayLiteral
+         | BinaryExpr
+         | ArrayIndex
+         | FunctionCall ;
+
+Block =  [ Statement, [Newline], {Statement, Newline} ];
+
+Export = [( "EXPORT" | "export" )]
+
+DeclareStatement = Export, ( "DECLARE" | "declare" ), Identifier, ("<-", Expr) | ((":", Type), ["<-", Expr]) ;
+
+OutputStatement = ( "OUTPUT" | "PRINT" | "output" | "print" ), Expr, {",", Expr} ;
+
+InputStatement = ( "INPUT" | "input" ), (Identifier | ArrayIndex) ;
+
+ConstantStatement = Export, ( "CONSTANT" | "constant" ), Identifier, "<-", Expr ;
+
+AssignStatement = (Identifier | ArrayIndex), "<-", Expr ;
+
+IfStatement = ( "IF" | "if" ), Expr, ( "THEN" | "then" ), Block,
+              [ ( "ELSE" | "else" ), Block ],
+              ( "ENDIF" | "endif" ) ;
+
+CaseofBranch = Expr, ":", Statement, Newline ;
+
+CaseofStatement = ( "CASE OF" | "case of" ), Expr, Newline,
+                  [ {CaseofBranch}, [ ( "OTHERWISE" | "otherwise" ), Statement, Newline ] ],
+                  ( "ENDCASE" | "endcase" ) ;
+
+WhileStatement = ( "WHILE" | "while" ), Expr, ( "DO" | "do" ), Block, ( "ENDWHILE" | "endwhile" ) ;
+
+ForStatement = ( "FOR" | "for" ), Identifier, "<-", Expr, ( "TO" | "to" ), Expr, [ ( "STEP" | "step" ), Expr ],
+               Block, ( "NEXT" | "next" ), Identifier ;
+
+RepeatUntilStatement = ( "REPEAT" | "repeat" ), Block, ( "UNTIL" | "until" ), Expr ;
+
+Parameter = Identifier, ":", Type ;
+
+ParameterList = [ "(", Parameter, {",", Parameter}, ")" ] ;
+
+ProcedureStatement = Export, ( "PROCEDURE" | "procedure" ), Identifier, ParameterList, Block, ( "ENDPROCEDURE" | "endprocedure" ) ;
+
+FunctionStatement = Export, ( "FUNCTION" | "function" ), Identifier, ParameterList, Block, ( "ENDFUNCTION" | "endfunction" ) ;
+
+CallStatement = ( "CALL" | "call" ), FunctionCall ;  
+
+ReturnStatement = ( "RETURN" | "return" ), Expr ;
+
+ScopeStatement = ( "SCOPE" | "scope" ), Block, ( "ENDSCOPE" | "endscope" ) ; 
+
+IncludeStatement = ( "INCLUDE" | "include" | "INCLUDE_FFI" | "include_ffi" ), StringLiteral ;
+
+Statement = DeclareStatement
+          | OutputStatement
+          | InputStatement
+          | ConstantStatement
+          | AssignStatement
+          | IfStatement
+          | CaseofStatement
+          | WhileStatement
+          | ForStatement
+          | RepeatUntilStatement
+          | FunctionStatement
+          | ProcedureStatement
+          | CallStatement
+          | ReturnStatement
+          | ScopeStatement
+          | IncludeStatement
+          | Expr
+
+Program = Block
