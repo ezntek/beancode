@@ -6,6 +6,28 @@ from .bean_ast import *
 from .error import *
 from . import __version__
 
+def _convert_escape_code(ch: str) -> str | None:
+    match ch:
+        case "n":
+            return "\n"
+        case "r":
+            return "\r"
+        case "e":
+            return "\033"
+        case "a":
+            return "\a"
+        case "b":
+            return "\b"
+        case "f":
+            return "\f"
+        case "v":
+            return "\v"
+        case "0":
+            return "\0"
+        case "\\":
+            return "\\"
+        case _:
+            return None
 
 class Parser:
     tokens: list[l.Token]
@@ -171,41 +193,42 @@ class Parser:
                 if val[0] == "\\":
                     if len(val) == 1:
                         return Literal(tok.pos, "char", char="\\")
-                    ch = ""
-                    match val[1]:
-                        case "n":
-                            ch = "\n"
-                        case "r":
-                            ch = "\r"
-                        case "e":
-                            ch = "\033"
-                        case "a":
-                            ch = "\a"
-                        case "b":
-                            ch = "\b"
-                        case "f":
-                            ch = "\f"
-                        case "v":
-                            ch = "\v"
-                        case "0":
-                            ch = "\0"
-                        case "\\":
-                            ch = "\\"
-                        case _:
-                            raise BCError(
-                                f"invalid escape sequence in literal `{lit.value}`",
-                                tok.pos,
-                            )
+
+                    ch = _convert_escape_code(val[1])
+                    if ch is None:
+                        raise BCError(
+                            f"invalid escape sequence in literal '{lit.value}'",
+                            tok.pos,
+                        )
+
                     return Literal(tok.pos, "char", char=ch)
                 else:
                     if len(val) > 1:
                         raise BCError(
-                            f"more than 1 character in char literal `{lit.value}`", tok
+                            f"more than 1 character in char literal '{lit.value}'", tok
                         )
                     return Literal(tok.pos, "char", char=val[0])
             case "string":
                 val = lit.value
-                return Literal(tok.pos, "string", string=val)
+                res = StringIO()
+                i = 0
+
+                while i < len(val):
+                    if val[i] == '\\':
+                        if i == len(val) - 1:
+                            res.write('\\')
+                        else:
+                            i += 1
+                            ch = _convert_escape_code(val[i])
+                            if ch is None:
+                                pos = (tok.pos[0], tok.pos[1] + i + 1, tok.pos[2]) 
+                                raise BCError(f"invalid escape sequence in literal \"{lit.value}\"", pos)
+                            res.write(ch)
+                    else:
+                        res.write(val[i])
+                    i += 1
+
+                return Literal(tok.pos, "string", string=res.getvalue())
             case "boolean":
                 val = lit.value.lower()
                 if val == "true":

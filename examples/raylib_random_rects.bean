@@ -1,4 +1,4 @@
-include_ffi "beanray"
+INCLUDE_FFI "beanray"
 
 CONSTANT MaxRect <- 1000
 CONSTANT WinWidth <- 800

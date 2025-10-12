@@ -3,7 +3,7 @@
 // outputs one character without a newline, and returns the input
 PROCEDURE PUTCHAR(ch: CHAR)
 
-// exits the program at the callsite with an OS error coder
+// exits the program at the callsite with an OS error code
 PROCEDURE EXIT(code: INTEGER) 
 ---
 */

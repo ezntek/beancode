@@ -1,7 +1,7 @@
 // you can typecast variables as follows:
 
-DECLARE Age_S: STRING
-Age_S <- STRING("16")
+DECLARE Age: STRING
+Age <- STRING("16")
 
 // type casting is automatically done with INPUTs
 DECLARE Price: STRING
