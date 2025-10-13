@@ -39,6 +39,7 @@ def _get_env(args: BCArgsList) -> BCValue:
     s = args["s"].get_string()
     return BCValue.new_string(os.environ[s])
 
+
 consts = []
 vars = []
 procs = [

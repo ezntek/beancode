@@ -7,10 +7,12 @@ import time
 import copy
 import math
 
+from .bean_help import bean_help
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
 from .error import *
+from .libroutine_defs import *
 from . import __version__, is_case_consistent
 
 
@@ -30,32 +32,6 @@ class Variable:
 BlockType = t.Literal[
     "if", "while", "for", "repeatuntil", "function", "procedure", "scope"
 ]
-
-Libroutine = list[tuple[BCType, ...] | BCType]
-Libroutines = dict[str, Libroutine]
-
-LIBROUTINES: Libroutines = {
-    "ucase": ["string"],
-    "lcase": ["string"],
-    "div": [("integer", "real"), ("integer", "real")],
-    "mod": [("integer", "real"), ("integer", "real")],
-    "substring": ["string", "integer", "integer"],
-    "round": ["real", "integer"],
-    "sqrt": [("integer", "real")],
-    "length": ["string"],
-    "sin": ["real"],
-    "cos": ["real"],
-    "tan": ["real"],
-    "getchar": [],
-    "random": [],
-}
-
-LIBROUTINES_NORETURN: Libroutines = {
-    "putchar": ["char"],
-    "exit": ["integer"],
-    "sleep": ["integer"],
-    "flush": [],
-}
 
 
 @dataclass
@@ -167,11 +143,17 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
 
-                lhs_num: int | float = 0 
+                lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
@@ -205,13 +187,18 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
 
-                lhs_num: int | float = 0 
+                lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind in ["integer", "real"]:
@@ -246,9 +233,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
 
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
@@ -285,9 +278,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an ordered comparison!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an ordered comparison!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
 
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
@@ -322,9 +321,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -362,9 +367,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -402,9 +413,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error(
@@ -443,9 +460,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs.kind in ["char", "string"] or rhs.kind in ["char", "string"]:
                     # concatenate instead
@@ -496,9 +519,15 @@ class Interpreter:
                 rhs = self.visit_expr(expr.rhs)
 
                 if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of a binary expression!", expr.lhs.pos)
+                    self.error(
+                        "cannot have NULL in the left hand side of a binary expression!",
+                        expr.lhs.pos,
+                    )
                 elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of a binary expression!", expr.rhs.pos)
+                    self.error(
+                        "cannot have NULL in the right hand side of a binary expression!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs.kind in ["boolean", "char", "string"]:
                     self.error("Cannot subtract bools, chars, and strings!")
@@ -917,6 +946,18 @@ class Interpreter:
                 case "tan":
                     [val, *_] = evargs
                     return BCValue.new_real(math.tan(val.get_real()))
+                case "help":
+                    [val, *_] = evargs
+                    query = val.get_string()
+                    s = bean_help(query)
+                    if s is None:
+                        self.error(
+                            f'No help information for query "{query}" was found.',
+                            stmt.pos,
+                        )
+
+                    return BCValue.new_string(s)
+
         except BCError as e:
             e.pos = stmt.pos
             raise e
@@ -930,30 +971,12 @@ class Interpreter:
         match name:
             case "putchar":
                 [ch, *_] = evargs
-
-                if ch.kind != "char":
-                    self.error(
-                        "expected first argument to PUTCHAR to be a CHAR", stmt.pos
-                    )
-
                 self.visit_putchar(ch.get_char())
             case "exit":
                 [code, *_] = evargs
-
-                if code.kind != "integer":
-                    self.error(
-                        "expected first argument to EXIT to be an INTEGER", stmt.pos
-                    )
-
                 self.visit_exit(code.get_integer())
             case "sleep":
                 [duration, *_] = evargs
-
-                if duration.kind != "real":
-                    self.error(
-                        "expected first argument to SLEEP to be a REAL", stmt.pos
-                    )
-
                 self.visit_sleep(duration.get_real())
             case "flush":
                 sys.stdout.flush()
@@ -1130,7 +1153,7 @@ class Interpreter:
         intp.calls.pop()
 
     def _typecast_string(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
-        _ = pos # shut up the type checker
+        _ = pos  # shut up the type checker
         s = ""
 
         if isinstance(inner.kind, BCArrayType):
@@ -1341,9 +1364,13 @@ class Interpreter:
             if expr.ident in self.functions:
                 obj = self.functions[expr.ident]
                 if isinstance(obj, BCProcedure) or isinstance(obj, ProcedureStatement):
-                    self.error(f'"{expr.ident}" is a procedure, not a variable!', expr.pos)
+                    self.error(
+                        f'"{expr.ident}" is a procedure, not a variable!', expr.pos
+                    )
                 else:
-                    self.error(f'"{expr.ident}" is a function, not a variable!', expr.pos)
+                    self.error(
+                        f'"{expr.ident}" is a function, not a variable!', expr.pos
+                    )
 
             try:
                 var = self.variables[expr.ident]
@@ -2011,16 +2038,16 @@ class Interpreter:
             inner_end_v = inner_end.get_integer()
 
             if outer_begin_v < 0:
-                self.error("outer beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[0].pos) # type: ignore
+                self.error("outer beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[0].pos)  # type: ignore
 
             if outer_end_v < 0:
-                self.error("outer ending value for array bound declaration cannot be <0!", atype.matrix_bounds[1].pos) # type: ignore
+                self.error("outer ending value for array bound declaration cannot be <0!", atype.matrix_bounds[1].pos)  # type: ignore
 
             if inner_begin_v < 0:
-                self.error("inner beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[2].pos) # type: ignore
+                self.error("inner beginning value for array bound declaration cannot be <0!", atype.matrix_bounds[2].pos)  # type: ignore
 
             if inner_end_v < 0:
-                self.error("inner ending value for array bound declaration cannot be <0!", atype.matrix_bounds[3].pos) # type: ignore
+                self.error("inner ending value for array bound declaration cannot be <0!", atype.matrix_bounds[3].pos)  # type: ignore
 
             if outer_begin_v >= outer_end_v:
                 self.error("invalid outer range for 2D array bound declaration", d.pos)
@@ -2050,13 +2077,13 @@ class Interpreter:
             end_v = end.get_integer()
 
             if begin_v < 0:
-                self.error("beginning value for array bound declaration cannot be <0!", atype.flat_bounds[0].pos) # type: ignore
+                self.error("beginning value for array bound declaration cannot be <0!", atype.flat_bounds[0].pos)  # type: ignore
 
             if end_v < 0:
-                self.error("ending value for array bound declaration cannot be <0!", atype.flat_bounds[1].pos) # type: ignore
+                self.error("ending value for array bound declaration cannot be <0!", atype.flat_bounds[1].pos)  # type: ignore
 
             if begin_v >= end_v:
-                self.error("invalid range for array bound declaration", atype.flat_bounds[0].pos) # type: ignore
+                self.error("invalid range for array bound declaration", atype.flat_bounds[0].pos)  # type: ignore
 
             size = end_v - begin_v
             arr: BCValue = [BCValue(atype.inner) for _ in range(size + 1)]  # type: ignore
@@ -2080,7 +2107,8 @@ class Interpreter:
             ) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
                 self.error(
-                    f'cannot shadow existing function or procedure named "{key}" with variable of the same name', d.pos
+                    f'cannot shadow existing function or procedure named "{key}" with variable of the same name',
+                    d.pos,
                 )
 
             if isinstance(d.typ, BCArrayType):
@@ -2128,7 +2156,7 @@ class Interpreter:
             case "declare":
                 self.visit_declare_stmt(stmt.declare)  # type: ignore
             case "expr":
-                self.visit_expr(stmt.expr) # type: ignore
+                self.visit_expr(stmt.expr)  # type: ignore
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

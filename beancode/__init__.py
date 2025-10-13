@@ -1,4 +1,4 @@
-__version__ = "0.4.0-alpha2"
+__version__ = "0.4.0-alpha3"
 
 
 def prefix_string_with_article(s: str) -> str:
@@ -42,11 +42,13 @@ def panic(msg: str):
     )
     raise Exception("panicked")
 
+
 def run(filename: str):
     file_content = str()
     with open(filename, "r") as f:
         file_content = f.read()
     execute(file_content)
+
 
 def execute(src: str, filename="(execute)"):
     from .error import BCError

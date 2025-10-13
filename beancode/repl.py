@@ -423,7 +423,6 @@ class Repl:
                 w.print("(repl)", inp)
                 continue
 
-
             if len(program.stmts) < 1:
                 continue
 
@@ -435,7 +434,7 @@ class Repl:
                 self.func_src[func.name] = self.buf.getvalue()
 
             if program.stmts[-1].kind == "expr":
-                exp: ast.Expr = program.stmts[-1].expr # type: ignore 
+                exp: ast.Expr = program.stmts[-1].expr  # type: ignore
                 output_stmt = ast.OutputStatement(pos=(0, 0, 0), items=[exp])
                 program.stmts[-1] = ast.Statement(kind="output", output=output_stmt)
 

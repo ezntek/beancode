@@ -44,7 +44,6 @@ def real_main():
     group.add_argument("file", nargs="?", type=str)
     args = parser.parse_args()
 
-
     if args.no_run:
         args.debug = True
     if args.command is not None:
@@ -123,8 +122,11 @@ def main():
     except ValueError:
         warn("Unexpected Python ValueError! Did you work with a very long number?")
     except Exception as e:
-        error(f"Python exception caught ({type(e)}: \"{e}\")! Please report this to the developers.")
+        error(
+            f'Python exception caught ({type(e)}: "{e}")! Please report this to the developers.'
+        )
         raise e
+
 
 if __name__ == "__main__":
     main()
