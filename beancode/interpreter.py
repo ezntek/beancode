@@ -43,6 +43,9 @@ LIBROUTINES: Libroutines = {
     "round": ["real", "integer"],
     "sqrt": [("integer", "real")],
     "length": ["string"],
+    "sin": ["real"],
+    "cos": ["real"],
+    "tan": ["real"],
     "getchar": [],
     "random": [],
 }
@@ -314,46 +317,6 @@ class Interpreter:
                             "boolean", boolean=(lhs.get_string() <= rhs.get_string())
                         )
             # add sub mul div
-            case "mul":
-                lhs = self.visit_expr(expr.lhs)
-                rhs = self.visit_expr(expr.rhs)
-
-                if lhs.kind == "null":
-                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
-                elif rhs.kind == "null":
-                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
-
-                if lhs.kind in ["boolean", "char", "string"]:
-                    self.error(
-                        "Cannot multiply between bools, chars, and strings!",
-                        expr.lhs.pos,
-                    )
-
-                if rhs.kind in ["boolean", "char", "string"]:
-                    self.error(
-                        "Cannot multiply between bools, chars, and strings!",
-                        expr.lhs.pos,
-                    )
-
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind == "integer":
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
-                    lhs_num = lhs.get_real()
-
-                if rhs.kind == "integer":
-                    rhs_num = rhs.get_integer()
-                elif lhs.kind == "real":
-                    rhs_num = rhs.get_real()
-
-                res = lhs_num * rhs_num
-
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
             case "pow":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -394,7 +357,46 @@ class Interpreter:
                     return BCValue.new_integer(res)
                 elif isinstance(res, float):
                     return BCValue.new_real(res)
+            case "mul":
+                lhs = self.visit_expr(expr.lhs)
+                rhs = self.visit_expr(expr.rhs)
 
+                if lhs.kind == "null":
+                    self.error("cannot have NULL in the left hand side of an arithmetic expression!", expr.lhs.pos)
+                elif rhs.kind == "null":
+                    self.error("cannot have NULL in the right hand side of an arithmetic expression!", expr.rhs.pos)
+
+                if lhs.kind in ["boolean", "char", "string"]:
+                    self.error(
+                        "Cannot multiply between bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind in ["boolean", "char", "string"]:
+                    self.error(
+                        "Cannot multiply between bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == "integer":
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == "real":
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == "integer":
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == "real":
+                    rhs_num = rhs.get_real()
+
+                res = lhs_num * rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
             case "div":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -730,7 +732,7 @@ class Interpreter:
 
     def visit_mod(self, lhs: int | float, rhs: int | float) -> BCValue:
         if type(rhs) == float:
-            return BCValue.new_real(float(rhs % rhs))
+            return BCValue.new_real(float(lhs % rhs))
         else:
             return BCValue.new_integer(int(lhs % rhs))
 
@@ -906,6 +908,15 @@ class Interpreter:
                     return self.visit_getchar()
                 case "random":
                     return self.visit_random()
+                case "sin":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.sin(val.get_real()))
+                case "cos":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.cos(val.get_real()))
+                case "tan":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.tan(val.get_real()))
         except BCError as e:
             e.pos = stmt.pos
             raise e
