@@ -98,9 +98,9 @@ def real_main():
     if args.no_run:
         return
 
+    i = Interpreter(program.stmts)
+    i.toplevel = True
     try:
-        i = Interpreter(program.stmts)
-        i.toplevel = True
         i.visit_block(None)
     except BCError as err:
         err.print(args.file, file_content)

@@ -479,6 +479,9 @@ class Lexer:
             if not ch.isalnum() and ch != "_":
                 raise BCError("invalid identifier", pos)
 
+        if is_case_consistent(word) and word.lower() == "endfor":
+            raise BCError("ENDFOR is not a valid keyword! Please use \"NEXT <your counter>\" instead.", pos)
+
         return Token(
             "ident",
             pos,

@@ -89,66 +89,6 @@ class BCError(Exception):
         indicator += f" \033[0m\033[1merror at line {line} column {col}\033[0m"
         print(indicator)
 
-
-class BCWarning(Exception):
-    # row, col, bol
-    pos: tuple[int, int, int]
-
-    def __init__(self, msg: str, ctx=None, data=None) -> None:  # type: ignore
-        self.len = 1
-        self.data = data
-        if type(ctx).__name__ == "Token":
-            self.pos = ctx.pos  # type: ignore
-            self.len = len(ctx.get_raw()[0])  # type: ignore
-        elif type(ctx) == tuple[int, int, int]:
-            self.pos = ctx
-        else:
-            self.pos = (0, 0, 0)  # type: ignore
-
-        s = f"\033[35;1mwarning: \033[0m\033[2m{msg}\033[0m\n"
-        self.msg = s
-        super().__init__(s)
-
-    def print(self, filename: str, file_content: str):
-        line = self.pos[0]
-        col = self.pos[1]
-        bol = self.pos[2]
-
-        eol = bol
-        while eol != len(file_content) and file_content[eol] != "\n":
-            eol += 1
-
-        if self.pos == (0, 0, 0):
-            print(self.msg, end="")
-            return
-
-        line_begin = f" \033[35;1m{line}\033[0m | "
-        padding = len(str(line) + "  | ") + col - 1
-        tabs = 0
-        spaces = lambda *_: " " * padding + "\t" * tabs
-
-        print(f"\033[0m\033[1m{filename}:{line}: ", end="")
-        print(self.msg, end="")
-
-        print(line_begin, end="")
-        print(file_content[bol:eol])
-
-        for ch in file_content[bol:eol]:
-            if ch == "\t":
-                padding -= 1
-                tabs += 1
-
-        tildes = f"{spaces()}\033[35;1m{'~' * self.len}\033[0m"
-        print(tildes)
-        indicator = f"{spaces()}\033[35;1m"
-        if os.name == "nt":
-            indicator += "+-"
-        else:
-            indicator += "∟"
-        indicator += f" \033[0m\033[1mwarning at line {line} column {col}\033[0m"
-        print(indicator)
-
-
 def info(msg: str):
     print(
         f"\033[34;1minfo:\033[0m {msg}",

@@ -87,7 +87,12 @@ class Repl:
             rep = self.i._display_array(a)
             typ = a.get_type_str()
         else:
-            rep = repr(val)
+            if val.kind == "string":
+                rep = f'"{val}"'
+            elif val.kind == "char":
+                rep = f"'{val}'"
+            else:
+                rep = str(val)
             typ = val.kind
 
         if isinstance(val.kind, ast.BCArrayType):
@@ -322,10 +327,6 @@ class Repl:
                     err.print("(repl)", self.buf.getvalue())
                     print()
                     return (None, ContinuationResult.ERROR)
-            except BCWarning as w:
-                w.print("(repl)", inp)
-                print()
-                return (None, ContinuationResult.ERROR)
 
             return (prog, ContinuationResult.SUCCESS)
 
@@ -419,10 +420,6 @@ class Repl:
                     err.print("(repl)", src)
                     print()
                     continue
-            except BCWarning as w:
-                w.print("(repl)", inp)
-                continue
-
 
             if len(program.stmts) < 1:
                 continue

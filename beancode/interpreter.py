@@ -1620,18 +1620,12 @@ class Interpreter:
         except BCError as err:
             err.print(filename, file_content)
             exit(1)
-        except BCWarning as warn:
-            warn.print(filename, file_content)
-            exit(1)
 
         intp = self.new(program.stmts)
         try:
             intp.visit_block(None)
         except BCError as err:
             err.print(filename, file_content)
-            exit(1)
-        except BCWarning as warn:
-            warn.print(filename, file_content)
             exit(1)
 
         for name, var in intp.variables.items():
