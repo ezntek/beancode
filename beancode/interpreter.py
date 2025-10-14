@@ -1735,6 +1735,8 @@ class Interpreter:
                 step = 1
         else:
             step = self.visit_expr(stmt.step).get_integer()
+            if step == 0:
+                self.error("step for for loop cannot be 0!", stmt.step.pos)
 
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
@@ -1750,50 +1752,32 @@ class Interpreter:
         intp.variables[stmt.counter.ident] = Variable(counter, const=False)
 
         if step > 0:
-            while counter.get_integer() <= end.get_integer():
-                intp.visit_block(None)
-                #  FIXME: barbaric
-                # clear declared variables
-                c = intp.variables[stmt.counter.ident]
-                intp.variables = self.variables.copy()
-                intp.variables[stmt.counter.ident] = c
-                if intp._returned:
-                    proc, func = self.can_return()
+            cond = lambda *_: counter.get_integer() <= end.get_integer() 
+        else:
+            cond = lambda *_: counter.get_integer() >= end.get_integer() 
+        
+        while cond():
+            intp.visit_block(None)
+            #  FIXME: barbaric
+            # clear declared variables
+            c = intp.variables[stmt.counter.ident]
+            intp.variables = self.variables.copy()
+            intp.variables[stmt.counter.ident] = c
+            if intp._returned:
+                proc, func = self.can_return()
 
-                    if not proc and not func:
-                        self.error(
-                            f"did not find function or procedure to return from!",
-                            stmt.pos,
-                        )
+                if not proc and not func:
+                    self.error(
+                        f"did not find function or procedure to return from!",
+                        stmt.pos,
+                    )
 
-                    self._returned = True
-                    self.retval = intp.retval
-                    return
+                self._returned = True
+                self.retval = intp.retval
+                return
 
-                counter.integer = counter.integer + step  # type: ignore
-        elif step < 0:
-            while counter.get_integer() >= end.get_integer():
-                intp.visit_block(None)
-                # FIXME:
-                # clear declared variables (barbaric)
-                c = intp.variables[stmt.counter.ident]
-                intp.variables = self.variables.copy()
-                intp.variables[stmt.counter.ident] = c
-                if intp._returned:
-                    proc, func = self.can_return()
-
-                    if not proc and not func:
-                        self.error(
-                            f"did not find function or procedure to return from!",
-                            stmt.pos,
-                        )
-
-                    self._returned = True
-                    self.retval = intp.retval
-                    return
-
-                counter.integer = counter.integer + step  # type: ignore
-
+            counter.integer = counter.integer + step  # type: ignore
+        
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)
         else:

@@ -520,12 +520,11 @@ class Parser:
             begin = self.consume()
             e = self.expression()
             if e is None:
-                raise BCError("invalid or no expression inside grouping", e)
+                raise BCError("invalid or no expression inside grouping", begin)
 
             end = self.consume()
-
             if end.separator != "right_paren":
-                raise BCError("expected ending ) delimiter after (", begin)
+                raise BCError("expected ending right parenthesis delimiter after left parenthesis in grouping", end)
 
             return Grouping(begin.pos, inner=e)
         elif p.operator == "sub":
@@ -1109,7 +1108,6 @@ class Parser:
         return Statement("while", while_s=res)
 
     def for_stmt(self):
-        # FOR <counter> <assign> <lit> TO <lit> [STEP <lit>]
         initial = self.peek()
 
         if initial.keyword != "for":
@@ -1149,6 +1147,8 @@ class Parser:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.peek()
                 )
+        
+        self.clean_newlines()
 
         stmts = []
         while self.peek().keyword != "next":
@@ -1214,7 +1214,7 @@ class Parser:
             raise BCError("invalid type after colon in function argument", colon)
 
         return FunctionArgument(
-            pos=ident.pos if ident.pos is not None else (0, 0, 0),
+            pos=ident.pos, # type: ignore
             name=ident.ident,
             typ=typ,
         )
