@@ -1,4 +1,4 @@
-__version__ = "0.4.0-alpha3"
+__version__ = "0.5.0-dev"
 
 
 def prefix_string_with_article(s: str) -> str:
