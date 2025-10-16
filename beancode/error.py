@@ -89,6 +89,7 @@ class BCError(Exception):
         indicator += f" \033[0m\033[1merror at line {line} column {col}\033[0m"
         print(indicator)
 
+
 def info(msg: str):
     print(
         f"\033[34;1minfo:\033[0m {msg}",

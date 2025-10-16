@@ -6,6 +6,7 @@ from .bean_ast import *
 from .error import *
 from . import __version__
 
+
 def _convert_escape_code(ch: str) -> str | None:
     match ch:
         case "n":
@@ -28,6 +29,7 @@ def _convert_escape_code(ch: str) -> str | None:
             return "\\"
         case _:
             return None
+
 
 class Parser:
     tokens: list[l.Token]
@@ -127,7 +129,9 @@ class Parser:
     def array_literal(self, nested=False) -> Expr | None:
         lbrace = self.consume()  # TODO: allow other braced literals later
         if lbrace.separator != "left_curly":
-            raise BCError("expected left curly brace for array or matrix literal!", lbrace)
+            raise BCError(
+                "expected left curly brace for array or matrix literal!", lbrace
+            )
 
         exprs = []
         while self.peek().separator != "right_curly":
@@ -135,14 +139,17 @@ class Parser:
 
             if self.peek().separator == "left_curly":
                 if nested:
-                    raise BCError("cannot nest array literals over 2 dimensions!", self.peek())
+                    raise BCError(
+                        "cannot nest array literals over 2 dimensions!", self.peek()
+                    )
                 arrlit = self.array_literal(nested=True)
                 exprs.append(arrlit)
             else:
                 expr = self.expression()
                 if expr is None:
                     raise BCError(
-                        "invalid or no expression supplied as argument to array literal", self.peek()
+                        "invalid or no expression supplied as argument to array literal",
+                        self.peek(),
                     )
                 exprs.append(expr)
 
@@ -214,15 +221,18 @@ class Parser:
                 i = 0
 
                 while i < len(val):
-                    if val[i] == '\\':
+                    if val[i] == "\\":
                         if i == len(val) - 1:
-                            res.write('\\')
+                            res.write("\\")
                         else:
                             i += 1
                             ch = _convert_escape_code(val[i])
                             if ch is None:
-                                pos = (tok.pos[0], tok.pos[1] + i + 1, tok.pos[2]) 
-                                raise BCError(f"invalid escape sequence in literal \"{lit.value}\"", pos)
+                                pos = (tok.pos[0], tok.pos[1] + i + 1, tok.pos[2])
+                                raise BCError(
+                                    f'invalid escape sequence in literal "{lit.value}"',
+                                    pos,
+                                )
                             res.write(ch)
                     else:
                         res.write(val[i])
@@ -524,7 +534,10 @@ class Parser:
 
             end = self.consume()
             if end.separator != "right_paren":
-                raise BCError("expected ending right parenthesis delimiter after left parenthesis in grouping", end)
+                raise BCError(
+                    "expected ending right parenthesis delimiter after left parenthesis in grouping",
+                    end,
+                )
 
             return Grouping(begin.pos, inner=e)
         elif p.operator == "sub":
@@ -1147,7 +1160,7 @@ class Parser:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.peek()
                 )
-        
+
         self.clean_newlines()
 
         stmts = []
@@ -1214,7 +1227,7 @@ class Parser:
             raise BCError("invalid type after colon in function argument", colon)
 
         return FunctionArgument(
-            pos=ident.pos, # type: ignore
+            pos=ident.pos,  # type: ignore
             name=ident.ident,
             typ=typ,
         )

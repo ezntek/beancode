@@ -1,4 +1,4 @@
-__version__ = "0.4.0-beta1"
+__version__ = "0.4.0-beta2"
 
 
 def prefix_string_with_article(s: str) -> str:
@@ -42,6 +42,7 @@ def panic(msg: str):
     )
     raise Exception("panicked")
 
+
 def run(filename: str):
     """Execute code from a file path."""
 
@@ -49,6 +50,7 @@ def run(filename: str):
     with open(filename, "r") as f:
         file_content = f.read()
     execute(file_content)
+
 
 def execute(src: str, filename="(execute)"):
     """Execute code from a Python string."""
