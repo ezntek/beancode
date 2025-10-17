@@ -2049,10 +2049,10 @@ class Interpreter:
             if inner_end_v < 0:
                 self.error("inner ending value for array bound declaration cannot be <0!", atype.matrix_bounds[3].pos)  # type: ignore
 
-            if outer_begin_v >= outer_end_v:
+            if outer_begin_v > outer_end_v:
                 self.error("invalid outer range for 2D array bound declaration", d.pos)
 
-            if inner_begin_v >= inner_end_v:
+            if inner_begin_v > inner_end_v:
                 self.error("invalid inner range for 2D array bound declaration", d.pos)
 
             # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
@@ -2082,7 +2082,7 @@ class Interpreter:
             if end_v < 0:
                 self.error("ending value for array bound declaration cannot be <0!", atype.flat_bounds[1].pos)  # type: ignore
 
-            if begin_v >= end_v:
+            if begin_v > end_v:
                 self.error("invalid range for array bound declaration", atype.flat_bounds[0].pos)  # type: ignore
 
             size = end_v - begin_v

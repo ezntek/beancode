@@ -1,5 +1,11 @@
 # beancode
 
+## WARNING
+
+This is the **development branch of beancode**. If you want stable builds or specifically versioned releases, head to the respective branches. This branch may have breaking changes and bugs added/removed anytime.
+
+---
+
 This is a tree-walking interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf), written in Python (3.10+).
 
 ***IMPORTANT:*** Some examples using [raylib](https://github.com/raysan5/raylib) are provided. They were written entirely for fun; in order to run those examples one must install the `raylib` package for those examples to run, else, you will get an error.

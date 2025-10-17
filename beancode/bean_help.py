@@ -205,7 +205,9 @@ def _getchar() -> str:
 def _putchar() -> str:
     res = StringIO()
 
-    # TODO: write help
+    res.write(LIBROUTINE_ENTRIES["putchar"][0] + '\n')
+    res.write(EXTENSION_TXT)
+    res.write("Arguments: (CHAR)")
 
     return res.getvalue()
 
@@ -213,7 +215,9 @@ def _putchar() -> str:
 def _exit() -> str:
     res = StringIO()
 
-    # TODO: write help
+    res.write(LIBROUTINE_ENTRIES["exit"][0] + '\n')
+    res.write(EXTENSION_TXT)
+    res.write("Arguments: (INTEGER)")
 
     return res.getvalue()
 
@@ -221,16 +225,19 @@ def _exit() -> str:
 def _sleep() -> str:
     res = StringIO()
 
-    # TODO: write help
-
+    res.write(LIBROUTINE_ENTRIES["sleep"][0] + '\n')
+    res.write(EXTENSION_TXT)
+    res.write("Arguments: (INTEGER or REAL)")
     return res.getvalue()
 
 
 def _flush() -> str:
     res = StringIO()
 
-    # TODO: write help
-
+    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + '\n')
+    res.write(EXTENSION_TXT)
+    res.write("Arguments: ()")
+    
     return res.getvalue()
 
 
