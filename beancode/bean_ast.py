@@ -125,6 +125,10 @@ class BCValue:
         )
 
     @classmethod
+    def new_null(cls) -> "BCValue":
+        return cls("null")
+
+    @classmethod
     def new_integer(cls, i: int) -> "BCValue":
         return cls("integer", integer=i)
 
@@ -304,6 +308,7 @@ StatementKind = typing.Literal[
     "return",
     "scope",
     "include",
+    "trace",
     "expr",
 ]
 
@@ -450,6 +455,12 @@ class IncludeStatement:
 
 
 @dataclass
+class TraceStatement:
+    pos: tuple[int, int, int]
+    inner: FunctionCall 
+    items: ArrayLiteral
+
+@dataclass
 class Statement:
     kind: StatementKind
     declare: DeclareStatement | None = None
@@ -468,6 +479,7 @@ class Statement:
     return_s: ReturnStatement | None = None
     scope: ScopeStatement | None = None
     include: IncludeStatement | None = None
+    trace: TraceStatement | None = None
     expr: Expr | None = None
 
     def __repr__(self) -> str:
@@ -504,10 +516,31 @@ class Statement:
                 return self.scope.__repr__()
             case "include":
                 return self.include.__repr__()
+            case "trace":
+                return self.trace.__repr__()
             case "expr":
                 return self.expr.__repr__()
-
+            
 
 @dataclass
 class Program:
     stmts: list[Statement]
+
+@dataclass
+class Variable:
+    val: BCValue
+    const: bool
+    export: bool = False
+
+    def is_uninitialized(self) -> bool:
+        return self.val.is_uninitialized()
+
+    def is_null(self) -> bool:
+        return self.val.is_null()
+
+
+@dataclass
+class CallStackEntry:
+    name: str
+    rtype: BCType | None
+    func: bool = False

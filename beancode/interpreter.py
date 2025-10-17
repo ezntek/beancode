@@ -12,27 +12,7 @@ from .parser import *
 from .error import *
 from .libroutines import *
 from . import __version__, is_case_consistent
-
-
-@dataclass
-class Variable:
-    val: BCValue
-    const: bool
-    export: bool = False
-
-    def is_uninitialized(self) -> bool:
-        return self.val.is_uninitialized()
-
-    def is_null(self) -> bool:
-        return self.val.is_null()
-
-
-@dataclass
-class CallStackEntry:
-    name: str
-    rtype: BCType | None
-    func: bool = False
-
+from .tracer import *
 
 class Interpreter:
     block: list[Statement]
@@ -47,6 +27,7 @@ class Interpreter:
     toplevel: bool
     retval: BCValue | None = None
     _returned: bool
+    tracer: Tracer | None = None
 
     def __init__(
         self,
@@ -54,16 +35,18 @@ class Interpreter:
         func=False,
         proc=False,
         loop=False,
+        tracer=None,
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
+        self.tracer = tracer
         self.reset_all()
 
     @classmethod
-    def new(cls, block: list[Statement], func=False, proc=False, loop=False) -> "Interpreter":  # type: ignore
-        return cls(block, func=func, proc=proc, loop=loop)  # type: ignore
+    def new(cls, block: list[Statement], func=False, proc=False, loop=False, tracer=None) -> "Interpreter":  # type: ignore
+        return cls(block, func=func, proc=proc, loop=loop, tracer=tracer)  # type: ignore
 
     def reset(self):
         self.cur_stmt = 0
@@ -101,6 +84,10 @@ class Interpreter:
                 break
 
         raise BCError(msg, pos, proc=proc, func=func)
+
+    def trace(self) -> None:
+        if self.tracer is not None:
+            self.tracer.collect_new(self.variables)
 
     def get_return_type(self) -> BCType | None:
         return self.calls[-1].rtype
@@ -607,7 +594,6 @@ class Interpreter:
                         "right hand side in boolean operation is null", expr.rhs.pos
                     )
 
-                # python does: False or True = False... <redacted> you
                 res = lhs_b or rhs_b
 
                 return BCValue.new_boolean(res)
@@ -658,7 +644,7 @@ class Interpreter:
 
         if isinstance(v.kind, BCArrayType):
             if v.array is None:
-                return BCValue("null")
+                return BCValue.new_null()
 
             a: BCArray = v.array  # type: ignore
 
@@ -684,7 +670,7 @@ class Interpreter:
                 res = a.matrix[tup[0] - a.matrix_bounds[0]][inner - a.matrix_bounds[2]]  # type: ignore
 
                 if res.is_uninitialized():
-                    return BCValue("null")
+                    return BCValue.new_null()
                 else:
                     return res
             else:
@@ -702,7 +688,7 @@ class Interpreter:
 
                 res = a.flat[tup[0] - a.flat_bounds[0]]  # type: ignore
                 if res.is_uninitialized():
-                    return BCValue("null")
+                    return BCValue.new_null()
                 else:
                     return res
         else:
@@ -954,7 +940,7 @@ class Interpreter:
             s = str(kind.upper())
         return BCValue.new_string(s)
 
-    def visit_fncall(self, stmt: FunctionCall) -> BCValue:
+    def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
         if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
             return self.visit_libroutine(stmt)
 
@@ -990,6 +976,10 @@ class Interpreter:
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
         vars = self.variables
+        if intp.tracer is None:
+            intp.tracer = tracer
+        else:
+            intp.tracer = self.tracer
 
         if len(func.args) != len(stmt.args):
             self.error(
@@ -1031,7 +1021,7 @@ class Interpreter:
 
         proc.fn(args)
 
-    def visit_call(self, stmt: CallStatement):
+    def visit_call(self, stmt: CallStatement, tracer: Tracer | None =None):
         if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
             stmt.ident
         ):
@@ -1070,6 +1060,10 @@ class Interpreter:
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(proc.name, None))
         vars = self.variables
+        if intp.tracer is None:
+            intp.tracer = tracer
+        else:
+            intp.tracer = self.tracer
 
         if len(proc.args) != len(stmt.args):
             self.error(
@@ -2054,6 +2048,28 @@ class Interpreter:
                     expr = self.visit_expr(d.expr)
                     self.variables[key].val = expr
 
+    def visit_trace_stmt(self, s: TraceStatement):
+        arr = self.visit_array_literal(s.items)
+        if arr.kind.inner != "string": # type: ignore
+            self.error(f'array literal in trace statement listing variable names to trace must be an ARRAY OF STRING!', s.pos)
+        
+        keys = [itm.get_string() for itm in arr.array.get_flat()] # type: ignore
+        tracer = Tracer(keys)
+        fn_name = s.inner.ident
+        fn = self.functions.get(fn_name)
+        if fn is None:
+            self.error(f'\"{fn_name}\" is not a valid function or procedure!')
+        
+        if isinstance(fn, BCFunction) or isinstance(fn, BCProcedure):
+            self.error("cannot trace an FFI function or procedure!")
+        elif isinstance(fn, FunctionStatement):
+            self.visit_fncall(s.inner, tracer=tracer)
+        elif isinstance(fn, ProcedureStatement):
+            call_s = CallStatement(s.inner.pos, s.inner.ident, s.inner.args) # type: ignore
+            self.visit_call(call_s, tracer=tracer)
+
+        tracer.print_items()
+
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
             case "if":
@@ -2088,6 +2104,8 @@ class Interpreter:
                 self.visit_constant_stmt(stmt.constant)  # type: ignore
             case "declare":
                 self.visit_declare_stmt(stmt.declare)  # type: ignore
+            case "trace":
+                self.visit_trace_stmt(stmt.trace) # type: ignore
             case "expr":
                 self.visit_expr(stmt.expr)  # type: ignore
 
@@ -2098,6 +2116,7 @@ class Interpreter:
             stmt = self.block[cur]
             self.cur_stmt = cur
             self.visit_stmt(stmt)
+            self.trace() # FIXME: remove
             if self._returned:
                 return
             cur += 1

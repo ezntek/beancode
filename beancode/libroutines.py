@@ -104,4 +104,3 @@ def bean_random() -> BCValue:
 
 def bean_sleep(duration: float):
     time.sleep(duration)
-

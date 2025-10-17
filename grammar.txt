@@ -115,6 +115,8 @@ ScopeStatement = ( "SCOPE" | "scope" ), Block, ( "ENDSCOPE" | "endscope" ) ;
 
 IncludeStatement = ( "INCLUDE" | "include" | "INCLUDE_FFI" | "include_ffi" ), StringLiteral ;
 
+TraceStatement = ( "TRACE" | "trace" ), FunctionCall, ',', ArrayLiteral;
+
 Statement = DeclareStatement
           | OutputStatement
           | InputStatement
@@ -131,6 +133,7 @@ Statement = DeclareStatement
           | ReturnStatement
           | ScopeStatement
           | IncludeStatement
+          | TraceStatement
           | Expr
           
 

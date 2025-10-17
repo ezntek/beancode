@@ -78,7 +78,8 @@ def real_main():
         for tok in toks:
             tok.print(file=sys.stderr)
         print("\033[1m==============\033[0m", file=sys.stderr)
-
+        sys.stderr.flush()
+    
     parser = Parser(toks)
 
     try:
@@ -90,9 +91,10 @@ def real_main():
     if args.debug:
         print("\033[1m=== AST ===\033[0m", file=sys.stderr)
         for stmt in program.stmts:
-            print(stmt)
+            print(stmt, file=sys.stderr)
             print()
         print("\033[0m\033[1m=== AST ===\033[0m", file=sys.stderr)
+        sys.stderr.flush()
 
     if args.no_run:
         return

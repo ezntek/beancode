@@ -39,8 +39,6 @@ Keyword = t.Literal[
     "readfile",
     "writefile",
     "closefile",
-    "div",
-    "mod",
     # extra feachur™
     "include",
     "include_ffi",
@@ -48,6 +46,7 @@ Keyword = t.Literal[
     "scope",
     "endscope",
     "print",
+    "trace",
 ]
 
 # lexer types
@@ -233,6 +232,7 @@ class Lexer:
             "writefile",
             "closefile",
             # extra feature
+            "trace",
             "scope",
             "endscope",
             "include",

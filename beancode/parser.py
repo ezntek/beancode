@@ -1409,6 +1409,27 @@ class Parser:
         res = IncludeStatement(include.pos, name.literal.value, ffi=ffi)  # type: ignore
         return Statement("include", include=res)
 
+    def trace_stmt(self) -> Statement | None:
+        begin = self.peek()
+        if begin.keyword != "trace":
+            return
+        self.consume()
+
+        fncall = self.function_call()
+        if fncall is None:
+            raise BCError("invalid function or procedure call in trace statement!", begin)
+
+        if self.peek().separator != "comma":
+            raise BCError("expected comma then variable list after function call in trace statement!", self.peek())
+        self.consume()
+
+        arrlit = self.array_literal()
+        if arrlit is None:
+            raise BCError("expected a valid array literal containing the variable names to trace!")
+
+        res = TraceStatement(begin.pos, fncall, arrlit) # type: ignore
+        return Statement("trace", trace=res)
+
     def clean_newlines(self):
         while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.consume()
@@ -1447,6 +1468,10 @@ class Parser:
         include = self.include_stmt()
         if include is not None:
             return include
+
+        trace = self.trace_stmt()
+        if trace is not None:
+            return trace
 
         declare = self.declare_stmt()
         if declare is not None:
