@@ -466,7 +466,7 @@ class Parser:
             comma = self.peek()
             if comma.separator != "comma" and comma.separator != "right_paren":
                 raise BCError(
-                    "expected comma after argument in function call argument list",
+                    "expected comma or right parenthesis after argument in function call argument list",
                     comma,
                 )
             elif comma.separator == "comma":

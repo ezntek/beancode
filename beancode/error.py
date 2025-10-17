@@ -36,15 +36,15 @@ class BCError(Exception):
             print(self.msg, end="")
             return
 
-        line = self.pos[0]
+        line_no = self.pos[0]
         col = self.pos[1]
         bol = self.pos[2]
 
         try:
-            if line != 1 and bol == 0:
+            if line_no != 1 and bol == 0:
                 i = 1
                 j = -1
-                while i < line and j < len(file_content):
+                while i < line_no and j < len(file_content):
                     j += 1
                     while file_content[j] != "\n":
                         j += 1
@@ -61,13 +61,21 @@ class BCError(Exception):
         while eol != len(file_content) and file_content[eol] != "\n":
             eol += 1
 
-        line_begin = f" \033[31;1m{line}\033[0m | "
-        padding = len(str(line) + "  | ") + col - 1
+        line_begin = f" \033[31;1m{line_no}\033[0m | "
+        padding = len(str(line_no) + "  | ") + col - 1
         tabs = 0
         spaces = lambda *_: " " * padding + "\t" * tabs
 
-        print(f"\033[0m\033[1m{filename}:{line}: ", end="")
-        print(self.msg, end="")
+        info = f"{filename}:{line_no}: "
+        print(f"\033[0m\033[1m{info}", end="")
+        msg_lines = self.msg.splitlines()
+        print(msg_lines[0], end="") # splitlines on a non-empty string guarantees one elem
+        if len(msg_lines) == 1:
+            print()
+
+        for msg_line in msg_lines[1:]:
+            sp = " "*len(info)
+            print(f"\033[2m\n{sp}{msg_line}\033[0m")
 
         print(line_begin, end="")
         print(file_content[bol:eol])
@@ -86,7 +94,7 @@ class BCError(Exception):
         else:
             indicator += "∟"
 
-        indicator += f" \033[0m\033[1merror at line {line} column {col}\033[0m"
+        indicator += f" \033[0m\033[1merror at line {line_no} column {col}\033[0m"
         print(indicator)
 
 

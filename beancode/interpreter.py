@@ -12,7 +12,7 @@ from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
 from .error import *
-from .libroutine_defs import *
+from .libroutines import *
 from . import __version__, is_case_consistent
 
 
@@ -721,64 +721,6 @@ class Interpreter:
             else:
                 self.error(f"cannot index {v.kind}", ind.ident.pos)
 
-    def visit_ucase(self, txt: str) -> BCValue:
-        return BCValue.new_string(txt.upper())
-
-    def visit_lcase(self, txt: str) -> BCValue:
-        return BCValue.new_string(txt.lower())
-
-    def visit_substring(self, txt: str, begin: int, length: int) -> BCValue:
-        begin = begin - 1
-        s = txt[begin : begin + length]
-
-        if len(s) == 1:
-            return BCValue.new_char(s[0])
-        else:
-            return BCValue.new_string(s)
-
-    def visit_length(self, txt: str) -> BCValue:
-        return BCValue.new_integer(len(txt))
-
-    def visit_round(self, val: float, places: int) -> BCValue:
-        res = round(val, places)
-        if places == 0:
-            return BCValue.new_integer(int(res))
-        else:
-            return BCValue.new_real(res)
-
-    def visit_getchar(self) -> BCValue:
-        s = sys.stdin.read(1)[0]  # get ONE character
-        return BCValue.new_char(s)
-
-    def visit_putchar(self, ch: str):
-        print(ch[0], end="")
-
-    def visit_exit(self, code: int) -> t.NoReturn:
-        sys.exit(code)
-
-    def visit_div(self, lhs: int | float, rhs: int | float) -> BCValue:
-        return BCValue.new_integer(int(lhs // rhs))
-
-    def visit_mod(self, lhs: int | float, rhs: int | float) -> BCValue:
-        if type(rhs) == float:
-            return BCValue.new_real(float(lhs % rhs))
-        else:
-            return BCValue.new_integer(int(lhs % rhs))
-
-    def visit_sqrt(self, val: BCValue) -> BCValue:  # type: ignore
-        if val.kind == "integer":
-            num = val.get_integer()
-            return BCValue.new_real(math.sqrt(num))
-        elif val.kind == "real":
-            num = val.get_real()
-            return BCValue.new_real(math.sqrt(num))
-
-    def visit_random(self) -> BCValue:
-        return BCValue.new_real(random.random())
-
-    def visit_sleep(self, duration: float):
-        time.sleep(duration)
-
     def _eval_libroutine_args(
         self,
         args: list[Expr],
@@ -848,15 +790,15 @@ class Interpreter:
                 case "ucase":
                     [txt, *_] = evargs
                     if txt.kind == "char":
-                        return self.visit_ucase(txt.get_char())
+                        return bean_ucase(txt.get_char())
                     elif txt.kind == "string":
-                        return self.visit_ucase(txt.get_string())
+                        return bean_ucase(txt.get_string())
                 case "lcase":
                     [txt, *_] = evargs
                     if txt.kind == "char":
-                        return self.visit_lcase(txt.get_char())
+                        return bean_lcase(txt.get_char())
                     elif txt.kind == "string":
-                        return self.visit_lcase(txt.get_string())
+                        return bean_lcase(txt.get_string())
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
@@ -880,7 +822,7 @@ class Interpreter:
                             stmt.pos,
                         )
 
-                    return self.visit_substring(txt_v, begin_v, length_v)
+                    return bean_substring(txt_v, begin_v, length_v)
                 case "div":
                     [lhs, rhs, *_] = evargs
 
@@ -894,7 +836,7 @@ class Interpreter:
                     if rhs_val == 0:
                         self.error("cannot divide by zero!", stmt.pos)
 
-                    return self.visit_div(lhs_val, rhs_val)
+                    return bean_div(lhs_val, rhs_val)
                 case "mod":
                     [lhs, rhs, *_] = evargs
 
@@ -908,10 +850,10 @@ class Interpreter:
                     if rhs_val == 0:
                         self.error("cannot divide by zero!", stmt.pos)
 
-                    return self.visit_mod(lhs_val, rhs_val)
+                    return bean_mod(lhs_val, rhs_val)
                 case "length":
                     [txt, *_] = evargs
-                    return self.visit_length(txt.get_string())
+                    return bean_length(txt.get_string())
                 case "round":
                     [val_r, places, *_] = evargs
 
@@ -920,7 +862,7 @@ class Interpreter:
                     if places_v < 0:
                         self.error("cannot round to negative places!", stmt.pos)
 
-                    return self.visit_round(val_r.get_real(), places_v)
+                    return bean_round(val_r.get_real(), places_v)
                 case "sqrt":
                     [val, *_] = evargs
 
@@ -932,11 +874,11 @@ class Interpreter:
                             "cannot calculate the square root of a negative!", stmt.pos
                         )
 
-                    return self.visit_sqrt(val)
+                    return bean_sqrt(val)
                 case "getchar":
-                    return self.visit_getchar()
+                    return bean_getchar()
                 case "random":
-                    return self.visit_random()
+                    return bean_random()
                 case "sin":
                     [val, *_] = evargs
                     return BCValue.new_real(math.sin(val.get_real()))
@@ -971,13 +913,13 @@ class Interpreter:
         match name:
             case "putchar":
                 [ch, *_] = evargs
-                self.visit_putchar(ch.get_char())
+                bean_putchar(ch.get_char())
             case "exit":
                 [code, *_] = evargs
-                self.visit_exit(code.get_integer())
+                bean_exit(code.get_integer())
             case "sleep":
                 [duration, *_] = evargs
-                self.visit_sleep(duration.get_real())
+                bean_sleep(duration.get_real())
             case "flush":
                 sys.stdout.flush()
 
@@ -1362,14 +1304,28 @@ class Interpreter:
             return BCValue.new_boolean(not inner.get_boolean())
         elif isinstance(expr, Identifier):
             if expr.ident in self.functions:
-                obj = self.functions[expr.ident]
-                if isinstance(obj, BCProcedure) or isinstance(obj, ProcedureStatement):
+                f = self.functions[expr.ident]
+                if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
                     self.error(
-                        f'"{expr.ident}" is a procedure, not a variable!', expr.pos
+                        f'undeclared variable "{expr.ident}" is a function!\nplease call it with an argument list: {expr.ident}(args...)',
+                        expr.pos,
                     )
                 else:
                     self.error(
-                        f'"{expr.ident}" is a function, not a variable!', expr.pos
+                        f'undeclared variable "{expr.ident}" is a function!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
+                        expr.pos,
+                    )
+
+            if is_case_consistent(expr.ident):
+                if expr.ident in LIBROUTINES:
+                    self.error(
+                        f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
+                        expr.pos,
+                    )
+                if expr.ident in LIBROUTINES_NORETURN:
+                    self.error(
+                        f'"{expr.ident}" is a library routine procedure!\nplease call it with the CALL keyword:  CALL {expr.ident}(args...)',
+                        expr.pos,
                     )
 
             try:
@@ -1378,6 +1334,7 @@ class Interpreter:
                 self.error(
                     f'cannot access undeclared variable "{expr.ident}"', expr.pos
                 )
+
             return var.val
         elif isinstance(expr, Literal):
             return expr.to_bcvalue()
