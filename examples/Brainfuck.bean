@@ -69,7 +69,7 @@ ENDPROCEDURE
 
 PROCEDURE loopbegin
     IF cells[ptr] = 0 THEN
-        WHILE substring(src, pc, 1) <> "]" DO
+        WHILE SUBSTRING(src, pc, 1) <> ']' DO
             pc <- pc + 1
         ENDWHILE
     ELSE
@@ -99,7 +99,7 @@ PROCEDURE debug
     ENDIF
 ENDPROCEDURE
 
-WHILE pc < srclen DO
+REPEAT
     CALL debug
     CASE OF SUBSTRING(src, pc, 1)
         '<': CALL dec
@@ -109,10 +109,10 @@ WHILE pc < srclen DO
         '[': CALL loopbegin
         ']': CALL loopend
         '.': CALL PUTCHAR(CHAR(cells[ptr]))
-        ',': cells[ptr] <- GETCHAR()
+        ',': cells[ptr] <- INTEGER(GETCHAR())
         // otherwise not enforced
     ENDCASE
     pc <- pc + 1
-ENDWHILE
+UNTIL pc > srclen
 
 OUTPUT ""
