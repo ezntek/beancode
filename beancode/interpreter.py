@@ -2,8 +2,6 @@ import os
 import sys
 import typing as t
 import importlib
-import random
-import time
 import copy
 import math
 
@@ -27,11 +25,6 @@ class Variable:
 
     def is_null(self) -> bool:
         return self.val.is_null()
-
-
-BlockType = t.Literal[
-    "if", "while", "for", "repeatuntil", "function", "procedure", "scope"
-]
 
 
 @dataclass
@@ -978,7 +971,7 @@ class Interpreter:
                 stmt.ident
             ):
                 self.error(
-                    f"{stmt.ident} is a library routine procedure, please use CALL instead!",
+                    f"{stmt.ident} is a library routine procedure.\nPlease use CALL instead!",
                     stmt.pos,
                 )
             else:
@@ -1052,7 +1045,7 @@ class Interpreter:
         except KeyError:
             if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
                 self.error(
-                    f"{stmt.ident} is a library routine function, please remove the CALL!",
+                    f"{stmt.ident} is a library routine function\nplease remove the CALL!",
                     stmt.pos,
                 )
             else:
@@ -1060,13 +1053,13 @@ class Interpreter:
 
         if isinstance(proc, FunctionStatement):
             self.error(
-                "cannot run CALL on a function! please call the function without the CALL keyword instead.",
+                "cannot run CALL on a function!\nPlease call the function without the CALL keyword instead.",
                 stmt.pos,
             )
 
         if isinstance(proc, BCFunction):
             self.error(
-                "cannot run CALL on an FFI function! please call the function without the CALL keyword instaed.",
+                "cannot run CALL on an FFI function!\nPlease call the function without the CALL keyword instaed.",
                 stmt.pos,
             )
 
@@ -1280,7 +1273,7 @@ class Interpreter:
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Typecast):
             return self.visit_typecast(expr)
-        if isinstance(expr, Grouping):
+        elif isinstance(expr, Grouping):
             return self.visit_expr(expr.inner)
         elif isinstance(expr, Negation):
             inner = self.visit_expr(expr.inner)
@@ -1347,7 +1340,9 @@ class Interpreter:
         elif isinstance(expr, FunctionCall):
             return self.visit_fncall(expr)
         else:
-            raise ValueError("expr is very corrupted whoops")
+            self.error(
+                "!!! bogus amogus !!! report this to the devs if you see this :) youre a lucky fellow!"
+            )
 
     def _display_array(self, arr: BCArray) -> str:
         if not arr.typ.is_matrix:
@@ -1432,9 +1427,6 @@ class Interpreter:
 
             if type(data.val.kind) == BCArrayType:
                 self.error(f'cannot call "INPUT" on an array', stmt.ident.pos)
-
-        if inp.strip() == "":
-            self.error(f'empty string supplied into variable with type "{data.val.kind.upper()}"', stmt.pos)  # type: ignore
 
         match target.kind:
             case "string":
@@ -1730,6 +1722,8 @@ class Interpreter:
                 step = 1
         else:
             step = self.visit_expr(stmt.step).get_integer()
+            if step == 0:
+                self.error("step for for loop cannot be 0!", stmt.step.pos)
 
         intp = self.new(stmt.block, loop=True)
         intp.calls = self.calls
@@ -1745,49 +1739,31 @@ class Interpreter:
         intp.variables[stmt.counter.ident] = Variable(counter, const=False)
 
         if step > 0:
-            while counter.get_integer() <= end.get_integer():
-                intp.visit_block(None)
-                #  FIXME: barbaric
-                # clear declared variables
-                c = intp.variables[stmt.counter.ident]
-                intp.variables = self.variables.copy()
-                intp.variables[stmt.counter.ident] = c
-                if intp._returned:
-                    proc, func = self.can_return()
+            cond = lambda *_: counter.get_integer() <= end.get_integer()
+        else:
+            cond = lambda *_: counter.get_integer() >= end.get_integer()
 
-                    if not proc and not func:
-                        self.error(
-                            f"did not find function or procedure to return from!",
-                            stmt.pos,
-                        )
+        while cond():
+            intp.visit_block(None)
+            #  FIXME: barbaric
+            # clear declared variables
+            c = intp.variables[stmt.counter.ident]
+            intp.variables = self.variables.copy()
+            intp.variables[stmt.counter.ident] = c
+            if intp._returned:
+                proc, func = self.can_return()
 
-                    self._returned = True
-                    self.retval = intp.retval
-                    return
+                if not proc and not func:
+                    self.error(
+                        f"did not find function or procedure to return from!",
+                        stmt.pos,
+                    )
 
-                counter.integer = counter.integer + step  # type: ignore
-        elif step < 0:
-            while counter.get_integer() >= end.get_integer():
-                intp.visit_block(None)
-                # FIXME:
-                # clear declared variables (barbaric)
-                c = intp.variables[stmt.counter.ident]
-                intp.variables = self.variables.copy()
-                intp.variables[stmt.counter.ident] = c
-                if intp._returned:
-                    proc, func = self.can_return()
+                self._returned = True
+                self.retval = intp.retval
+                return
 
-                    if not proc and not func:
-                        self.error(
-                            f"did not find function or procedure to return from!",
-                            stmt.pos,
-                        )
-
-                    self._returned = True
-                    self.retval = intp.retval
-                    return
-
-                counter.integer = counter.integer + step  # type: ignore
+            counter.integer = counter.integer + step  # type: ignore
 
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)

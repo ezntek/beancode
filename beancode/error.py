@@ -69,12 +69,14 @@ class BCError(Exception):
         info = f"{filename}:{line_no}: "
         print(f"\033[0m\033[1m{info}", end="")
         msg_lines = self.msg.splitlines()
-        print(msg_lines[0], end="") # splitlines on a non-empty string guarantees one elem
+        print(
+            msg_lines[0], end=""
+        )  # splitlines on a non-empty string guarantees one elem
         if len(msg_lines) == 1:
             print()
 
         for msg_line in msg_lines[1:]:
-            sp = " "*len(info)
+            sp = " " * len(info)
             print(f"\033[2m\n{sp}{msg_line}\033[0m")
 
         print(line_begin, end="")

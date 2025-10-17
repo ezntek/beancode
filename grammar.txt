@@ -1,9 +1,6 @@
 // informal bnf/ebnf-like grammar spec for beancode
 // is not comprehensive in terms of newline placement
 
-// informal bnf/ebnf-like grammar spec for beancode
-// is not comprehensive in terms of newline placement
-
 OneNewline = ("\n") | ("\r\n") | ";" ;
 
 Newline = OneNewline, {OneNewline} ;
@@ -71,11 +68,11 @@ Expr = Identifier
          | ArrayIndex
          | FunctionCall ;
 
-Block =  [ Statement, [Newline], {Statement, Newline} ];
+Block =  [ Statement | (Statement , [Newline], {Statement, Newline}) ];
 
 Export = [( "EXPORT" | "export" )]
 
-DeclareStatement = Export, ( "DECLARE" | "declare" ), Identifier, ("<-", Expr) | ((":", Type), ["<-", Expr]) ;
+DeclareStatement = Export, ( "DECLARE" | "declare" ), Identifier, ( ({", ", Identifier}, ":", Type) | ((":", Type), [ "<-", Expr ]) ) ;
 
 OutputStatement = ( "OUTPUT" | "PRINT" | "output" | "print" ), Expr, {",", Expr} ;
 

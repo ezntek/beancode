@@ -34,11 +34,14 @@ LIBROUTINES_NORETURN: Libroutines = {
     "flush": [],
 }
 
+
 def bean_ucase(txt: str) -> BCValue:
     return BCValue.new_string(txt.upper())
 
+
 def bean_lcase(txt: str) -> BCValue:
     return BCValue.new_string(txt.lower())
+
 
 def bean_substring(txt: str, begin: int, length: int) -> BCValue:
     begin = begin - 1
@@ -49,8 +52,10 @@ def bean_substring(txt: str, begin: int, length: int) -> BCValue:
     else:
         return BCValue.new_string(s)
 
+
 def bean_length(txt: str) -> BCValue:
     return BCValue.new_integer(len(txt))
+
 
 def bean_round(val: float, places: int) -> BCValue:
     res = round(val, places)
@@ -59,24 +64,30 @@ def bean_round(val: float, places: int) -> BCValue:
     else:
         return BCValue.new_real(res)
 
+
 def bean_getchar() -> BCValue:
     s = sys.stdin.read(1)[0]  # get ONE character
     return BCValue.new_char(s)
 
+
 def bean_putchar(ch: str):
     print(ch[0], end="")
+
 
 def bean_exit(code: int) -> NoReturn:
     sys.exit(code)
 
+
 def bean_div(lhs: int | float, rhs: int | float) -> BCValue:
     return BCValue.new_integer(int(lhs // rhs))
+
 
 def bean_mod(lhs: int | float, rhs: int | float) -> BCValue:
     if type(rhs) == float:
         return BCValue.new_real(float(lhs % rhs))
     else:
         return BCValue.new_integer(int(lhs % rhs))
+
 
 def bean_sqrt(val: BCValue) -> BCValue:  # type: ignore
     if val.kind == "integer":
@@ -86,8 +97,11 @@ def bean_sqrt(val: BCValue) -> BCValue:  # type: ignore
         num = val.get_real()
         return BCValue.new_real(math.sqrt(num))
 
+
 def bean_random() -> BCValue:
     return BCValue.new_real(random.random())
 
+
 def bean_sleep(duration: float):
     time.sleep(duration)
+

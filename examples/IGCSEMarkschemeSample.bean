@@ -1,7 +1,5 @@
-/*
- * IGCSE Computer Science 0478 May/June 2025 Paper 23
- * Last question markscheme answer
- */
+// IGCSE Computer Science 0478 May/June 2025 Paper 23
+// Last question markscheme answer
 
 // --- Variable Declarations (not in MS) ---
 DECLARE Video: ARRAY[1:10000,1:4] OF STRING

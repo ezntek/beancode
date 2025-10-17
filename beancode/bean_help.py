@@ -6,6 +6,7 @@ from typing import Callable
 
 HelpEntry = tuple[str, Callable[[], str]]
 
+
 def _help() -> str:
     res = StringIO()
     print("Show this help message, and a list of available help pages.\n", file=res)
@@ -43,25 +44,29 @@ a custom one that beancode includes to further simplify programming.
 def _ucase() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["ucase"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["ucase"][0] + "\n")
     res.write("Arguments: (STRING), Returns: STRING\n\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   UCASE("hello") \033[2m// returns "HELLO"\033[0m
   UCASE("Srinivasa Ramanujan") \033[2m// returns "SRINIVASA RAMANUJAN"\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
 
 
 def _lcase() -> str:
     res = StringIO()
-    
-    res.write(LIBROUTINE_ENTRIES["lcase"][0] + '\n')
+
+    res.write(LIBROUTINE_ENTRIES["lcase"][0] + "\n")
     res.write("Arguments: (STRING), Returns: STRING\n\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   LCASE("GOODBYE") \033[2m// returns "goodbye"\033[0m
-  LCASE("Mista Zozin") \033[2m// returns "mista zozin"\033[0m
-    """)
+  LCASE("Alexey Kutepov") \033[2m// returns "alexey kutepov"\033[0m
+    """
+    )
 
     return res.getvalue()
 
@@ -69,12 +74,14 @@ def _lcase() -> str:
 def _div() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["div"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["div"][0] + "\n")
     res.write("Arguments: (REAL or INTEGER), Returns: REAL or INTEGER\n\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   DIV(5, 2) \033[2m// returns 2\033[0m
   DIV(12.5, 2) \033[2m// returns 6\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
 
@@ -82,12 +89,14 @@ def _div() -> str:
 def _mod() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["mod"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["mod"][0] + "\n")
     res.write("Arguments: (REAL or INTEGER), Returns: REAL or INTEGER\n\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   MOD(5, 2) \033[2m// returns 1\033[0m
   MOD(7.3, 4.1) \033[2m// returns 3.2\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
 
@@ -96,19 +105,23 @@ def _substring() -> str:
     res = StringIO()
 
     # TODO: write help
-    res.write(f"""{LIBROUTINE_ENTRIES["substring"][0]} 
+    res.write(
+        f"""{LIBROUTINE_ENTRIES["substring"][0]} 
 SUBSTRING works on the base string, where you want to begin taking characters
 and how many characters to take in total.\n
 \033[1mNote: IGCSE Pseudocode strings start at 1.\n\033[0m
-""")
+"""
+    )
     res.write("Arguments: (STRING, INTEGER, INTEGER), Returns: STRING\n")
-    res.write("""Example:
+    res.write(
+        """Example:
   DECLARE Original, First, Second: STRING
   Original <- "Fish and Chips"
 
   First <- SUBSTRING(Original, 1, 4) \033[2m// stores "Fish" into First\033[0m
   Second <- SUBSTRING(Original, 10, 5) \033[2m// stores "Chips" into Second\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
 
@@ -116,26 +129,32 @@ and how many characters to take in total.\n
 def _length() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["length"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["length"][0] + "\n")
     res.write("Arguments: (STRING), Returns: INTEGER\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   LENGTH("Andrew Kelley") \033[2m// returns 13\033[0m
   LENGTH("Drew DeVault") \033[2m// returns 12\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
+
 
 def _round() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["round"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["round"][0] + "\n")
     res.write("Arguments: (REAL or INTEGER), Returns: REAL or INTEGER\n")
-    res.write("""Examples:
+    res.write(
+        """Examples:
   ROUND(3.1415926, 2) \033[2m// returns 3.14\033[0m
   ROUND(5.2613, 0) \033[2m// returns 5 as an integer\033[0m
-    """)
+    """
+    )
 
     return res.getvalue()
+
 
 EXTENSION_TXT = """\033[31mThis is a library routine that is part of the beancode extensions.\033[0m
 This means that it is not found in standard IGCSE Pseudocode, but is specific
@@ -151,10 +170,11 @@ def _random() -> str:
 
     return res.getvalue()
 
+
 def _sqrt() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["sqrt"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["sqrt"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (REAL or INTEGER), Returns: REAL\n")
 
@@ -164,7 +184,7 @@ def _sqrt() -> str:
 def _sin() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["sin"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["sin"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (REAL), Returns: REAL\n")
 
@@ -174,7 +194,7 @@ def _sin() -> str:
 def _cos() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["cos"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["cos"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (REAL), Returns: REAL\n")
 
@@ -184,7 +204,7 @@ def _cos() -> str:
 def _tan() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["tan"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["tan"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (REAL), Returns: REAL\n")
 
@@ -194,10 +214,9 @@ def _tan() -> str:
 def _getchar() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["getchar"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["getchar"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (), Returns: CHAR\n")
-
 
     return res.getvalue()
 
@@ -205,7 +224,7 @@ def _getchar() -> str:
 def _putchar() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["putchar"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["putchar"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (CHAR)")
 
@@ -215,7 +234,7 @@ def _putchar() -> str:
 def _exit() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["exit"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["exit"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (INTEGER)")
 
@@ -225,7 +244,7 @@ def _exit() -> str:
 def _sleep() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["sleep"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["sleep"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (INTEGER or REAL)")
     return res.getvalue()
@@ -234,10 +253,10 @@ def _sleep() -> str:
 def _flush() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + '\n')
+    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: ()")
-    
+
     return res.getvalue()
 
 
@@ -270,7 +289,6 @@ HELP_ENTRIES: dict[str, HelpEntry] = {
     "help": ("Show some information regarding the help library routine.", _help),
     "library routines": ("Information regarding library routines", _libroutines),
     "libroutines": ("Information regarding library routines", _libroutines),
-    
     # library routines
 }
 HELP_ENTRIES.update(LIBROUTINE_ENTRIES)
