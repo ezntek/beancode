@@ -457,8 +457,10 @@ class IncludeStatement:
 @dataclass
 class TraceStatement:
     pos: tuple[int, int, int]
-    inner: FunctionCall 
-    items: ArrayLiteral
+    vars: list[str] 
+    stmt: FunctionCall | CallStatement
+    file_name: str
+
 
 @dataclass
 class Statement:

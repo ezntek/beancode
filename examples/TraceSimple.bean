@@ -1,4 +1,4 @@
-PROCEDURE Simple
+PROCEDURE Simple()
     DECLARE Num: INTEGER
     DECLARE Done: BOOLEAN
 
@@ -17,4 +17,4 @@ PROCEDURE Simple
     OUTPUT Done
 ENDPROCEDURE
 
-TRACE Simple(), {"Num", "Done"}
+TRACE(Num, Done) CALL Simple TO "foo.html" 

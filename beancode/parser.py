@@ -796,7 +796,7 @@ class Parser:
                     "expected right paren after arg list in procedure call", leftb
                 )
 
-        self.check_newline("procedure call")
+        self.consume_newlines()
 
         res = CallStatement(begin.pos, ident=ident.ident, args=args)
         return Statement("call", call=res)
@@ -1414,20 +1414,73 @@ class Parser:
         if begin.keyword != "trace":
             return
         self.consume()
+        
+        lparen = self.consume()
+        if lparen.separator != "left_paren":
+            raise BCError(
+                "expected opening parenthesis after TRACE keyword!", self.peek()
+            )
 
-        fncall = self.function_call()
-        if fncall is None:
-            raise BCError("invalid function or procedure call in trace statement!", begin)
+        vars = list()
+        while self.peek().separator != "right_paren":
+            ident: Identifier | None = self.ident()  # type: ignore
+            if ident is None:
+                raise BCError(
+                    "expected valid identifier after left paren in TRACE keyword!",
+                    lparen,
+                )
 
-        if self.peek().separator != "comma":
-            raise BCError("expected comma then variable list after function call in trace statement!", self.peek())
-        self.consume()
+            vars.append(ident.ident)  # type: ignore
 
-        arrlit = self.array_literal()
-        if arrlit is None:
-            raise BCError("expected a valid array literal containing the variable names to trace!")
+            comma = self.peek()
+            if comma.separator != "comma" and comma.separator != "right_paren":
+                raise BCError(
+                    "expected comma or right parenthesis after argument in function call argument list",
+                    comma,
+                )
+            elif comma.separator == "comma":
+                self.consume()
 
-        res = TraceStatement(begin.pos, fncall, arrlit) # type: ignore
+        rightb = self.consume()
+        if rightb.separator != "right_paren":
+            raise BCError(
+                "expected right paren after variable list in TRACE statement!", rightb
+            )
+
+        stmt: CallStatement | FunctionCall
+        call = self.call_stmt()
+        if call is not None:
+            stmt = call.call  # type: ignore
+        else:
+            fncall = self.function_call()
+            if fncall is None:
+                raise BCError(
+                    "invalid function or procedure call in trace statement!", begin
+                )
+            stmt = fncall  # type: ignore
+
+        to = self.consume()
+        if to.keyword != "to":
+            raise BCError(
+                "expected TO keyword after call/function call in TRACE statement!", to
+            )
+
+        lit: Literal | None = self.literal()  # type: ignore
+        if lit is None:
+            raise BCError(
+                "expected valid literal after TO keyword in TRACE statement!",
+                self.peek(),
+            )
+
+        file_name = lit.to_bcvalue()
+        if file_name.kind != "string":
+            raise BCError(
+                "expected string literal after TO keyword in TRACE statement!\n"
+                + "pass the file name of the output trace table in a string.",
+                self.peek(),
+            )
+
+        res = TraceStatement(begin.pos, vars, stmt, file_name.get_string())
         return Statement("trace", trace=res)
 
     def clean_newlines(self):

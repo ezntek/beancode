@@ -2095,26 +2095,26 @@ class Interpreter:
         self.trace()
 
     def visit_trace_stmt(self, s: TraceStatement):
-        arr = self.visit_array_literal(s.items)
-        if arr.kind.inner != "string": # type: ignore
-            self.error(f'array literal in trace statement listing variable names to trace must be an ARRAY OF STRING!', s.pos)
-        
-        keys = [itm.get_string() for itm in arr.array.get_flat()] # type: ignore
-        tracer = Tracer(keys)
-        fn_name = s.inner.ident
+        vars = s.vars
+        tracer = Tracer(vars)
+
+        # XXX: this is super scuffed!
+        # both FunctionCall and CallStmt have this field.
+        fn_name = s.stmt.ident 
         fn = self.functions.get(fn_name)
         if fn is None:
             self.error(f'\"{fn_name}\" is not a valid function or procedure!')
         
-        if isinstance(fn, BCFunction) or isinstance(fn, BCProcedure):
-            self.error("cannot trace an FFI function or procedure!")
-        elif isinstance(fn, FunctionStatement):
-            self.visit_fncall(s.inner, tracer=tracer)
-        elif isinstance(fn, ProcedureStatement):
-            call_s = CallStatement(s.inner.pos, s.inner.ident, s.inner.args) # type: ignore
-            self.visit_call(call_s, tracer=tracer)
+        if isinstance(s.stmt, FunctionCall):
+            self.visit_fncall(s.stmt, tracer=tracer)
+        elif isinstance(s.stmt, CallStatement):
+            self.visit_call(s.stmt, tracer=tracer)
 
-        print(tracer.gen_html())
+        if os.path.exists(s.file_name):
+            warn(f"file name or path \"{s.file_name}\" provided to tracer already exists! overwriting...")
+        
+        with open(s.file_name, "w") as f:
+            f.write(tracer.gen_html())
 
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
