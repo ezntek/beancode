@@ -28,6 +28,8 @@ class Interpreter:
     retval: BCValue | None = None
     _returned: bool
     tracer: Tracer | None = None
+    tracer_inputs: list[str] | None = None
+    tracer_outputs: list[str] | None = None
 
     def __init__(
         self,
@@ -55,6 +57,11 @@ class Interpreter:
         self.calls = list()
         self.variables = dict()
         self.functions = dict()
+        
+        if self.tracer is not None:
+            self.tracer_outputs = list()
+            self.tracer_inputs = list()
+
         self._returned = False
         self.cur_stmt = 0
 
@@ -85,9 +92,31 @@ class Interpreter:
 
         raise BCError(msg, pos, proc=proc, func=func)
 
-    def trace(self) -> None:
-        if self.tracer is not None:
-            self.tracer.collect_new(self.variables)
+    def trace(self, loop_trace=False, trace_inputs=False, trace_outputs=False) -> None:
+        if self.tracer is None:
+            return
+        
+        # loop_trace: manually invoked trace in a loop
+        # (every statement in a loop should not be traced) 
+        if self.loop and not loop_trace:
+            return
+
+        inputs = None
+        outputs = None
+
+        if trace_inputs:
+            inputs = self.tracer_inputs
+             
+        if trace_outputs:
+            outputs = self.tracer_outputs
+
+        self.tracer.collect_new(self.variables, inputs=inputs, outputs=outputs)
+
+        if trace_inputs:
+            self.tracer_inputs.clear() # type: ignore
+
+        if trace_outputs:
+            self.tracer_outputs.clear() # type: ignore
 
     def get_return_type(self) -> BCType | None:
         return self.calls[-1].rtype
@@ -972,7 +1001,7 @@ class Interpreter:
         if isinstance(func, BCFunction):
             return self.visit_ffi_fncall(func, stmt)
 
-        intp = self.new(func.block, func=True)
+        intp = self.new(func.block, func=True, tracer=self.tracer)
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
         vars = self.variables
@@ -1056,7 +1085,7 @@ class Interpreter:
         if isinstance(proc, BCProcedure):
             return self.visit_ffi_call(proc, stmt)
 
-        intp = self.new(proc.block, proc=True)
+        intp = self.new(proc.block, proc=True, tracer=self.tracer)
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(proc.name, None))
         vars = self.variables
@@ -1383,6 +1412,10 @@ class Interpreter:
                 res += self._display_array(evaled.array)  # type: ignore
             else:
                 res += str(evaled)
+
+        if self.tracer_outputs is not None and self.loop:
+            self.tracer_outputs.append(res) # type: ignore
+
         print(res)
 
     def _guess_input_type(self, inp: str) -> BCValue:
@@ -1403,6 +1436,9 @@ class Interpreter:
     def visit_input_stmt(self, stmt: InputStatement):
         inp = input()
         target: BCValue
+
+        if self.tracer_inputs is not None and self.loop:
+            self.tracer_inputs.append(inp) # type: ignore        
 
         if isinstance(stmt.ident, ArrayIndex):
             target = self.visit_array_index(stmt.ident)
@@ -1472,6 +1508,8 @@ class Interpreter:
                         self.error("expected REAL for INPUT", stmt.ident.pos)
                 else:
                     self.error("expected REAL for INPUT", stmt.ident.pos)
+       
+        self.trace()
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         proc, func = self.can_return()
@@ -1633,9 +1671,9 @@ class Interpreter:
             self.error("condition of while loop must be a boolean!", stmt.cond.pos)
 
         if cond.get_boolean():
-            intp: Interpreter = self.new(stmt.if_block)
+            intp: Interpreter = self.new(stmt.if_block, tracer=self.tracer)
         else:
-            intp: Interpreter = self.new(stmt.else_block)
+            intp: Interpreter = self.new(stmt.else_block, tracer=self.tracer)
 
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
@@ -1671,7 +1709,7 @@ class Interpreter:
 
         block: list[Statement] = stmt.block  # type: ignore
 
-        intp = self.new(block, loop=True)
+        intp = self.new(block, loop=True, tracer=self.tracer)
         intp.variables = dict(self.variables)  # scope
         intp.functions = dict(self.functions)
 
@@ -1683,7 +1721,12 @@ class Interpreter:
                 break
 
             intp.visit_block(block)
+           
+            # trace all I/O that happened
+            intp.trace(loop_trace=True, trace_inputs=True, trace_outputs=True)
+
             # FIXME: barbaric aah
+            # reset all declares
             intp.variables = self.variables.copy()
             if intp._returned:
                 proc, func = self.can_return()
@@ -1719,7 +1762,7 @@ class Interpreter:
             if step == 0:
                 self.error("step for for loop cannot be 0!", stmt.step.pos)
 
-        intp = self.new(stmt.block, loop=True)
+        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
         intp.calls = self.calls
         intp.variables = self.variables.copy()
         intp.functions = self.functions.copy()
@@ -1766,7 +1809,7 @@ class Interpreter:
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond  # type: ignore
-        intp = self.new(stmt.block, loop=True)
+        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
         intp.calls = self.calls
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
@@ -1797,7 +1840,7 @@ class Interpreter:
                 break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
-        intp = self.new(stmt.block, loop=False)
+        intp = self.new(stmt.block, loop=False, tracer=self.tracer)
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.visit_block(None)
@@ -1913,6 +1956,7 @@ class Interpreter:
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             self.variables[key].val = copy.deepcopy(exp)
+        self.trace()
 
     def visit_constant_stmt(self, c: ConstantStatement):
         key = c.ident.ident
@@ -1930,6 +1974,7 @@ class Interpreter:
 
         val = self.visit_expr(c.value)
         self.variables[key] = Variable(val, True, export=c.export)
+        self.trace()
 
     def _declare_array(self, d: DeclareStatement, key: str):
         atype: BCArrayType = d.typ  # type: ignore
@@ -2047,6 +2092,7 @@ class Interpreter:
                 if d.expr is not None:
                     expr = self.visit_expr(d.expr)
                     self.variables[key].val = expr
+        self.trace()
 
     def visit_trace_stmt(self, s: TraceStatement):
         arr = self.visit_array_literal(s.items)
@@ -2068,7 +2114,7 @@ class Interpreter:
             call_s = CallStatement(s.inner.pos, s.inner.ident, s.inner.args) # type: ignore
             self.visit_call(call_s, tracer=tracer)
 
-        tracer.print_items()
+        print(tracer.gen_html())
 
     def visit_stmt(self, stmt: Statement):
         match stmt.kind:
@@ -2116,7 +2162,6 @@ class Interpreter:
             stmt = self.block[cur]
             self.cur_stmt = cur
             self.visit_stmt(stmt)
-            self.trace() # FIXME: remove
             if self._returned:
                 return
             cur += 1
