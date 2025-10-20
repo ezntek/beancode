@@ -13,6 +13,21 @@ tr, td, th {
     padding-right: 20px;
     text-align: center;
 }
++.fls {
+    color: red; 
+}
++.tru {
+    color: green;
+}
++.int {
+    color: yellow; 
+}
++.dim {
+    color: gray;
+}
++caption {
+    caption-side: bottom;
+}
 """
 
 class Tracer:
@@ -99,6 +114,9 @@ class Tracer:
         res.write("<!-- Generated HTML by beancode's TRACE statement -->\n")
         res.write("<html>\n")
         res.write(f"<head>\n")
+        res.write("<meta charset=UTF-8>\n")
+        res.write("<meta name=color-scheme content=\"dark light\">\n")
+
         title_s = ""
         if filename is not None:
             title_s = " for " + filename
@@ -107,11 +125,11 @@ class Tracer:
         res.write(f"<title>{title}</title>\n")
         res.write(f"<style>\n{TABLE_STYLE}\n</style>\n")
         res.write("</head>\n")
-        res.write("<body>\n")
+        res.write("<body><center>\n")
 
         res.write(f"<h1>{title}</h1>\n")
         res.write(self._gen_html_table() + '\n')
         
-        res.write("</body>\n")
+        res.write("</center></body>\n")
         res.write("</html>\n")
         return res.getvalue() 
