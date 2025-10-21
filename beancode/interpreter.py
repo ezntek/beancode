@@ -120,34 +120,38 @@ class Interpreter:
         if self.tracer_outputs is not None:
             self.tracer_outputs.clear()  # type: ignore
 
-    def get_return_type(self) -> BCType | None:
+    def get_return_type(self) -> Type | None:
         return self.calls[-1].rtype
 
-    def visit_bc_array_type_spec(self, s: BCArrayTypeSpec) -> BCArrayType:
-        if s.is_matrix:
-            s_bounds = s.get_matrix_bounds()
+    def visit_array_type(self, t: ArrayType) -> BCArrayType:
+        if t.is_matrix:
+            s_bounds = t.get_matrix_bounds()
             outer_begin = self.visit_expr(s_bounds[0])
             if outer_begin.kind != "integer":
                 self.error(
-                    f"cannot use type of {outer_begin.kind} as array bound!", s_bounds[0].pos
+                    f"cannot use type of {outer_begin.kind} as array bound!",
+                    s_bounds[0].pos,
                 )
 
             outer_end = self.visit_expr(s_bounds[1])  # type: ignore
             if outer_end.kind != "integer":
                 self.error(
-                    f"cannot use type of {outer_end.kind} as array bound!", s_bounds[1].pos 
+                    f"cannot use type of {outer_end.kind} as array bound!",
+                    s_bounds[1].pos,
                 )
 
             inner_begin = self.visit_expr(s_bounds[2])  # type: ignore
             if inner_begin.kind != "integer":
                 self.error(
-                    f"cannot use type of {inner_begin.kind} as array bound!", s_bounds[2].pos
+                    f"cannot use type of {inner_begin.kind} as array bound!",
+                    s_bounds[2].pos,
                 )
 
             inner_end = self.visit_expr(s_bounds[3])  # type: ignore
             if inner_end.kind != "integer":
                 self.error(
-                    f"cannot use type of {inner_end.kind} as array bound!", s_bounds[3].pos
+                    f"cannot use type of {inner_end.kind} as array bound!",
+                    s_bounds[3].pos,
                 )
 
             ob = outer_begin.get_integer()
@@ -155,9 +159,9 @@ class Interpreter:
             ib = inner_begin.get_integer()
             ie = inner_end.get_integer()
             bounds = (ob, oe, ib, ie)
-            return BCArrayType.new_matrix(s.inner, bounds)
+            return BCArrayType.new_matrix(t.inner, bounds)
         else:
-            s_bounds = s.get_flat_bounds()
+            s_bounds = t.get_flat_bounds()
             begin = self.visit_expr(s_bounds[0])
             if begin.kind != "integer":
                 self.error(
@@ -167,15 +171,15 @@ class Interpreter:
             end = self.visit_expr(s_bounds[1])  # type: ignore
             if end.kind != "integer":
                 self.error(
-                    f"cannot use type of {end.kind} as array bound!", s_bounds[1].pos 
+                    f"cannot use type of {end.kind} as array bound!", s_bounds[1].pos
                 )
-            
-            bounds = (begin.get_integer(), end.get_integer())
-            return BCArrayType.new_flat(s.inner, bounds)
 
-    def visit_type(self, t: BCType) -> BCValueType:
-        if isinstance(t, BCArrayTypeSpec):
-            return self.visit_bc_array_type_spec(t)
+            bounds = (begin.get_integer(), end.get_integer())
+            return BCArrayType.new_flat(t.inner, bounds)
+
+    def visit_type(self, t: Type) -> BCType:
+        if isinstance(t, ArrayType):
+            return self.visit_array_type(t)
         else:
             return t
 
@@ -692,7 +696,7 @@ class Interpreter:
         index = index.get_integer()
 
         v = self.variables[ind.ident.ident].val
-        
+
         if isinstance(v.kind, BCArrayType):
             a: BCArray = v.array  # type: ignore
 
@@ -700,9 +704,9 @@ class Interpreter:
                 if ind.idx_inner is None:
                     self.error("expected 2 indices for matrix indexing", ind.pos)
 
-                inner_index = self.visit_expr(ind.idx_inner).integer # type: ignore
+                inner_index = self.visit_expr(ind.idx_inner).integer  # type: ignore
                 if inner_index is None:
-                    self.error("found (null) for inner array index", ind.idx_inner.pos) # type: ignore
+                    self.error("found (null) for inner array index", ind.idx_inner.pos)  # type: ignore
 
                 return (index, inner_index)
             else:
@@ -750,13 +754,15 @@ class Interpreter:
                     self.error(
                         f'cannot access out of bounds array element "{tup[1]}"', ind.idx_inner.pos  # type: ignore
                     )
-                
+
                 idx1 = outer - a.get_matrix_bounds()[0]
                 idx2 = inner - a.get_matrix_bounds()[2]
                 res = a.get_matrix()[idx1][idx2]
                 return res
             else:
-                if tup[0] not in range(a.get_flat_bounds()[0], a.get_flat_bounds()[1] + 1):
+                if tup[0] not in range(
+                    a.get_flat_bounds()[0], a.get_flat_bounds()[1] + 1
+                ):
                     if tup[0] == 0:
                         self.error(
                             "cannot access the 0th array element, which is disallowed in pseudocode",
@@ -1281,10 +1287,10 @@ class Interpreter:
 
     def visit_matrix_literal(self, expr: ArrayLiteral) -> BCValue:
         first_matrix_elem: Expr = expr.items[0].items[0]  # type: ignore
-        matrix: list[list[BCValue]] = list() 
+        matrix: list[list[BCValue]] = list()
 
         # since we checked earlier, we know this is always a primitive
-        typ: BCPrimitiveType = self.visit_expr(first_matrix_elem).kind # type: ignore
+        typ: BCPrimitiveType = self.visit_expr(first_matrix_elem).kind  # type: ignore
         inner_arr_len = len(expr.items[0].items)  # type: ignore
 
         outer_arr: list[ArrayLiteral] = expr.items  # type: ignore
@@ -1315,7 +1321,7 @@ class Interpreter:
         # we know there is at least one item always
         vals = [self.visit_expr(expr.items[0])]
         # we know that this is a primitive
-        typ: BCPrimitiveType = vals[0].kind # type: ignore
+        typ: BCPrimitiveType = vals[0].kind  # type: ignore
 
         for val in expr.items[1:]:
             newval = self.visit_expr(val)
@@ -1326,9 +1332,9 @@ class Interpreter:
             vals.append(newval)
 
         bounds = (1, len(vals))
-        typ = BCArrayType.new_flat(typ,  bounds)
+        typ = BCArrayType.new_flat(typ, bounds)
         return BCValue.new_array(BCArray.new_flat(typ, vals))
-            
+
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Typecast):
             return self.visit_typecast(expr)
@@ -1399,7 +1405,9 @@ class Interpreter:
         elif isinstance(expr, FunctionCall):
             return self.visit_fncall(expr)
         else:
-            self.error("whoops something is very wrong. this is a rare error, please report it to the developers.")
+            self.error(
+                "whoops something is very wrong. this is a rare error, please report it to the developers."
+            )
 
     def _display_array(self, arr: BCArray) -> str:
         if not arr.typ.is_matrix:
@@ -1955,14 +1963,20 @@ class Interpreter:
 
             if self.variables[key].const:
                 self.error(f"cannot assign constant {key}", s.ident.pos)
-            
+
             if var.val.kind != exp.kind:
                 self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
             elif isinstance(exp.kind, BCArrayType):
                 a = exp.get_array()
-                if a.typ.is_matrix and a.get_matrix_bounds() != var.val.get_array().get_matrix_bounds():
+                if (
+                    a.typ.is_matrix
+                    and a.get_matrix_bounds() != var.val.get_array().get_matrix_bounds()
+                ):
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
-                elif not a.typ.is_matrix and a.get_flat_bounds() != var.val.get_array().get_flat_bounds():
+                elif (
+                    not a.typ.is_matrix
+                    and a.get_flat_bounds() != var.val.get_array().get_flat_bounds()
+                ):
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             self.variables[key].val = copy.deepcopy(exp)
 
@@ -1987,24 +2001,24 @@ class Interpreter:
         self.trace(c.pos[0])
 
     def _declare_array(self, d: DeclareStatement, key: str):
-        s: BCArrayTypeSpec = d.typ # type: ignore
-        inner_type = s.inner
-        t = self.visit_bc_array_type_spec(s)
-        if s.is_matrix:
+        at: ArrayType = d.typ  # type: ignore
+        inner_type = at.inner
+        t = self.visit_array_type(at)
+        if t.is_matrix:
             bounds = t.get_matrix_bounds()
-            ob, oe, ib, ie = bounds 
+            ob, oe, ib, ie = bounds
 
             if ob < 0:
-                self.error("outer beginning value for array bound declaration cannot be <0!", s.get_matrix_bounds()[0].pos)  # type: ignore
+                self.error("outer beginning value for array bound declaration cannot be <0!", t.get_matrix_bounds()[0].pos)  # type: ignore
 
             if oe < 0:
-                self.error("outer ending value for array bound declaration cannot be <0!", s.get_matrix_bounds()[1].pos)  # type: ignore
+                self.error("outer ending value for array bound declaration cannot be <0!", t.get_matrix_bounds()[1].pos)  # type: ignore
 
             if ib < 0:
-                self.error("inner beginning value for array bound declaration cannot be <0!", s.get_matrix_bounds()[2].pos)  # type: ignore
+                self.error("inner beginning value for array bound declaration cannot be <0!", t.get_matrix_bounds()[2].pos)  # type: ignore
 
             if ie < 0:
-                self.error("inner ending value for array bound declaration cannot be <0!", s.get_matrix_bounds()[3].pos)  # type: ignore
+                self.error("inner ending value for array bound declaration cannot be <0!", t.get_matrix_bounds()[3].pos)  # type: ignore
 
             if ob > oe:
                 self.error("invalid outer range for 2D array bound declaration", d.pos)
@@ -2016,7 +2030,10 @@ class Interpreter:
             in_size = ie - ib
             out_size = oe - ob
             # array bound declarations are inclusive
-            outer_arr = [[BCValue(inner_type) for _ in range(in_size + 1)] for _ in range(out_size + 1)]
+            outer_arr = [
+                [BCValue(inner_type) for _ in range(in_size + 1)]
+                for _ in range(out_size + 1)
+            ]
 
             atype = BCArrayType.new_matrix(inner_type, bounds)
             res = BCArray.new_matrix(atype, outer_arr)
@@ -2025,23 +2042,21 @@ class Interpreter:
             begin, end = bounds
 
             if begin < 0:
-                self.error("beginning value for array bound declaration cannot be <0!", s.flat_bounds[0].pos)  # type: ignore
+                self.error("beginning value for array bound declaration cannot be <0!", t.flat_bounds[0].pos)  # type: ignore
 
             if end < 0:
-                self.error("ending value for array bound declaration cannot be <0!", s.flat_bounds[1].pos)  # type: ignore
+                self.error("ending value for array bound declaration cannot be <0!", t.flat_bounds[1].pos)  # type: ignore
 
             if begin > end:
-                self.error("invalid range for array bound declaration", s.flat_bounds[0].pos)  # type: ignore
+                self.error("invalid range for array bound declaration", t.flat_bounds[0].pos)  # type: ignore
 
             size = end - begin
-            arr = [BCValue(s.inner) for _ in range(size + 1)]
+            arr = [BCValue(t.inner) for _ in range(size + 1)]
 
             atype = BCArrayType.new_flat(inner_type, bounds)
             res = BCArray.new_flat(atype, arr)
 
-        self.variables[key] = Variable(
-            BCValue.new_array(res), False, export=d.export
-        )
+        self.variables[key] = Variable(BCValue.new_array(res), False, export=d.export)
 
     def visit_declare_stmt(self, d: DeclareStatement):
         for ident in d.ident:
@@ -2058,7 +2073,7 @@ class Interpreter:
                     d.pos,
                 )
 
-            if isinstance(d.typ, BCArrayTypeSpec):
+            if isinstance(d.typ, ArrayType):
                 self._declare_array(d, key)
             else:
                 self.variables[key] = Variable(

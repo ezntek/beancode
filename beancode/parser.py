@@ -267,7 +267,7 @@ class Parser:
                 else:
                     raise BCError(f"invalid number literal `{val}`", tok)
 
-    def _array_type(self) -> BCType | None:
+    def _array_type(self) -> Type | None:
         flat_bounds = None
         matrix_bounds = None
         is_matrix = False
@@ -367,14 +367,14 @@ class Parser:
 
         inner = arrtyp.typ  # type: ignore
 
-        return BCArrayTypeSpec(
+        return ArrayType(
             is_matrix=is_matrix,
             flat_bounds=flat_bounds,
             matrix_bounds=matrix_bounds,
             inner=inner,
         )
 
-    def typ(self) -> BCType | None:
+    def typ(self) -> Type | None:
         adv = self.consume()
 
         if adv.kind == "newline":

@@ -5,9 +5,9 @@ import random
 
 from typing import NoReturn
 
-from beancode.bean_ast import BCType, BCValue
+from beancode.bean_ast import Type, BCValue
 
-Libroutine = list[tuple[BCType, ...] | BCType]
+Libroutine = list[tuple[Type, ...] | Type]
 Libroutines = dict[str, Libroutine]
 
 LIBROUTINES: Libroutines = {

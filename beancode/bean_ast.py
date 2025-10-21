@@ -12,8 +12,9 @@ class Expr:
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
 
+
 @dataclass
-class BCArrayTypeSpec:
+class ArrayType:
     """parse-time specification of the array type"""
 
     inner: BCPrimitiveType
@@ -30,7 +31,9 @@ class BCArrayTypeSpec:
 
     def get_matrix_bounds(self) -> tuple["Expr", "Expr", "Expr", "Expr"]:
         if self.matrix_bounds is None:
-            raise BCError("tried to access matrix bounds on array without matrix bounds")
+            raise BCError(
+                "tried to access matrix bounds on array without matrix bounds"
+            )
         return self.matrix_bounds
 
     def __repr__(self) -> str:
@@ -38,6 +41,7 @@ class BCArrayTypeSpec:
             return "ARRAY[2D] OF " + self.inner.upper()
         else:
             return "ARRAY OF " + self.inner.upper()
+
 
 @dataclass
 class BCArrayType:
@@ -49,11 +53,13 @@ class BCArrayType:
     matrix_bounds: tuple[int, int, int, int] | None = None
 
     @classmethod
-    def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> 'BCArrayType':
+    def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> "BCArrayType":
         return cls(inner, False, flat_bounds=bounds)
 
     @classmethod
-    def new_matrix(cls, inner: BCPrimitiveType, bounds: tuple[int, int, int, int]) -> 'BCArrayType':
+    def new_matrix(
+        cls, inner: BCPrimitiveType, bounds: tuple[int, int, int, int]
+    ) -> "BCArrayType":
         return cls(inner, True, matrix_bounds=bounds)
 
     def get_flat_bounds(self) -> tuple[int, int]:
@@ -76,6 +82,7 @@ class BCArrayType:
         s.write("] OF ")
         s.write(str(self.inner).upper())
         return s.getvalue()
+
 
 def array_bounds_to_string(bounds: tuple[int, int]) -> str:
     return f"{bounds[0]}:{bounds[1]}"
@@ -125,15 +132,17 @@ class BCArray:
         else:
             return str(self.matrix)
 
+
 # parsetime
-BCType = BCArrayTypeSpec | BCPrimitiveType
+Type = ArrayType | BCPrimitiveType
 
 # runtime
-BCValueType = BCArrayType | BCPrimitiveType
+BCType = BCArrayType | BCPrimitiveType
+
 
 @dataclass
 class BCValue:
-    kind: BCValueType
+    kind: BCType
     integer: int | None = None
     real: float | None = None
     char: str | None = None
@@ -155,7 +164,7 @@ class BCValue:
         return self.kind == "null" or self.is_uninitialized()
 
     @classmethod
-    def empty(cls, kind: BCValueType) -> "BCValue":
+    def empty(cls, kind: BCType) -> "BCValue":
         return cls(
             kind,
             integer=None,
@@ -396,7 +405,7 @@ class ConstantStatement:
 class DeclareStatement:
     pos: tuple[int, int, int]
     ident: list[Identifier]
-    typ: BCType
+    typ: Type
     export: bool = False
     expr: Expr | None = None
 
@@ -462,7 +471,7 @@ class RepeatUntilStatement:
 class FunctionArgument:
     pos: tuple[int, int, int]
     name: str
-    typ: BCType
+    typ: Type
 
 
 @dataclass
@@ -479,7 +488,7 @@ class FunctionStatement:
     pos: tuple[int, int, int]
     name: str
     args: list[FunctionArgument]
-    returns: BCType
+    returns: Type
     block: list["Statement"]
     export: bool = False
 
@@ -594,5 +603,5 @@ class Variable:
 @dataclass
 class CallStackEntry:
     name: str
-    rtype: BCType | None
+    rtype: Type | None
     func: bool = False

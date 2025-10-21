@@ -105,9 +105,11 @@ def draw_text(args: BCArgsList):
 _COLOR_T = BCArrayType.new_flat("integer", (1, 4))
 _RECT_T = BCArrayType.new_flat("integer", (1, 4))
 
+
 def _color_to_bc_array(color: p.Color) -> BCValue:
     flat = [BCValue.new_integer(color[0]), BCValue.new_integer(color[1]), BCValue.new_integer(color[2]), BCValue.new_integer(color[3])]  # type: ignore
     return BCValue.new_array(BCArray.new_flat(_COLOR_T, flat))
+
 
 constants = [
     BCConstant("BEIGE", _color_to_bc_array(p.BEIGE)),

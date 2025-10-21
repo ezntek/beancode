@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from typing import Callable, TypedDict
-from .bean_ast import BCArrayType, BCValueType, BCPrimitiveType, BCValue
+from .bean_ast import BCArrayType, BCType, BCPrimitiveType, BCValue
 
 
 def array(inner: BCPrimitiveType, low: int, high: int) -> BCArrayType:
     return BCArrayType.new_flat(inner, (low, high))
+
 
 def matrix(
     inner: BCPrimitiveType,
@@ -16,7 +17,8 @@ def matrix(
     b = (low_outer, high_outer, low_inner, high_inner)
     return BCArrayType.new_matrix(inner, b)
 
-BCParamSpec = dict[str, BCValueType]
+
+BCParamSpec = dict[str, BCType]
 BCArgsList = dict[str, BCValue]
 
 
@@ -38,7 +40,7 @@ class BCProcedure:  # ffi variant of a function
 @dataclass
 class BCDeclare:
     name: str
-    typ: BCValueType | None = None  # either typ, value or both must be set
+    typ: BCType | None = None  # either typ, value or both must be set
     value: BCValue | None = None
 
 

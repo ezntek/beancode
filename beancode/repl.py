@@ -90,7 +90,7 @@ class Repl:
         else:
             rep = repr(val)
             typ = val.kind
-        
+
         if isinstance(val.kind, ast.BCArrayType):
             print(f"'{typ}' {rep}")
         else:
