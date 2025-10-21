@@ -15,4 +15,4 @@ PROCEDURE Code
     UNTIL i = Max
 ENDPROCEDURE
 
-TRACE Code(), {"a", "b", "i"}
+TRACE(a, b, c, i, Max) CALL Code TO "fibtrace.html"

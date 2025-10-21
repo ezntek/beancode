@@ -388,6 +388,7 @@ class CaseofStatement:
 @dataclass
 class WhileStatement:
     pos: tuple[int, int, int]
+    end_pos: tuple[int, int, int]  # for tracing
     cond: Expr
     block: list["Statement"]
 
@@ -395,6 +396,7 @@ class WhileStatement:
 @dataclass
 class ForStatement:
     pos: tuple[int, int, int]
+    end_pos: tuple[int, int, int]  # for tracing
     counter: Identifier
     block: list["Statement"]
     begin: Expr
@@ -405,6 +407,7 @@ class ForStatement:
 @dataclass
 class RepeatUntilStatement:
     pos: tuple[int, int, int]
+    end_pos: tuple[int, int, int]  # for tracing
     cond: Expr
     block: list["Statement"]
 

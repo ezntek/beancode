@@ -1113,9 +1113,9 @@ class Parser:
         while self.peek().keyword != "endwhile":
             stmts.append(self.scan_one_statement())
 
-        self.consume()  # byebye `ENDWHILE`
+        end = self.consume()  # byebye `ENDWHILE`
 
-        res = WhileStatement(begin.pos, expr, stmts)
+        res = WhileStatement(begin.pos, end.pos, expr, stmts)
         return Statement("while", while_s=res)
 
     def for_stmt(self):
@@ -1164,7 +1164,7 @@ class Parser:
         while self.peek().keyword != "next":
             stmts.append(self.scan_one_statement())
 
-        self.consume()  # byebye NEXT
+        next = self.consume()  # byebye NEXT
 
         next_counter: Identifier | None = self.ident()  # type: ignore
         if next_counter is None:
@@ -1177,7 +1177,7 @@ class Parser:
             )
 
         # thanks python for not having proper null handling
-        res = ForStatement(begin.pos, counter=counter, block=stmts, begin=begin, end=end, step=step)  # type: ignore
+        res = ForStatement(begin.pos, next.pos, counter=counter, block=stmts, begin=begin, end=end, step=step)  # type: ignore
         return Statement("for", for_s=res)
 
     def repeatuntil_stmt(self) -> Statement | None:
@@ -1195,7 +1195,7 @@ class Parser:
         while self.peek().keyword != "until":
             stmts.append(self.scan_one_statement())
 
-        self.consume()  # byebye `UNTIL`
+        until = self.consume()  # byebye `UNTIL`
 
         expr = self.expression()
         if expr is None:
@@ -1204,7 +1204,7 @@ class Parser:
                 self.peek(),
             )
 
-        res = RepeatUntilStatement(begin.pos, expr, stmts)
+        res = RepeatUntilStatement(begin.pos, until.pos, expr, stmts)
         return Statement("repeatuntil", repeatuntil=res)
 
     def function_arg(self) -> FunctionArgument | None:

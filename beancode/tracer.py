@@ -37,7 +37,7 @@ caption{caption-side:bottom}
 
 
 class Tracer:
-    vars: dict[str, list[BCValue]]
+    vars: dict[str, list[BCValue | None]]
     line_numbers: dict[int, int]
     outputs: dict[int, list[str]]
     inputs: dict[int, list[str]]
@@ -63,8 +63,9 @@ class Tracer:
             if k not in vars:
                 v.append(BCValue.new_null())
             else:
-                v.append(vars[k].val)
+                v.append(copy.copy(vars[k].val))
             last_idx = len(v)
+        last_idx -= 1
 
         if outputs is not None and len(outputs) > 0:
             self.outputs[last_idx] = copy.copy(outputs)
@@ -72,7 +73,6 @@ class Tracer:
         if inputs is not None and len(inputs) > 0:
             self.inputs[last_idx] = copy.copy(inputs)
 
-        # TODO: make it a list
         self.line_numbers[last_idx] = line_num
 
     def print_raw(self) -> None:
@@ -83,14 +83,17 @@ class Tracer:
         print(f"Inputs: {self.outputs}")
         print(f"Outputs: {self.inputs}")
 
-    def _gen_html_table(self) -> str:
-        first = list(self.line_numbers.keys())[0]
+    def _should_print_line_numbers(self) -> bool:
+        first = tuple(self.line_numbers.keys())[0]
         print_lines = False
         for idx in self.line_numbers:
             if idx not in self.inputs and idx not in self.outputs:
                 line_empty = True
                 for v in self.vars.keys():
-                    if not self.vars[v][idx].is_uninitialized():
+                    var = self.vars[v][idx]
+                    if var is None:
+                        break
+                    if not var.is_uninitialized():
                         line_empty = False
                         break
                 if line_empty:
@@ -98,27 +101,31 @@ class Tracer:
             if self.line_numbers[idx] != first:
                 print_lines = True
                 break
+        return print_lines
 
+    def _gen_html_table(self) -> str:
         res = StringIO()
         res.write("<table>\n")
 
-        if not print_lines:
-            res.write("<caption>\n")
-            res.write(f"All values are captured at line {self.line_numbers=}\n")
+        should_print_line_nums = self._should_print_line_numbers()
+
+        if not should_print_line_nums:
+            res.write("<caption>")
+            res.write(f"All values are captured at line {self.line_numbers}")
             res.write("</caption>\n")
 
         # generate header
         res.write("<thead>\n")
         res.write("<tr>\n")
 
-        if print_lines:
+        if should_print_line_nums:
             res.write("<th style=padding:0>Line</th>")
+
+        for row_num in self.vars:
+            res.write(f"<th>{row_num}</th>\n")
 
         if len(self.inputs) > 0:
             res.write("<th>Inputs</th>\n")
-
-        for idx in self.vars:
-            res.write(f"<th>{idx}</th>\n")
 
         if len(self.outputs) > 0:
             res.write("<th>Outputs</th>\n")
@@ -129,46 +136,59 @@ class Tracer:
         res.write("<tbody>\n")
 
         # cursed python
-        for idx, row in enumerate(zip(*self.vars.values())):
-            if idx not in self.inputs and idx not in self.outputs:
-                line_empty = True
-                for itm in row:
-                    if not itm.is_uninitialized():
+        rows = tuple(enumerate(zip(*self.vars.values())))
+        nskipped = 0
+        for row_num, row in rows:
+            # skip empty lines where nothing happens
+            if row_num not in self.inputs and row_num not in self.outputs:
+                line_empty = True  # assume empty line due to no I/O first
+                for var in row:
+                    if not var.is_uninitialized():
                         line_empty = False
                         break
                 if line_empty:
+                    nskipped += 1
                     continue
 
             res.write("<tr>\n")
-            if print_lines:
-                if idx in self.line_numbers:
-                    res.write(f"<td>{self.line_numbers[idx]}</td>\n")
+
+            if should_print_line_nums:
+                if row_num in self.line_numbers:
+                    res.write(f"<td>{self.line_numbers[row_num]}</td>\n")
+
+            for col, var in enumerate(row):
+                var: BCValue
+
+                if row_num - nskipped != 0:
+                    prev = rows[row_num - 1][1][col]
+                    if prev == var:
+                        res.write(f"<td></td>\n")
+                        continue
+
+                if var.is_uninitialized():
+                    res.write(f"<td><pre class=dim>(uninitialized)</pre></td>\n")
+                    continue
+
+                match var.kind:
+                    case "boolean":
+                        klass = "tru" if var.boolean == True else "fls"
+                        res.write(f"<td><pre class={klass}>{str(var)}</pre></td>\n")
+                    case "integer" | "real":
+                        res.write(f"<td><pre class=int>{str(var)}</pre></td>\n")
+                    case _:
+                        res.write(f"<td><pre>{str(var)}</pre></td>\n")
 
             if len(self.inputs) > 0:
                 s = str()
-                if idx in self.inputs:
-                    l = self.inputs[idx]
+                if row_num in self.inputs:
+                    l = self.inputs[row_num]
                     s = "\n".join(l)
                 res.write(f"<td><pre>{s}</pre></td>\n")
 
-            for itm in row:
-                itm: BCValue
-                if itm.is_uninitialized():
-                    res.write(f"<td><pre class=dim>(uninitialized)</pre></td>\n")
-                    continue
-                match itm.kind:
-                    case "boolean":
-                        cls = "tru" if itm.boolean == True else "fls"
-                        res.write(f"<td><pre class={cls}>{str(itm)}</pre></td>\n")
-                    case "integer" | "real":
-                        res.write(f"<td><pre class=int>{str(itm)}</pre></td>\n")
-                    case _:
-                        res.write(f"<td><pre>{str(itm)}</pre></td>\n")
-
             if len(self.outputs) > 0:
                 s = str()
-                if idx in self.outputs:
-                    l = self.outputs[idx]
+                if row_num in self.outputs:
+                    l = self.outputs[row_num]
                     s = "\n".join(l)
                 res.write(f"<td><pre>{s}</pre></td>\n")
 

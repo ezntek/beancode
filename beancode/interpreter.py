@@ -94,7 +94,9 @@ class Interpreter:
         raise BCError(msg, pos, proc=proc, func=func)
 
     def trace(
-        self, line_num, loop_trace=False, trace_inputs=False, trace_outputs=False
+        self,
+        line_num: int,
+        loop_trace=False,
     ) -> None:
         if self.tracer is None:
             return
@@ -104,23 +106,17 @@ class Interpreter:
         if self.loop and not loop_trace:
             return
 
-        inputs = None
-        outputs = None
-
-        if trace_inputs:
-            inputs = self.tracer_inputs
-
-        if trace_outputs:
-            outputs = self.tracer_outputs
-
         self.tracer.collect_new(
-            self.variables, line_num, inputs=inputs, outputs=outputs
+            self.variables,
+            line_num,
+            inputs=self.tracer_inputs,
+            outputs=self.tracer_outputs,
         )
 
-        if trace_inputs:
+        if self.tracer_inputs is not None:
             self.tracer_inputs.clear()  # type: ignore
 
-        if trace_outputs:
+        if self.tracer_outputs is not None:
             self.tracer_outputs.clear()  # type: ignore
 
     def get_return_type(self) -> BCType | None:
@@ -1006,13 +1002,11 @@ class Interpreter:
         if isinstance(func, BCFunction):
             return self.visit_ffi_fncall(func, stmt)
 
-        intp = self.new(func.block, func=True, tracer=self.tracer)
+        intp = self.new(func.block, func=True, tracer=tracer)
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
         vars = self.variables
-        if intp.tracer is None:
-            intp.tracer = tracer
-        else:
+        if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
 
         if len(func.args) != len(stmt.args):
@@ -1090,13 +1084,11 @@ class Interpreter:
         if isinstance(proc, BCProcedure):
             return self.visit_ffi_call(proc, stmt)
 
-        intp = self.new(proc.block, proc=True, tracer=self.tracer)
+        intp = self.new(proc.block, proc=True, tracer=tracer)
         intp.calls = self.calls
         intp.calls.append(CallStackEntry(proc.name, None))
         vars = self.variables
-        if intp.tracer is None:
-            intp.tracer = tracer
-        else:
+        if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
 
         if len(proc.args) != len(stmt.args):
@@ -1418,10 +1410,10 @@ class Interpreter:
             else:
                 res += str(evaled)
 
-        if self.tracer_outputs is not None and self.loop:
+        if self.tracer_outputs is not None:
             self.tracer_outputs.append(res)  # type: ignore
-
-        print(res)
+        else:
+            print(res)
 
     def _guess_input_type(self, inp: str) -> BCValue:
         p = Parser([])
@@ -1438,17 +1430,17 @@ class Interpreter:
         else:
             return BCValue(kind="string")
 
-    def visit_input_stmt(self, stmt: InputStatement):
+    def visit_input_stmt(self, s: InputStatement):
         inp = input()
         target: BCValue
 
-        if self.tracer_inputs is not None and self.loop:
+        if self.tracer_inputs is not None:
             self.tracer_inputs.append(inp)  # type: ignore
 
-        if isinstance(stmt.ident, ArrayIndex):
-            target = self.visit_array_index(stmt.ident)
+        if isinstance(s.ident, ArrayIndex):
+            target = self.visit_array_index(s.ident)
         else:
-            id = stmt.ident.ident
+            id = s.ident.ident
 
             data: Variable | None = self.variables.get(id)
             if data is None:
@@ -1458,10 +1450,10 @@ class Interpreter:
             target = data.val  # type: ignore
 
             if data.const:
-                self.error(f'cannot call "INPUT" into constant {id}', stmt.ident.pos)
+                self.error(f'cannot call "INPUT" into constant {id}', s.ident.pos)
 
             if type(data.val.kind) == BCArrayType:
-                self.error(f'cannot call "INPUT" on an array', stmt.ident.pos)
+                self.error(f'cannot call "INPUT" on an array', s.ident.pos)
 
         match target.kind:
             case "string":
@@ -1470,7 +1462,7 @@ class Interpreter:
             case "char":
                 if len(inp) > 1:
                     self.error(
-                        f'expected single character but got "{inp}" for CHAR', stmt.pos
+                        f'expected single character but got "{inp}" for CHAR', s.pos
                     )
 
                 target.kind = "char"
@@ -1479,7 +1471,7 @@ class Interpreter:
                 if inp.lower() not in ["true", "false", "yes", "no"]:
                     self.error(
                         f'expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got "{inp}"',
-                        stmt.pos,
+                        s.pos,
                     )
 
                 inp = inp.lower()
@@ -1498,9 +1490,9 @@ class Interpreter:
                         target.kind = "integer"
                         target.integer = res
                     except ValueError:
-                        self.error("expected INTEGER for INPUT", stmt.ident.pos)
+                        self.error("expected INTEGER for INPUT", s.ident.pos)
                 else:
-                    self.error("expected INTEGER for INPUT", stmt.ident.pos)
+                    self.error("expected INTEGER for INPUT", s.ident.pos)
             case "real":
                 inp = inp.lower().strip()
                 p = Parser([])
@@ -1510,11 +1502,11 @@ class Interpreter:
                         target.kind = "real"
                         target.real = res
                     except ValueError:
-                        self.error("expected REAL for INPUT", stmt.ident.pos)
+                        self.error("expected REAL for INPUT", s.ident.pos)
                 else:
-                    self.error("expected REAL for INPUT", stmt.ident.pos)
+                    self.error("expected REAL for INPUT", s.ident.pos)
 
-        self.trace(stmt.pos[0])
+        self.trace(s.pos[0])
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         proc, func = self.can_return()
@@ -1728,9 +1720,7 @@ class Interpreter:
             intp.visit_block(block)
 
             # trace all I/O that happened
-            intp.trace(
-                stmt.pos[0], loop_trace=True, trace_inputs=True, trace_outputs=True
-            )
+            intp.trace(stmt.end_pos[0], loop_trace=True)
 
             # FIXME: barbaric aah
             # reset all declares
@@ -1789,6 +1779,9 @@ class Interpreter:
 
         while cond():
             intp.visit_block(None)
+
+            intp.trace(stmt.end_pos[0], loop_trace=True)
+
             #  FIXME: barbaric
             # clear declared variables
             c = intp.variables[stmt.counter.ident]
@@ -1823,6 +1816,9 @@ class Interpreter:
 
         while True:
             intp.visit_block(None)
+
+            intp.trace(stmt.end_pos[0], loop_trace=True)
+
             # FIXME: barbaric
             intp.variables = self.variables.copy()
             if intp._returned:
@@ -1963,6 +1959,7 @@ class Interpreter:
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             self.variables[key].val = copy.deepcopy(exp)
+
         self.trace(s.pos[0])
 
     def visit_constant_stmt(self, c: ConstantStatement):
