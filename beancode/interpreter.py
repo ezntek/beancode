@@ -739,18 +739,19 @@ class Interpreter:
             tup = self._get_array_index(ind)
             if a.typ.is_matrix:
                 outer, inner = tup
+                bounds = a.get_matrix_bounds()
                 if inner is None:
                     self.error(
                         "second index not present for matrix index", ind.ident.pos
                     )
 
-                if outer not in range(a.matrix_bounds[0], a.matrix_bounds[1] + 1):  # type: ignore
+                if outer not in range(bounds[0], bounds[1] + 1):  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[0]}"',
                         ind.idx_outer.pos,
                     )
 
-                if inner not in range(a.matrix_bounds[2], a.matrix_bounds[3] + 1):  # type: ignore
+                if inner not in range(bounds[2], bounds[3] + 1):  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[1]}"', ind.idx_inner.pos  # type: ignore
                     )
