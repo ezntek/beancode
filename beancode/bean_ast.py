@@ -12,18 +12,16 @@ class Expr:
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
 
-
 @dataclass
-class BCArrayType:
+class BCArrayTypeSpec:
+    """parse-time specification of the array type"""
+
     inner: BCPrimitiveType
     is_matrix: bool  # true: 2d array
     flat_bounds: tuple["Expr", "Expr"] | None = None  # begin:end
     matrix_bounds: tuple["Expr", "Expr", "Expr", "Expr"] | None = (
         None  # begin:end,begin:end
     )
-
-    def has_bounds(self) -> bool:
-        return self.flat_bounds is not None or self.matrix_bounds is not None
 
     def get_flat_bounds(self) -> tuple["Expr", "Expr"]:
         if self.flat_bounds is None:
@@ -32,7 +30,7 @@ class BCArrayType:
 
     def get_matrix_bounds(self) -> tuple["Expr", "Expr", "Expr", "Expr"]:
         if self.matrix_bounds is None:
-            raise BCError("tried to access matrixbounds on array without matrix bounds")
+            raise BCError("tried to access matrix bounds on array without matrix bounds")
         return self.matrix_bounds
 
     def __repr__(self) -> str:
@@ -41,6 +39,43 @@ class BCArrayType:
         else:
             return "ARRAY OF " + self.inner.upper()
 
+@dataclass
+class BCArrayType:
+    """runtime representation of an array type"""
+
+    inner: BCPrimitiveType
+    is_matrix: bool
+    flat_bounds: tuple[int, int] | None = None
+    matrix_bounds: tuple[int, int, int, int] | None = None
+
+    @classmethod
+    def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> 'BCArrayType':
+        return cls(inner, False, flat_bounds=bounds)
+
+    @classmethod
+    def new_matrix(cls, inner: BCPrimitiveType, bounds: tuple[int, int, int, int]) -> 'BCArrayType':
+        return cls(inner, True, matrix_bounds=bounds)
+
+    def get_flat_bounds(self) -> tuple[int, int]:
+        if self.flat_bounds is None:
+            raise BCError("tried to access flat bounds on array without flat bounds")
+        return self.flat_bounds
+
+    def get_matrix_bounds(self) -> tuple[int, int, int, int]:
+        if self.matrix_bounds is None:
+            raise BCError("tried to access matrixbounds on array without matrix bounds")
+        return self.matrix_bounds
+
+    def __repr__(self) -> str:
+        s = StringIO()
+        s.write("ARRAY[")
+        if self.flat_bounds is not None:
+            s.write(array_bounds_to_string(self.flat_bounds))
+        elif self.matrix_bounds is not None:
+            s.write(matrix_bounds_to_string(self.matrix_bounds))
+        s.write("] OF ")
+        s.write(str(self.inner).upper())
+        return s.getvalue()
 
 def array_bounds_to_string(bounds: tuple[int, int]) -> str:
     return f"{bounds[0]}:{bounds[1]}"
@@ -55,8 +90,34 @@ class BCArray:
     typ: BCArrayType
     flat: list["BCValue"] | None = None  # must be a BCPrimitiveType
     matrix: list[list["BCValue"]] | None = None  # must be a BCPrimitiveType
-    flat_bounds: tuple[int, int] | None = None
-    matrix_bounds: tuple[int, int, int, int] | None = None
+
+    @classmethod
+    def new_flat(cls, typ: BCArrayType, flat: list["BCValue"]) -> "BCArray":
+        return cls(typ=typ, flat=flat)
+
+    @classmethod
+    def new_matrix(cls, typ: BCArrayType, matrix: list[list["BCValue"]]) -> "BCArray":
+        return cls(typ=typ, matrix=matrix)
+
+    def get_flat(self) -> list["BCValue"]:
+        if self.flat is None:
+            raise BCError("tried to access 1D array from a 2D array")
+        return self.flat
+
+    def get_matrix(self) -> list[list["BCValue"]]:
+        if self.matrix is None:
+            raise BCError("tried to access 2D array from a 1D array")
+        return self.matrix
+
+    def get_flat_bounds(self) -> tuple[int, int]:
+        if self.typ.flat_bounds is None:
+            raise BCError("tried to access 1D array from a 2D array")
+        return self.typ.flat_bounds
+
+    def get_matrix_bounds(self) -> tuple[int, int, int, int]:
+        if self.typ.matrix_bounds is None:
+            raise BCError("tried to access 2D array from a 1D array")
+        return self.typ.matrix_bounds
 
     def __repr__(self) -> str:
         if not self.typ.is_matrix:
@@ -64,34 +125,15 @@ class BCArray:
         else:
             return str(self.matrix)
 
-    def get_flat(self) -> list["BCValue"]:
-        if self.flat is None:
-            raise BCError("tried to access flat array from a matrix array")
-        return self.flat
+# parsetime
+BCType = BCArrayTypeSpec | BCPrimitiveType
 
-    def get_matrix(self) -> list[list["BCValue"]]:
-        if self.matrix is None:
-            raise BCError("tried to access matrix array from a flat array")
-        return self.matrix
-
-    def get_type_str(self) -> str:
-        s = StringIO()
-        s.write("ARRAY[")
-        if self.flat_bounds is not None:
-            s.write(array_bounds_to_string(self.flat_bounds))
-        elif self.matrix_bounds is not None:
-            s.write(matrix_bounds_to_string(self.matrix_bounds))
-        s.write("] OF ")
-        s.write(str(self.typ.inner).upper())
-        return s.getvalue()
-
-
-BCType = BCArrayType | BCPrimitiveType
-
+# runtime
+BCValueType = BCArrayType | BCPrimitiveType
 
 @dataclass
 class BCValue:
-    kind: BCType
+    kind: BCValueType
     integer: int | None = None
     real: float | None = None
     char: str | None = None
@@ -113,7 +155,7 @@ class BCValue:
         return self.kind == "null" or self.is_uninitialized()
 
     @classmethod
-    def empty(cls, kind: BCType) -> "BCValue":
+    def empty(cls, kind: BCValueType) -> "BCValue":
         return cls(
             kind,
             integer=None,
@@ -147,6 +189,10 @@ class BCValue:
     @classmethod
     def new_string(cls, s: str) -> "BCValue":
         return cls("string", string=s)
+
+    @classmethod
+    def new_array(cls, a: BCArray) -> "BCValue":
+        return cls(a.typ, array=a)
 
     def get_integer(self) -> int:
         if self.kind != "integer":

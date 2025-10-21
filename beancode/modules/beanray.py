@@ -102,19 +102,12 @@ def draw_text(args: BCArgsList):
     p.draw_text(text, x, y, size, color)
 
 
-_COLOR_T = BCArrayType(
-    "integer", False, flat_bounds=(Literal("integer", 1), Literal("integer", 4))
-)
-_RECT_T = BCArrayType(
-    "integer", False, flat_bounds=(Literal("integer", 1), Literal("integer", 4))
-)
-
+_COLOR_T = BCArrayType.new_flat("integer", (1, 4))
+_RECT_T = BCArrayType.new_flat("integer", (1, 4))
 
 def _color_to_bc_array(color: p.Color) -> BCValue:
     flat = [BCValue.new_integer(color[0]), BCValue.new_integer(color[1]), BCValue.new_integer(color[2]), BCValue.new_integer(color[3])]  # type: ignore
-    arr = BCArray(_COLOR_T, flat=flat, flat_bounds=(1, 4))
-    return BCValue(_COLOR_T, array=arr)
-
+    return BCValue.new_array(BCArray.new_flat(_COLOR_T, flat))
 
 constants = [
     BCConstant("BEIGE", _color_to_bc_array(p.BEIGE)),

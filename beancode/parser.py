@@ -71,7 +71,7 @@ class Parser:
         return self.prev()
 
     def consume_newlines(self):
-        while self.peek().kind == "newline":
+        while self.cur != len(self.tokens) - 1 and self.peek().kind == "newline":
             self.consume()
 
     def check_newline(self, s: str):
@@ -267,6 +267,113 @@ class Parser:
                 else:
                     raise BCError(f"invalid number literal `{val}`", tok)
 
+    def _array_type(self) -> BCType | None:
+        flat_bounds = None
+        matrix_bounds = None
+        is_matrix = False
+        inner: BCPrimitiveType
+
+        left_bracket = self.consume()
+        if left_bracket.separator == "left_bracket":
+            begin = self.expression()
+            if begin is None:
+                raise BCError(
+                    "invalid or no expression as beginning value of array declaration",
+                    begin,
+                )
+
+            colon = self.consume()
+            if colon.separator != "colon":
+                raise BCError(
+                    "expected colon after beginning value of array declaration",
+                    colon,
+                )
+
+            end = self.expression()
+            if end is None:
+                raise BCError(
+                    "invalid or no expression as ending value of array declaration",
+                    end,
+                )
+
+            flat_bounds = (begin, end)
+
+            right_bracket = self.consume()
+            if right_bracket.separator == "right_bracket":
+                pass
+            elif right_bracket.separator == "comma":
+                inner_begin = self.expression()
+                if inner_begin is None:
+                    raise BCError(
+                        "invalid or no expression as beginning value of array declaration",
+                        inner_begin,
+                    )
+
+                inner_colon = self.consume()
+                if inner_colon.separator != "colon":
+                    raise BCError(
+                        "expected colon after beginning value of array declaration",
+                        inner_colon,
+                    )
+
+                inner_end = self.expression()
+                if inner_end is None:
+                    raise BCError(
+                        "invalid or no expression as ending value of array declaration",
+                        inner_end,
+                    )
+
+                matrix_bounds = (
+                    flat_bounds[0],
+                    flat_bounds[1],
+                    inner_begin,
+                    inner_end,
+                )
+
+                flat_bounds = None
+
+                right_bracket = self.consume()
+                if right_bracket.separator != "right_bracket":
+                    raise BCError(
+                        "expected ending right bracket after matrix length declaration",
+                        right_bracket,
+                    )
+
+                is_matrix = True
+            else:
+                raise BCError(
+                    "expected right bracket or comma after array bounds declaration",
+                    right_bracket,
+                )
+        else:
+            raise BCError(
+                "expected opening bracket `[` after `ARRAY` keyword", left_bracket
+            )
+
+        of = self.consume()
+        if of.kind != "keyword" and of.keyword != "of":
+            raise BCError("expected `OF` after size declaration", of)
+
+        arrtyp = self.consume()
+
+        if arrtyp.typ == "array":
+            raise BCError(
+                "cannot have array as array element type, please use the matrix syntax instead",
+                arrtyp,
+            )
+
+        if arrtyp.typ not in self.PRIM_TYPES:
+            raise BCError("invalid type used as array element type", arrtyp)
+
+        inner = arrtyp.typ  # type: ignore
+
+        return BCArrayTypeSpec(
+            is_matrix=is_matrix,
+            flat_bounds=flat_bounds,
+            matrix_bounds=matrix_bounds,
+            inner=inner,
+        )
+
     def typ(self) -> BCType | None:
         adv = self.consume()
 
@@ -280,112 +387,7 @@ class Parser:
             t: BCPrimitiveType = adv.typ  # type: ignore
             return t
         elif adv.kind == "type" and adv.typ == "array":
-            flat_bounds = None
-            matrix_bounds = None
-            is_matrix = False
-            inner: BCPrimitiveType
-
-            left_bracket = self.consume()
-            if left_bracket.separator == "left_bracket":
-                begin = self.expression()
-                if begin is None:
-                    raise BCError(
-                        "invalid or no expression as beginning value of array declaration",
-                        begin,
-                    )
-
-                colon = self.consume()
-                if colon.separator != "colon":
-                    raise BCError(
-                        "expected colon after beginning value of array declaration",
-                        colon,
-                    )
-
-                end = self.expression()
-                if end is None:
-                    raise BCError(
-                        "invalid or no expression as ending value of array declaration",
-                        end,
-                    )
-
-                flat_bounds = (begin, end)
-
-                right_bracket = self.consume()
-                if right_bracket.separator == "right_bracket":
-                    pass
-                elif right_bracket.separator == "comma":
-                    inner_begin = self.expression()
-                    if inner_begin is None:
-                        raise BCError(
-                            "invalid or no expression as beginning value of array declaration",
-                            inner_begin,
-                        )
-
-                    inner_colon = self.consume()
-                    if inner_colon.separator != "colon":
-                        raise BCError(
-                            "expected colon after beginning value of array declaration",
-                            inner_colon,
-                        )
-
-                    inner_end = self.expression()
-                    if inner_end is None:
-                        raise BCError(
-                            "invalid or no expression as ending value of array declaration",
-                            inner_end,
-                        )
-
-                    matrix_bounds = (
-                        flat_bounds[0],
-                        flat_bounds[1],
-                        inner_begin,
-                        inner_end,
-                    )
-
-                    flat_bounds = None
-
-                    right_bracket = self.consume()
-                    if right_bracket.separator != "right_bracket":
-                        raise BCError(
-                            "expected ending right bracket after matrix length declaration",
-                            right_bracket,
-                        )
-
-                    is_matrix = True
-                else:
-                    raise BCError(
-                        "expected right bracket or comma after array bounds declaration",
-                        right_bracket,
-                    )
-            else:
-                raise BCError(
-                    "expected opening bracket `[` after `ARRAY` keyword", left_bracket
-                )
-
-            of = self.consume()
-            if of.kind != "keyword" and of.keyword != "of":
-                raise BCError("expected `OF` after size declaration", of)
-
-            # TODO: refactor
-            arrtyp = self.consume()
-
-            if arrtyp.typ == "array":
-                raise BCError(
-                    "cannot have array as array element type, please use the matrix syntax instead",
-                    arrtyp,
-                )
-
-            if arrtyp.typ not in self.PRIM_TYPES:
-                raise BCError("invalid type used as array element type", arrtyp)
-
-            inner = arrtyp.typ  # type: ignore
-
-            return BCArrayType(
-                is_matrix=is_matrix,
-                flat_bounds=flat_bounds,
-                matrix_bounds=matrix_bounds,
-                inner=inner,
-            )
+            return self._array_type()
 
     def ident(self) -> Expr | None:
         c = self.consume()

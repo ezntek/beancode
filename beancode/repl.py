@@ -1,3 +1,9 @@
+import sys
+import os
+
+from typing import Any
+from io import StringIO
+
 from . import bean_ast as ast
 from . import lexer
 from . import parser
@@ -5,11 +11,6 @@ from . import interpreter as intp
 from . import bean_ffi as ffi
 from . import __version__
 from .error import *
-
-from io import StringIO
-
-import sys
-import os
 
 try:
     import readline
@@ -85,17 +86,18 @@ class Repl:
         if isinstance(val.kind, ast.BCArrayType):
             a = val.get_array()
             rep = self.i._display_array(a)
-            typ = a.get_type_str()
+            typ = str(a.typ)
         else:
             rep = repr(val)
             typ = val.kind
-
+        
         if isinstance(val.kind, ast.BCArrayType):
             print(f"'{typ}' {rep}")
         else:
             print(f"'{typ.upper()}' ({rep})")
 
-    def _get_args_list(self, args: list[tuple[str, ast.BCType]]) -> str:
+    def _args_list_to_string(self, args: list[tuple[str, Any]]) -> str:
+        # Any: either an ast.BCType or ast.Type
         sio = StringIO()
         sio.write("(")
         for i, (name, typ) in enumerate(args):
@@ -115,16 +117,14 @@ class Repl:
         if isinstance(proc, ast.ProcedureStatement):
             sio.write(proc.name)
             if len(proc.args) != 0:
-                args: list[tuple[str, ast.BCType]] = [
-                    (arg.name, arg.typ) for arg in proc.args
-                ]
-                sio.write(self._get_args_list(args))
+                args = [(arg.name, arg.typ) for arg in proc.args]
+                sio.write(self._args_list_to_string(args))
         else:
             ffi = True
             sio.write(proc.name)
             if len(proc.params) != 0:
                 args = list(proc.params.items())
-                sio.write(self._get_args_list(args))
+                sio.write(self._args_list_to_string(args))
 
         if ffi:
             sio.write("\033[2m <FFI>\033[0m")
@@ -139,16 +139,14 @@ class Repl:
         if isinstance(func, ast.FunctionStatement):
             sio.write(func.name)
             if len(func.args) != 0:
-                args: list[tuple[str, ast.BCType]] = [
-                    (arg.name, arg.typ) for arg in func.args
-                ]
-                sio.write(self._get_args_list(args))
+                args = [(arg.name, arg.typ) for arg in func.args]
+                sio.write(self._args_list_to_string(args))
         else:
             ffi = True
             sio.write(func.name)
             if len(func.params) != 0:
                 args = list(func.params.items())
-                sio.write(self._get_args_list(args))
+                sio.write(self._args_list_to_string(args))
 
         sio.write(" RETURNS ")
         sio.write(str(func.returns).upper())
