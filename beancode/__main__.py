@@ -79,7 +79,7 @@ def real_main():
             tok.print(file=sys.stderr)
         print("\033[1m==============\033[0m", file=sys.stderr)
         sys.stderr.flush()
-    
+
     parser = Parser(toks)
 
     try:

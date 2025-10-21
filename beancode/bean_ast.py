@@ -457,7 +457,7 @@ class IncludeStatement:
 @dataclass
 class TraceStatement:
     pos: tuple[int, int, int]
-    vars: list[str] 
+    vars: list[str]
     stmt: FunctionCall | CallStatement
     file_name: str
 
@@ -522,11 +522,12 @@ class Statement:
                 return self.trace.__repr__()
             case "expr":
                 return self.expr.__repr__()
-            
+
 
 @dataclass
 class Program:
     stmts: list[Statement]
+
 
 @dataclass
 class Variable:

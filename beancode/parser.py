@@ -1414,7 +1414,7 @@ class Parser:
         if begin.keyword != "trace":
             return
         self.consume()
-        
+
         lparen = self.consume()
         if lparen.separator != "left_paren":
             raise BCError(

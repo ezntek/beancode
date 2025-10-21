@@ -14,6 +14,7 @@ from .libroutines import *
 from . import __version__, is_case_consistent
 from .tracer import *
 
+
 class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]
@@ -57,7 +58,7 @@ class Interpreter:
         self.calls = list()
         self.variables = dict()
         self.functions = dict()
-        
+
         if self.tracer is not None:
             self.tracer_outputs = list()
             self.tracer_inputs = list()
@@ -92,12 +93,14 @@ class Interpreter:
 
         raise BCError(msg, pos, proc=proc, func=func)
 
-    def trace(self, loop_trace=False, trace_inputs=False, trace_outputs=False) -> None:
+    def trace(
+        self, line_num, loop_trace=False, trace_inputs=False, trace_outputs=False
+    ) -> None:
         if self.tracer is None:
             return
-        
+
         # loop_trace: manually invoked trace in a loop
-        # (every statement in a loop should not be traced) 
+        # (every statement in a loop should not be traced)
         if self.loop and not loop_trace:
             return
 
@@ -106,17 +109,19 @@ class Interpreter:
 
         if trace_inputs:
             inputs = self.tracer_inputs
-             
+
         if trace_outputs:
             outputs = self.tracer_outputs
 
-        self.tracer.collect_new(self.variables, inputs=inputs, outputs=outputs)
+        self.tracer.collect_new(
+            self.variables, line_num, inputs=inputs, outputs=outputs
+        )
 
         if trace_inputs:
-            self.tracer_inputs.clear() # type: ignore
+            self.tracer_inputs.clear()  # type: ignore
 
         if trace_outputs:
-            self.tracer_outputs.clear() # type: ignore
+            self.tracer_outputs.clear()  # type: ignore
 
     def get_return_type(self) -> BCType | None:
         return self.calls[-1].rtype
@@ -1050,7 +1055,7 @@ class Interpreter:
 
         proc.fn(args)
 
-    def visit_call(self, stmt: CallStatement, tracer: Tracer | None =None):
+    def visit_call(self, stmt: CallStatement, tracer: Tracer | None = None):
         if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
             stmt.ident
         ):
@@ -1414,7 +1419,7 @@ class Interpreter:
                 res += str(evaled)
 
         if self.tracer_outputs is not None and self.loop:
-            self.tracer_outputs.append(res) # type: ignore
+            self.tracer_outputs.append(res)  # type: ignore
 
         print(res)
 
@@ -1438,7 +1443,7 @@ class Interpreter:
         target: BCValue
 
         if self.tracer_inputs is not None and self.loop:
-            self.tracer_inputs.append(inp) # type: ignore        
+            self.tracer_inputs.append(inp)  # type: ignore
 
         if isinstance(stmt.ident, ArrayIndex):
             target = self.visit_array_index(stmt.ident)
@@ -1508,8 +1513,8 @@ class Interpreter:
                         self.error("expected REAL for INPUT", stmt.ident.pos)
                 else:
                     self.error("expected REAL for INPUT", stmt.ident.pos)
-       
-        self.trace()
+
+        self.trace(stmt.pos[0])
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         proc, func = self.can_return()
@@ -1721,9 +1726,11 @@ class Interpreter:
                 break
 
             intp.visit_block(block)
-           
+
             # trace all I/O that happened
-            intp.trace(loop_trace=True, trace_inputs=True, trace_outputs=True)
+            intp.trace(
+                stmt.pos[0], loop_trace=True, trace_inputs=True, trace_outputs=True
+            )
 
             # FIXME: barbaric aah
             # reset all declares
@@ -1956,7 +1963,7 @@ class Interpreter:
                 elif not exp.array.typ.matrix_bounds and exp.array.flat_bounds != var.val.array.flat_bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             self.variables[key].val = copy.deepcopy(exp)
-        self.trace()
+        self.trace(s.pos[0])
 
     def visit_constant_stmt(self, c: ConstantStatement):
         key = c.ident.ident
@@ -1974,7 +1981,7 @@ class Interpreter:
 
         val = self.visit_expr(c.value)
         self.variables[key] = Variable(val, True, export=c.export)
-        self.trace()
+        self.trace(c.pos[0])
 
     def _declare_array(self, d: DeclareStatement, key: str):
         atype: BCArrayType = d.typ  # type: ignore
@@ -2092,7 +2099,7 @@ class Interpreter:
                 if d.expr is not None:
                     expr = self.visit_expr(d.expr)
                     self.variables[key].val = expr
-        self.trace()
+        self.trace(d.pos[0])
 
     def visit_trace_stmt(self, s: TraceStatement):
         vars = s.vars
@@ -2100,19 +2107,21 @@ class Interpreter:
 
         # XXX: this is super scuffed!
         # both FunctionCall and CallStmt have this field.
-        fn_name = s.stmt.ident 
+        fn_name = s.stmt.ident
         fn = self.functions.get(fn_name)
         if fn is None:
-            self.error(f'\"{fn_name}\" is not a valid function or procedure!')
-        
+            self.error(f'"{fn_name}" is not a valid function or procedure!')
+
         if isinstance(s.stmt, FunctionCall):
             self.visit_fncall(s.stmt, tracer=tracer)
         elif isinstance(s.stmt, CallStatement):
             self.visit_call(s.stmt, tracer=tracer)
 
         if os.path.exists(s.file_name):
-            warn(f"file name or path \"{s.file_name}\" provided to tracer already exists! overwriting...")
-        
+            warn(
+                f'file name or path "{s.file_name}" provided to tracer already exists! overwriting...'
+            )
+
         with open(s.file_name, "w") as f:
             f.write(tracer.gen_html())
 
@@ -2151,7 +2160,7 @@ class Interpreter:
             case "declare":
                 self.visit_declare_stmt(stmt.declare)  # type: ignore
             case "trace":
-                self.visit_trace_stmt(stmt.trace) # type: ignore
+                self.visit_trace_stmt(stmt.trace)  # type: ignore
             case "expr":
                 self.visit_expr(stmt.expr)  # type: ignore
 
