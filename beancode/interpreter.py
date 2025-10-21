@@ -1888,7 +1888,7 @@ class Interpreter:
 
             if self.variables[key].val.array is None:
                 self.error(
-                    f"tried to index a variable of type {self.variables[key].val.kind} like an array",
+                    f"cannot index a variable of type {self.variables[key].val.kind} like an array!",
                     s.ident.pos,
                 )
 

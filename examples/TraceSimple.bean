@@ -17,4 +17,4 @@ PROCEDURE Simple()
     OUTPUT Done
 ENDPROCEDURE
 
-TRACE(Num, Done) CALL Simple TO "foo.html" 
+TRACE(Num, Done) CALL Simple TO "simple.html" 

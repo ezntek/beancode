@@ -13,26 +13,21 @@ tr, td, th {
     padding-right: 20px;
     text-align: center;
 }
-+.fls {
+.fls {
     color: red; 
 }
-+.tru {
+.tru {
     color: green;
 }
-+.int {
+.int {
     color: yellow; 
 }
-+.dim {
+.dim {
     color: gray;
 }
-+caption {
+caption {
     caption-side: bottom;
 }
-.fls{color:red}
-.tru{color:green}
-.int{color:yellow}
-.dim{color:gray}
-caption{caption-side:bottom}
 """
 
 
