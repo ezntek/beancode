@@ -39,7 +39,6 @@ class Parser:
     def __init__(self, tokens: list[Token]) -> None:
         self.cur = 0
         self.tokens = tokens
-        self.PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
 
     def prev(self) -> Token:
         return self.tokens[self.cur - 1]
@@ -62,8 +61,8 @@ class Parser:
     def peek_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
         tok = self.peek()
 
-        s = ' ' + ctx if ctx  else str()
-        h = '\n' + help if help  else str()
+        s = " " + ctx if ctx else str()
+        h = "\n" + help if help else str()
 
         if tok.kind != expected:
             raise BCError(f"expected token {expected}{s}, but got {tok}{h}", tok.pos)
@@ -71,16 +70,16 @@ class Parser:
 
     def peek_next_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
         tok = self.peek_next()
-        
-        s = ' ' + ctx if ctx  else str()
-        h = '\n' + help if help  else str()
-        
-        if tok is None:
-            raise BCError(f"expected token {expected}{s}, but reached end of file{h}")
+
+        s = " " + ctx if ctx else str()
+        h = "\n" + help if help else str()
+
+        if not tok:
+            raise BCError(f"expected token {expected}{s}, but reached end of file{h}", eof=True)
 
         if tok.kind != expected:
             raise BCError(f"expected token {expected}{s}, but got {tok}{h}", tok.pos)
-        
+
         return tok
 
     def check(self, tok: TokenKind) -> bool:
@@ -99,32 +98,30 @@ class Parser:
     def consume_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
         cons = self.consume()
         if cons.kind != expected:
-            s = ' ' + ctx if ctx  else str()
-            h = '\n' + help if help  else str()
-            
-            if help :
+            s = " " + ctx if ctx else str()
+            h = "\n" + help if help else str()
+
+            if help:
                 h = "\n" + help
-            raise BCError(
-                f"expected token {expected}{s}, but got {cons}{h}", cons.pos
-            )
+            raise BCError(f"expected token {expected}{s}, but got {cons}{h}", cons.pos)
         return cons
 
     def check_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
         """check_and_consume, then expect"""
 
         t = self.check_and_consume(expected)
-        if t is None:
-            s = ' ' + ctx if ctx  else str()
-            h = '\n' + help if help  else str()
+        if not t:
+            s = " " + ctx if ctx else str()
+            h = "\n" + help if help else str()
 
-            raise BCError(
-                f"expected token {expected}{s}, but got {t}{h}", self.pos()
-            )
+            raise BCError(f"expected token {expected}{s}, but got {t}{h}", self.pos())
         return t
 
     def consume(self) -> Token:
         if self.cur < len(self.tokens):
             self.cur += 1
+        else:
+            raise BCError("reached end of file", eof=True)
 
         return self.prev()
 
@@ -185,7 +182,7 @@ class Parser:
                 exprs.append(arrlit)
             else:
                 expr = self.expression()
-                if expr is None:
+                if not expr:
                     raise BCError(
                         "invalid or no expression supplied as argument to array literal",
                         self.pos(),
@@ -216,13 +213,12 @@ class Parser:
         return ArrayLiteral(lbrace.pos, exprs)
 
     def literal(self) -> Expr | None:
-        if not self.match(
+        if not self.check_many(
             "literal_string", "literal_char", "literal_number", "true", "false", "null"
         ):
             return
 
         lit = self.consume()
-
         match lit.kind:
             case "literal_char":
                 if len(lit.data) == 0:  # type: ignore
@@ -236,7 +232,7 @@ class Parser:
                         return Literal(lit.pos, "char", char="\\")
 
                     ch = _convert_escape_code(val[1])
-                    if ch is None:
+                    if not ch:
                         raise BCError(
                             f"invalid escape sequence in literal '{val}'",
                             lit.pos,
@@ -261,7 +257,7 @@ class Parser:
                         else:
                             i += 1
                             ch = _convert_escape_code(val[i])
-                            if ch is None:
+                            if not ch:
                                 pos = copy.copy(lit.pos)
                                 pos.col += i
                                 pos.span = 2
@@ -309,7 +305,7 @@ class Parser:
 
         self.consume_and_expect("left_bracket", "for array type declaration")
         begin = self.expression()
-        if begin is None:
+        if not begin:
             raise BCError(
                 "invalid or no expression as beginning value of array declaration",
                 begin,
@@ -318,7 +314,7 @@ class Parser:
         self.consume_and_expect("colon", "after beginning value of array declaration")
 
         end = self.expression()
-        if end is None:
+        if not end:
             raise BCError(
                 "invalid or no expression as ending value of array declaration",
                 end,
@@ -331,7 +327,7 @@ class Parser:
             pass
         elif right_bracket.kind == "comma":
             inner_begin = self.expression()
-            if inner_begin is None:
+            if not inner_begin:
                 raise BCError(
                     "invalid or no expression as beginning value of array declaration",
                     inner_begin,
@@ -342,7 +338,7 @@ class Parser:
             )
 
             inner_end = self.expression()
-            if inner_end is None:
+            if not inner_end:
                 raise BCError(
                     "invalid or no expression as ending value of array declaration",
                     inner_end,
@@ -374,10 +370,8 @@ class Parser:
                 "cannot have array as array element type, please use the matrix syntax instead",
                 arrtyp.pos,
             )
-        if arrtyp.data not in self.PRIM_TYPES:
-            raise BCError("invalid type used as array element type", arrtyp.pos)
 
-        inner = arrtyp.typ  # type: ignore
+        inner = arrtyp.data  # type: ignore
 
         return ArrayType(
             is_matrix=is_matrix,
@@ -404,7 +398,7 @@ class Parser:
 
     def array_index(self) -> Expr | None:
         pn = self.peek_next()
-        if pn is None:
+        if not pn:
             return
         if pn.kind != "left_bracket":
             return
@@ -413,7 +407,7 @@ class Parser:
 
         leftb = self.consume_and_expect("left_bracket")
         exp = self.expression()
-        if exp is None:
+        if not exp:
             raise BCError("expected expression as array index", leftb.pos)
 
         rightb = self.consume()
@@ -422,7 +416,7 @@ class Parser:
             pass
         elif rightb.kind == "comma":
             exp_inner = self.expression()
-            if exp_inner is None:
+            if not exp_inner:
                 raise BCError("expected expression as array index", exp_inner)
 
             self.consume_and_expect("right_bracket", "after expression in array index")
@@ -441,7 +435,7 @@ class Parser:
             return
 
         leftb = self.peek_next()
-        if leftb is None:
+        if not leftb:
             return
         if leftb.kind != "left_paren":
             return
@@ -453,7 +447,7 @@ class Parser:
         args = []
         while self.peek().kind != "right_paren":
             expr = self.expression()
-            if expr is None:
+            if not expr:
                 raise BCError(
                     "invalid or no expression as function argument", leftb.pos
                 )
@@ -481,7 +475,7 @@ class Parser:
         self.consume()  # checked already
 
         expr = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError("invalid or no expression supplied for type cast", expr)
 
         self.consume_and_expect("right_paren", "after type cast expression")
@@ -491,7 +485,7 @@ class Parser:
     def grouping(self) -> Expr | None:
         begin = self.consume_and_expect("left_paren", "in grouping")
         e = self.expression()
-        if e is None:
+        if not e:
             raise BCError("invalid or no expression inside grouping", e)
 
         self.consume_and_expect("right_paren", "after expression in grouping")
@@ -499,24 +493,24 @@ class Parser:
 
     def unary(self) -> Expr | None:
         p = self.peek()
-        if p.kind == "literal":
-            return self.literal()
-        elif p.kind == "left_curly":
+
+        lit = self.literal()
+        if lit:
+            return lit
+
+        if p.kind == "left_curly":
             return self.array_literal()
         elif p.kind == "ident":
             pn = self.peek_next()
-            if pn is None:
-                return
-
-            if pn.kind == "left_bracket":
-                return self.array_index()
-            elif pn.kind == "left_paren":
-                return self.function_call()
-
+            if pn is not None:
+                if pn.kind == "left_bracket":
+                    return self.array_index()
+                elif pn.kind == "left_paren":
+                    return self.function_call()
             return self.ident()
         elif p.kind == "type":
             pn = self.peek_next()
-            if pn is None:
+            if not pn:
                 return
 
             if pn.kind == "left_paren":
@@ -526,13 +520,13 @@ class Parser:
         elif p.kind == "sub":
             begin = self.consume()
             e = self.unary()
-            if e is None:
+            if not e:
                 raise BCError("invalid or no expression for negation", begin.pos)
             return Negation(begin.pos, e)
         elif p.kind == "not":
             begin = self.consume()
             e = self.expression()
-            if e is None:
+            if not e:
                 raise BCError("invalid or no expression for logical NOT", begin.pos)
             return Not(begin.pos, e)
         else:
@@ -540,97 +534,104 @@ class Parser:
 
     def pow(self) -> Expr | None:
         expr = self.unary()
-        if expr is None:
+        if not expr:
             return
 
-        if self.check("pow"):
+        if self.match("pow"):
+            op = self.prev()
             right = self.pow()
-            expr = BinaryExpr(expr.pos, expr, "pow", right)  # type: ignore
+
+            if not right:
+                return
+
+            expr = BinaryExpr(op.pos, expr, "pow", right)
 
         return expr
 
     def factor(self) -> Expr | None:
         expr = self.pow()
-        if expr is None:
+        if not expr:
             return
 
         while self.match("mul", "div"):
-            op: Operator = self.prev().kind  # type: ignore
+            op = self.prev()
 
             right = self.pow()
 
-            if right is None:
+            if not right:
                 return
 
-            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
+            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
 
         return expr
 
     def term(self) -> Expr | None:
         expr = self.factor()
 
-        if expr is None:
+        if not expr:
             return
 
         while self.match("add", "sub"):
-            op: Operator = self.prev().kind  # type: ignore
+            op = self.prev()
 
             right = self.factor()
-            if right is None:
+            if not right:
                 return
 
-            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
+            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
 
         return expr
 
     def comparison(self) -> Expr | None:
         # > < >= <=
         expr = self.term()
-        if expr is None:
+        if not expr:
             return
 
-        while self.match("greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal"):
-            op: Operator = self.prev().kind  # type: ignore
+        while self.match(
+            "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal"
+        ):
+            op = self.prev()
 
             right = self.term()
-            if right is None:
+            if not right:
                 return
 
-            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
+            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
 
         return expr
 
     def equality(self) -> Expr | None:
         expr = self.comparison()
 
-        if expr is None:
+        if not expr:
             return
 
         while self.match("equal", "not_equal"):
-            op: Operator = self.prev().kind  # type: ignore
+            op = self.prev()
 
             right = self.comparison()
-            if right is None:
+            if not right:
                 return
 
-            expr = BinaryExpr(expr.pos, expr, op, right)
+            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
 
         return expr
 
     def logical_comparison(self) -> Expr | None:
         expr = self.equality()
-        if expr is None:
+        if not expr:
             return
 
         while self.match("and", "or"):
-            op: Operator = self.prev().kind  # type: ignore
+            op = self.prev()  # type: ignore
 
             right = self.equality()
 
-            if right is None:
+            if not right:
                 return
 
-            expr = BinaryExpr(expr.pos, expr, op, right)  # kw must be and or or
+            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
 
         return expr
 
@@ -646,16 +647,16 @@ class Parser:
 
         self.consume()
         initial = self.expression()
-        if initial is None:
+        if not initial:
             raise BCError(
                 "found OUTPUT but an invalid or no expression that follows", begin.pos
             )
 
         exprs.append(initial)
 
-        while self.peek().kind == "comma":
+        while self.match("comma"):
             new = self.expression()
-            if new is None:
+            if not new:
                 break
 
             exprs.append(new)
@@ -665,15 +666,12 @@ class Parser:
 
     def input_stmt(self) -> Statement | None:
         begin = self.check_and_consume("input")
-        if begin is None:
+        if not begin:
             return
 
-        begin = self.consume()
-
         ident: ArrayIndex | Identifier
-
         array_index = self.array_index()
-        if array_index is None:
+        if not array_index:
             ident = self.expect_ident("after INPUT")
         else:
             ident = array_index  # type: ignore
@@ -683,11 +681,11 @@ class Parser:
 
     def return_stmt(self) -> Statement | None:
         begin = self.check_and_consume("return")
-        if begin is None:
+        if not begin:
             return
 
         expr = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError(
                 "invalid or no expression used as RETURN expression", begin.pos
             )
@@ -696,7 +694,7 @@ class Parser:
 
     def call_stmt(self) -> Statement | None:
         begin = self.check_and_consume("call")
-        if begin is None:
+        if not begin:
             return
 
         # CALL <ident>(<expr>, <expr>)
@@ -704,13 +702,13 @@ class Parser:
 
         leftb = self.peek()
         args = []
-        if leftb.kind == "separator" and leftb.separator == "left_paren":
+        if leftb.kind == "left_paren":
             self.consume()
             while self.peek().kind != "right_paren":
                 expr = self.expression()
-                if expr is None:
+                if not expr:
                     raise BCError(
-                        "invalid or no expression as procedure argument", leftb
+                        "invalid or no expression as procedure argument", leftb.pos
                     )
 
                 args.append(expr)
@@ -738,9 +736,9 @@ class Parser:
         if begin.kind == "export":
             export = True
             begin = self.peek_next()
-            if begin is None:
+            if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin
+                    "expected token following export, but got end of file", begin, eof=True
                 )
 
         if begin.kind != "declare":
@@ -771,7 +769,7 @@ class Parser:
             self.consume()
 
             typ = self.typ()
-            if typ is None:
+            if not typ:
                 raise BCError("invalid type after DECLARE", colon.pos)
 
         if self.check("assign"):
@@ -783,12 +781,12 @@ class Parser:
                 )
 
             expr = self.expression()
-            if expr is None:
+            if not expr:
                 raise BCError(
                     "invalid or no expression after assign in declare", tok.pos
                 )
 
-        if typ is None and expr is None:
+        if not typ and not expr:
             raise BCError(
                 "must have either a type declaration, expression to assign as, or both",
                 colon.pos,
@@ -805,9 +803,9 @@ class Parser:
 
         if self.check("export"):
             begin = self.peek_next()
-            if begin is None:
+            if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin
+                    "expected token following export, but got end of file", begin, eof=True
                 )
             export = True
 
@@ -823,7 +821,7 @@ class Parser:
         self.consume_and_expect("assign", "after variable name in constant declaration")
 
         expr = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError(
                 "invalid or no expression for constant declaration", self.pos()
             )
@@ -831,13 +829,13 @@ class Parser:
         self.check_newline("constant declaration (CONSTANT)")
 
         res = ConstantStatement(
-            begin.pos, Identifier(ident.pos, str(ident.kind)), expr, export=export
+            begin.pos, Identifier(ident.pos, str(ident.data)), expr, export=export
         )
         return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
-        if p is None:
+        if not p:
             return
 
         if p.kind == "left_bracket":
@@ -847,25 +845,22 @@ class Parser:
                 if temp_idx == len(self.tokens):
                     raise BCError(
                         "reached end of file while searching for end delimiter `]`",
-                        self.tokens[-1].pos,
+                        self.tokens[-1].pos, eof=True
                     )
 
             p = self.tokens[temp_idx + 1]
-            if p.kind != "operator":
-                return
-            elif p.operator != "assign":
-                return
-        elif p.kind != "assign":
+
+        if p.kind != "assign":
             return
 
         ident = self.array_index()
-        if ident is None:
+        if not ident:
             ident = self.expect_ident("for left hand side of assignment")
 
         self.consume()  # go past the arrow
 
         expr: Expr | None = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError("expected expression after `<-` in assignment", p.pos)
 
         self.check_newline("assignment")
@@ -882,14 +877,12 @@ class Parser:
 
     def if_stmt(self) -> Statement | None:
         begin = self.check_and_consume("if")
-        if begin is None:
+        if not begin:
             return
 
         cond = self.expression()
-        if cond is None:
-            raise BCError(
-                "found invalid or no expression for if condition", self.pos()
-            )
+        if not cond:
+            raise BCError("found invalid or no expression for if condition", self.pos())
 
         # allow stupid igcse stuff
         if self.peek().kind == "newline":
@@ -901,13 +894,12 @@ class Parser:
         if_stmts = []
         else_stmts = []
 
-        while self.check_many("else", "endif"):
+        while not self.check_many("else", "endif"):
             if_stmts.append(self.scan_one_statement())
 
         if self.check_and_consume("else"):
             self.clean_newlines()
-
-            else_stmts = self.block("else")
+            else_stmts = self.block("endif")
 
         self.consume()  # byebye endif
 
@@ -925,7 +917,7 @@ class Parser:
             return
 
         main_expr = self.expression()
-        if main_expr is None:
+        if not main_expr:
             raise BCError(
                 "found invalid or no expression for case of value", self.pos()
             )
@@ -934,12 +926,11 @@ class Parser:
 
         branches: list[CaseofBranch] = []
         otherwise: Statement | None = None
-        next_expr: Expr | None = None
         while not self.check("endcase"):
             is_otherwise = self.check("otherwise")
 
             if not is_otherwise:
-                expr = self.expression() if next_expr is None else next_expr
+                expr = self.expression() 
                 if not expr:
                     raise BCError(
                         "invalid or no expression for case of branch", self.pos()
@@ -951,7 +942,7 @@ class Parser:
 
             stmt = self.stmt()
 
-            if stmt is None:
+            if not stmt:
                 raise BCError("expected statement for case of branch block")
 
             if is_otherwise:
@@ -972,7 +963,7 @@ class Parser:
             return
 
         expr = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError(
                 "found invalid or no expression for while loop condition", self.pos()
             )
@@ -1002,20 +993,20 @@ class Parser:
         self.consume_and_expect("assign", "after counter in for loop")
 
         begin = self.expression()
-        if begin is None:
+        if not begin:
             raise BCError("invalid or no expression as begin in for loop", self.pos())
 
         self.consume_and_expect("to", "after beginning value in for loop")
 
         end = self.expression()
-        if end is None:
+        if not end:
             raise BCError("invalid or no expression as end in for loop", self.pos())
 
         step: Expr | None = None
         if self.check("step"):
             self.consume()
             step = self.expression()
-            if step is None:
+            if not step:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.pos()
                 )
@@ -1031,7 +1022,15 @@ class Parser:
                 self.prev().pos,
             )
 
-        res = ForStatement(initial.pos, next.pos, counter=counter, block=stmts, begin=begin, end=end, step=step)
+        res = ForStatement(
+            initial.pos,
+            next.pos,
+            counter=counter,
+            block=stmts,
+            begin=begin,
+            end=end,
+            step=step,
+        )
         return Statement("for", for_s=res)
 
     def repeatuntil_stmt(self) -> Statement | None:
@@ -1040,12 +1039,12 @@ class Parser:
             return
 
         self.clean_newlines()
-        
+
         stmts = self.block("until")
         until = self.consume()
 
         expr = self.expression()
-        if expr is None:
+        if not expr:
             raise BCError(
                 "found invalid or no expression for repeat-until loop condition",
                 self.pos(),
@@ -1057,10 +1056,12 @@ class Parser:
     def function_arg(self) -> FunctionArgument | None:
         # ident : type
         ident = self.expect_ident("for function argument")
-        colon = self.consume_and_expect("colon", "after identifier in function argument")
+        colon = self.consume_and_expect(
+            "colon", "after identifier in function argument"
+        )
 
         typ = self.typ()
-        if typ is None:
+        if not typ:
             raise BCError("invalid type after colon in function argument", colon.pos)
 
         return FunctionArgument(
@@ -1075,9 +1076,9 @@ class Parser:
 
         if begin.kind == "export":
             begin = self.peek_next()
-            if begin is None:
+            if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin
+                    "expected token following export, but got end of file", begin, eof=True
                 )
             export = True
 
@@ -1092,12 +1093,12 @@ class Parser:
 
         args = []
         leftb = self.peek()
-        if leftb.kind == "separator" and leftb.separator == "left_paren":
+        if leftb.kind == "left_paren":
             # there is an arg list
             self.consume()
-            while self.check("right_paren"):
+            while not self.check("right_paren"):
                 arg = self.function_arg()
-                if arg is None:
+                if not arg:
                     raise BCError("invalid function argument", self.pos())
 
                 args.append(arg)
@@ -1110,7 +1111,9 @@ class Parser:
                 if self.check("comma"):
                     self.consume()
 
-            self.consume_and_expect("right_paren", "after argument list in procedure declaration")
+            self.consume_and_expect(
+                "right_paren", "after argument list in procedure declaration"
+            )
 
         self.consume_newlines()
 
@@ -1129,9 +1132,9 @@ class Parser:
 
         if begin.kind == "export":
             begin = self.peek_next()
-            if begin is None:
+            if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin
+                    "expected token following export, but got end of file", begin, eof=True
                 )
             export = True
 
@@ -1146,12 +1149,12 @@ class Parser:
 
         args = []
         leftb = self.peek()
-        if leftb.kind == "separator" and leftb.separator == "left_paren":
+        if leftb.kind == "left_paren":
             # there is an arg list
             self.consume()
             while not self.check("right_paren"):
                 arg = self.function_arg()
-                if arg is None:
+                if not arg:
                     raise BCError("invalid function argument", self.pos())
 
                 args.append(arg)
@@ -1164,13 +1167,17 @@ class Parser:
                 if self.check("comma"):
                     self.consume()
 
-            self.consume_and_expect("right_paren", "after argument list in function declaration")
+            self.consume_and_expect(
+                "right_paren", "after argument list in function declaration"
+            )
 
         self.consume_and_expect("returns", "after function arguments")
 
         typ = self.typ()
-        if typ is None:
-            raise BCError("invalid type after RETURNS for function return value", self.pos())
+        if not typ:
+            raise BCError(
+                "invalid type after RETURNS for function return value", self.pos()
+            )
 
         self.consume_newlines()
 
@@ -1193,9 +1200,9 @@ class Parser:
             return
 
         self.clean_newlines()
-        stmts = self.block("scope")
-
+        stmts = self.block("endscope")
         self.consume()
+        
         res = ScopeStatement(begin.pos, stmts)
         return Statement("scope", scope=res)
 
@@ -1209,15 +1216,12 @@ class Parser:
             ffi = True
 
         name = self.consume()
-        if name.kind != "literal":
+        if name.kind != "literal_string":
             raise BCError(
-                "Include must be followed by a literal of the name of the file to include"
+                "include must be followed by a literal of the name of the file to include", name.pos
             )
 
-        if name.literakind != "string":  # type: ignore
-            raise BCError("literal for include must be a string!")
-
-        res = IncludeStatement(include.pos, name.literavalue, ffi=ffi)  # type: ignore
+        res = IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
         return Statement("include", include=res)
 
     def trace_stmt(self) -> Statement | None:
@@ -1228,7 +1232,7 @@ class Parser:
         self.consume_and_expect("left_paren", "after TRACE keyword")
 
         vars = list()
-        while self.consume_and_expect("right_paren"):
+        while not self.check("right_paren"):
             ident = self.expect_ident("in variable list in TRACE statement!")
 
             vars.append(ident.ident)  # type: ignore
@@ -1240,24 +1244,28 @@ class Parser:
             elif self.check("comma"):
                 self.consume()
 
-        self.consume_and_expect("right_paren", "after variable list in TRACE statement!")
+        self.consume_and_expect(
+            "right_paren", "after variable list in TRACE statement!"
+        )
 
         stmt: CallStatement | FunctionCall
         call = self.call_stmt()
-        if call :
-            stmt = calcall  # type: ignore
+        if call:
+            stmt = call.call  # type: ignore
         else:
             fncall = self.function_call()
-            if fncall is None:
+            if not fncall:
                 raise BCError(
                     "invalid function or procedure call in trace statement!", begin.pos
                 )
             stmt = fncall  # type: ignore
 
-        self.consume_and_expect("to", "after procedure or function call in TRACE statement")
+        self.consume_and_expect(
+            "to", "after procedure or function call in TRACE statement"
+        )
 
         lit: Literal | None = self.literal()  # type: ignore
-        if lit is None:
+        if not lit:
             raise BCError(
                 "expected valid literal after TO keyword in TRACE statement!",
                 self.pos(),
@@ -1286,76 +1294,76 @@ class Parser:
             return
 
         assign = self.assign_stmt()
-        if assign :
+        if assign:
             return assign
 
         constant = self.constant_stmt()
-        if constant :
+        if constant:
             return constant
 
         output = self.output_stmt()
-        if output :
+        if output:
             return output
 
         inp = self.input_stmt()
-        if inp :
+        if inp:
             return inp
 
         proc_call = self.call_stmt()
-        if proc_call :
+        if proc_call:
             return proc_call
 
         return_s = self.return_stmt()
-        if return_s :
+        if return_s:
             return return_s
 
         include = self.include_stmt()
-        if include :
+        if include:
             return include
 
         trace = self.trace_stmt()
-        if trace :
+        if trace:
             return trace
 
         declare = self.declare_stmt()
-        if declare :
+        if declare:
             return declare
 
         if_s = self.if_stmt()
-        if if_s :
+        if if_s:
             return if_s
 
         caseof = self.caseof_stmt()
-        if caseof :
+        if caseof:
             return caseof
 
         while_s = self.while_stmt()
-        if while_s :
+        if while_s:
             return while_s
 
         for_s = self.for_stmt()
-        if for_s :
+        if for_s:
             return for_s
 
         repeatuntil_s = self.repeatuntil_stmt()
-        if repeatuntil_s :
+        if repeatuntil_s:
             return repeatuntil_s
 
         procedure = self.procedure_stmt()
-        if procedure :
+        if procedure:
             return procedure
 
         function = self.function_stmt()
-        if function :
+        if function:
             return function
 
         scope = self.scope_stmt()
-        if scope :
+        if scope:
             return scope
 
         cur = self.peek()
         expr = self.expression()
-        if expr :
+        if expr:
             return Statement("expr", expr=expr)
         else:
             raise BCError("invalid statement or expression", cur.pos)
@@ -1382,7 +1390,7 @@ class Parser:
         while self.cur < len(self.tokens):
             self.clean_newlines()
             stmt = self.scan_one_statement()
-            if stmt is None:  # this has to be an EOF
+            if not stmt:  # this has to be an EOF
                 continue
             stmts.append(stmt)
 

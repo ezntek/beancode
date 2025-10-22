@@ -196,7 +196,7 @@ class Lexer:
         return ch in "{}[]();:,"
 
     def is_operator_start(self, ch: str) -> bool:
-        return ch in "+-*/<>=^"
+        return ch in "+-*/<>=^←"
 
     def trim_spaces(self) -> None:
         if not self.in_bounds():
@@ -210,7 +210,7 @@ class Lexer:
 
     def trim_comments(self) -> None:
         # if there are not 2 chars more in the stream (// and /*)
-        if self.cur + 2 >= len(self.src):
+        if self.cur + 2 > len(self.src):
             return
 
         pair = self.src[self.cur:self.cur+2]
@@ -242,7 +242,7 @@ class Lexer:
         if not self.is_operator_start(self.get_cur()):
             return None
 
-        if self.cur + 2 >= len(self.src):
+        if self.cur + 2 > len(self.src):
             return None
  
         TABLE: dict[str, TokenKind] = {
@@ -282,6 +282,7 @@ class Lexer:
             '+': "add",
             '-': "sub",
             '^': "pow",
+            "←": "assign",
         } 
 
         kind = TABLE.get(self.get_cur())
@@ -302,6 +303,9 @@ class Lexer:
 
         while True:
             stop = False
+            if not self.in_bounds():
+                break
+
             cur = self.get_cur()
             if is_delimited_literal:
                 stop = cur in ("\n\r"+DELIMS)
@@ -312,14 +316,18 @@ class Lexer:
                 len += 1
                 self.cur += 1
 
-            if stop or not self.in_bounds():
+            if stop:
                 break
 
             len += 1
             self.cur += 1
 
-        if is_delimited_literal:
-            len += 1
+        if is_delimited_literal: 
+            if not self.in_bounds():
+                # we don't set eof to true, becuase we do not allow for multile string literals, and this
+                # would break the REPL.
+                raise BCError("unexpected end of file while scanning for delimited literal", self.pos(len))
+            
             cur = self.get_cur()
             if cur != delim:
                 if cur in DELIMS:
@@ -330,10 +338,7 @@ class Lexer:
                         "did you forget to insert an ending quotation mark?", self.pos(len))
             else:
                 self.cur += 1
-        elif not self.in_bounds():
-            # we don't set eof to true, becuase we do not allow for multile string literals, and this
-            # would break the REPL.
-            raise BCError("unexpected end of file while scanning for delimited literal", self.pos(len))
+                len += 1
 
         res = self.src[begin:begin+len]
         return res
@@ -390,9 +395,9 @@ class Lexer:
             return Token("literal_number", self.pos(len(word)), data=word)
 
         if is_case_consistent(word):
-            if word == "true":
+            if word.lower() == "true":
                 return Token("true", self.pos(len(word)))
-            elif word == "false":
+            elif word.lower() == "false":
                 return Token("false", self.pos(len(word)))
 
     def _is_ident(self, word: str) -> bool:
@@ -446,5 +451,5 @@ class Lexer:
         res = list()
         while self.in_bounds():
             res.append(self.next_token())
-            res[-1].print()
+        res.append(Token("newline", self.pos_here(1)))
         return res
