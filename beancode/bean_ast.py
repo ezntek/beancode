@@ -9,8 +9,7 @@ from .error import *
 
 @dataclass
 class Expr:
-    # location of the token
-    pos: Pos | None
+    pos: Pos
 
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
