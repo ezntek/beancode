@@ -84,6 +84,7 @@ TokenKind = typing.Literal[
     "type",
 ]
 
+
 def humanize_token_kind(k: TokenKind) -> str:
     match k:
         case "assign":
@@ -141,12 +142,13 @@ def humanize_token_kind(k: TokenKind) -> str:
         case "type":
             return "type"
         case _:
-            return k.upper() 
+            return k.upper()
+
 
 @dataclass
 class Token:
     kind: TokenKind
-    pos: Pos 
+    pos: Pos
     data: str | BCPrimitiveType | typing.Literal["array"] | None = None
 
     def print(self, file=sys.stdout):
@@ -248,7 +250,7 @@ class Lexer:
         self.row += 1
         self.cur += 1
         self.bol = self.cur
-   
+
     def in_bounds(self) -> bool:
         return self.cur < len(self.src)
 
@@ -269,7 +271,7 @@ class Lexer:
             return
 
         cur = str()
-        while self.in_bounds() and (cur := self.get_cur()).isspace() and cur != '\n':
+        while self.in_bounds() and (cur := self.get_cur()).isspace() and cur != "\n":
             self.cur += 1
 
         self.trim_comments()
@@ -279,29 +281,29 @@ class Lexer:
         if self.cur + 2 > len(self.src):
             return
 
-        pair = self.src[self.cur:self.cur+2]
+        pair = self.src[self.cur : self.cur + 2]
         if pair not in ("//", "/*"):
             return
 
         if pair == "//":
-            self.cur += 2 # skip past comment marker
+            self.cur += 2  # skip past comment marker
 
-            while self.in_bounds() and self.get_cur() != '\n':
+            while self.in_bounds() and self.get_cur() != "\n":
                 self.cur += 1
 
             self.trim_spaces()
         elif pair == "/*":
             self.cur += 2
 
-            while self.in_bounds() and self.src[self.cur:self.cur+2] != '*/':
-                if self.get_cur() == '\n':
+            while self.in_bounds() and self.src[self.cur : self.cur + 2] != "*/":
+                if self.get_cur() == "\n":
                     self.bump_newline()
                 else:
                     self.cur += 1
 
             # found */
             self.cur += 2
-    
+
         self.trim_spaces()
 
     def next_double_symbol(self) -> Token | None:
@@ -310,7 +312,7 @@ class Lexer:
 
         if self.cur + 2 > len(self.src):
             return None
- 
+
         TABLE: dict[str, TokenKind] = {
             "<>": "not_equal",
             ">=": "greater_than_or_equal",
@@ -318,38 +320,38 @@ class Lexer:
             "<-": "assign",
         }
 
-        pair = self.src[self.cur:self.cur+2]
+        pair = self.src[self.cur : self.cur + 2]
         kind = TABLE.get(pair)
-        
+
         if kind is not None:
             self.cur += 2
             return Token(kind, self.pos(2))
-    
+
     def next_single_symbol(self) -> Token | None:
         cur = self.get_cur()
         if not self.is_separator(cur) and not self.is_operator_start(cur):
             return None
 
         TABLE: dict[str, TokenKind] = {
-            '{': "left_curly",
-            '}': "right_curly",
-            '[': "left_bracket",
-            ']': "right_bracket",
-            '(': "left_paren",
-            ')': "right_paren",
-            ':': "colon",
-            ';': "newline",
-            ',': "comma",
-            '=': "equal",
-            '<': "less_than",
-            '>': "greater_than",
-            '*': "mul",
-            '/': "div",
-            '+': "add",
-            '-': "sub",
-            '^': "pow",
+            "{": "left_curly",
+            "}": "right_curly",
+            "[": "left_bracket",
+            "]": "right_bracket",
+            "(": "left_paren",
+            ")": "right_paren",
+            ":": "colon",
+            ";": "newline",
+            ",": "comma",
+            "=": "equal",
+            "<": "less_than",
+            ">": "greater_than",
+            "*": "mul",
+            "/": "div",
+            "+": "add",
+            "-": "sub",
+            "^": "pow",
             "←": "assign",
-        } 
+        }
 
         kind = TABLE.get(self.get_cur())
         if kind is not None:
@@ -374,11 +376,16 @@ class Lexer:
 
             cur = self.get_cur()
             if is_delimited_literal:
-                stop = cur in ("\n\r"+DELIMS)
+                stop = cur in ("\n\r" + DELIMS)
             else:
-                stop = self.is_operator_start(cur) or self.is_separator(cur) or cur.isspace() or cur in DELIMS
+                stop = (
+                    self.is_operator_start(cur)
+                    or self.is_separator(cur)
+                    or cur.isspace()
+                    or cur in DELIMS
+                )
 
-            if cur == '\\':
+            if cur == "\\":
                 len += 1
                 self.cur += 1
 
@@ -388,25 +395,34 @@ class Lexer:
             len += 1
             self.cur += 1
 
-        if is_delimited_literal: 
+        if is_delimited_literal:
             if not self.in_bounds():
                 # we don't set eof to true, becuase we do not allow for multile string literals, and this
                 # would break the REPL.
-                raise BCError("unexpected end of file while scanning for delimited literal", self.pos(len))
-            
+                raise BCError(
+                    "unexpected end of file while scanning for delimited literal",
+                    self.pos(len),
+                )
+
             cur = self.get_cur()
             if cur != delim:
                 if cur in DELIMS:
-                    raise BCError("mismatched delimiter in literal\n" + 
-                        "did you insert the wrong ending quotation mark>", self.pos(len))
+                    raise BCError(
+                        "mismatched delimiter in literal\n"
+                        + "did you insert the wrong ending quotation mark>",
+                        self.pos(len),
+                    )
                 else:
-                    raise BCError("unterminated delimited literal\n"+
-                        "did you forget to insert an ending quotation mark?", self.pos(len))
+                    raise BCError(
+                        "unterminated delimited literal\n"
+                        + "did you forget to insert an ending quotation mark?",
+                        self.pos(len),
+                    )
             else:
                 self.cur += 1
                 len += 1
 
-        res = self.src[begin:begin+len]
+        res = self.src[begin : begin + len]
         return res
 
     def next_keyword(self, word: str) -> Token | None:
@@ -415,18 +431,18 @@ class Lexer:
                 return None
         else:
             return None
-        
-        kind: TokenKind = word.lower() # type: ignore
+
+        kind: TokenKind = word.lower()  # type: ignore
         return Token(kind, self.pos(len(word)))
-    
+
     def next_type(self, word: str) -> Token | None:
         if is_case_consistent(word):
             if word.lower() not in self.types:
                 return None
         else:
             return None
-        
-        typ: BCPrimitiveType = word.lower() # type: ignore
+
+        typ: BCPrimitiveType = word.lower()  # type: ignore
         return Token("type", self.pos(len(word)), data=typ)
 
     def _is_number(self, word: str) -> bool:
@@ -436,7 +452,7 @@ class Lexer:
             if ch.isdigit():
                 continue
 
-            if ch == '.':
+            if ch == ".":
                 if found_decimal:
                     return False
                 else:
@@ -469,7 +485,7 @@ class Lexer:
     def _is_ident(self, word: str) -> bool:
         if not word[0].isalpha():
             return False
-    
+
         for ch in word:
             if not ch.isalnum() and ch not in "_.":
                 return False
@@ -488,7 +504,7 @@ class Lexer:
         if not self.in_bounds():
             return
 
-        if self.get_cur() == '\n':
+        if self.get_cur() == "\n":
             t = Token("newline", self.pos_here(1))
             self.bump_newline()
             return t
@@ -499,14 +515,14 @@ class Lexer:
 
         if res := self.next_single_symbol():
             return res
-        
+
         word = self.next_word()
 
         if res := self.next_keyword(word):
             return res
 
         if res := self.next_type(word):
-            return res            
+            return res
 
         if res := self.next_literal(word):
             return res

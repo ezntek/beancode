@@ -65,7 +65,10 @@ class Parser:
         h = "\n" + help if help else str()
 
         if tok.kind != expected:
-            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}", tok.pos)
+            raise BCError(
+                f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                tok.pos,
+            )
         return tok
 
     def peek_next_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
@@ -75,10 +78,16 @@ class Parser:
         h = "\n" + help if help else str()
 
         if not tok:
-            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but reached end of file{h}", eof=True)
+            raise BCError(
+                f"expected token {humanize_token_kind(expected)}{s}, but reached end of file{h}",
+                eof=True,
+            )
 
         if tok.kind != expected:
-            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}", tok.pos)
+            raise BCError(
+                f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                tok.pos,
+            )
 
         return tok
 
@@ -103,7 +112,10 @@ class Parser:
 
             if help:
                 h = "\n" + help
-            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}", cons.pos)
+            raise BCError(
+                f"expected token {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}",
+                cons.pos,
+            )
         return cons
 
     def consume(self) -> Token:
@@ -724,7 +736,9 @@ class Parser:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin, eof=True
+                    "expected token following export, but got end of file",
+                    begin,
+                    eof=True,
                 )
 
         if begin.kind != "declare":
@@ -791,7 +805,9 @@ class Parser:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin, eof=True
+                    "expected token following export, but got end of file",
+                    begin,
+                    eof=True,
                 )
             export = True
 
@@ -831,7 +847,8 @@ class Parser:
                 if temp_idx == len(self.tokens):
                     raise BCError(
                         "reached end of file while searching for end delimiter `]`",
-                        self.tokens[-1].pos, eof=True
+                        self.tokens[-1].pos,
+                        eof=True,
                     )
 
             p = self.tokens[temp_idx + 1]
@@ -916,7 +933,7 @@ class Parser:
             is_otherwise = self.check("otherwise")
 
             if not is_otherwise:
-                expr = self.expression() 
+                expr = self.expression()
                 if not expr:
                     raise BCError(
                         "invalid or no expression for case of branch", self.pos()
@@ -936,7 +953,7 @@ class Parser:
             else:
                 branches.append(CaseofBranch(expr.pos, expr, stmt))  # type: ignore
 
-            #self.check_newline("CASE OF branch")
+            # self.check_newline("CASE OF branch")
             self.consume_newlines()
         self.consume()
 
@@ -991,7 +1008,7 @@ class Parser:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.pos()
                 )
-        
+
         self.clean_newlines()
         stmts = self.block("next")
         next = self.consume()
@@ -1060,7 +1077,9 @@ class Parser:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin, eof=True
+                    "expected token following export, but got end of file",
+                    begin,
+                    eof=True,
                 )
             export = True
 
@@ -1116,7 +1135,9 @@ class Parser:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
-                    "expected token following export, but got end of file", begin, eof=True
+                    "expected token following export, but got end of file",
+                    begin,
+                    eof=True,
                 )
             export = True
 
@@ -1184,7 +1205,7 @@ class Parser:
         self.clean_newlines()
         stmts = self.block("endscope")
         self.consume()
-        
+
         res = ScopeStatement(begin.pos, stmts)
         return Statement("scope", scope=res)
 
@@ -1200,7 +1221,8 @@ class Parser:
         name = self.consume()
         if name.kind != "literal_string":
             raise BCError(
-                "include must be followed by a literal of the name of the file to include", name.pos
+                "include must be followed by a literal of the name of the file to include",
+                name.pos,
             )
 
         res = IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore

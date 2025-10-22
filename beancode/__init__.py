@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 __version__ = "0.5.0-dev"
 
+
 @dataclass
 class Pos:
     row: int
@@ -10,6 +11,7 @@ class Pos:
 
     def __repr__(self) -> str:
         return f"{self.row} {self.col} {self.span}"
+
 
 def prefix_string_with_article(s: str) -> str:
     if s[0].lower() in "aeiou":
@@ -34,6 +36,7 @@ def humanize_index(idx: int) -> str:
                 return s + "th"
 
     return s + "th"
+
 
 def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
