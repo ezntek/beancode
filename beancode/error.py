@@ -5,7 +5,6 @@ from . import Pos
 
 
 class BCError(Exception):
-    # row, col, bol
     pos: Pos | None
     eof: bool
     proc: str | None
@@ -13,7 +12,6 @@ class BCError(Exception):
 
     def __init__(self, msg: str, pos: Pos | None = None, eof=False, proc=None, func=None) -> None:  # type: ignore
         self.eof = eof
-        self.len = 1
         self.proc = proc
         self.func = func
         self.pos = pos
@@ -70,7 +68,7 @@ class BCError(Exception):
                 padding -= 1
                 tabs += 1
 
-        tildes = f"{spaces()}\033[31;1m{'~' * self.len}\033[0m"
+        tildes = f"{spaces()}\033[31;1m{'~' * self.pos.span}\033[0m"
         print(tildes)
 
         indicator = f"{spaces()}\033[31;1m"

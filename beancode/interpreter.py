@@ -745,6 +745,7 @@ class Interpreter:
                         "second index not present for matrix index", ind.ident.pos
                     )
 
+                bounds = a.get_matrix_bounds()
                 if outer not in range(bounds[0], bounds[1] + 1):  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[0]}"',
@@ -756,8 +757,8 @@ class Interpreter:
                         f'cannot access out of bounds array element "{tup[1]}"', ind.idx_inner.pos  # type: ignore
                     )
 
-                idx1 = outer - a.get_matrix_bounds()[0]
-                idx2 = inner - a.get_matrix_bounds()[2]
+                idx1 = outer - bounds[0]
+                idx2 = inner - bounds[2]
                 res = a.get_matrix()[idx1][idx2]
                 return res
             else:
