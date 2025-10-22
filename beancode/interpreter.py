@@ -1776,18 +1776,17 @@ class Interpreter:
         intp.variables = self.variables.copy()
         intp.functions = self.functions.copy()
 
-        counter = begin
-
         var_existed = stmt.counter.ident in intp.variables
         if var_existed:
             var_prev_value = intp.variables[stmt.counter.ident]
 
-        intp.variables[stmt.counter.ident] = Variable(counter, const=False)
+        counter = Variable(copy.copy(begin), const=False)
+        intp.variables[stmt.counter.ident] = counter 
 
         if step > 0:
-            cond = lambda *_: counter.get_integer() <= end.get_integer()
+            cond = lambda *_: counter.val.get_integer() <= self.visit_expr(stmt.end).get_integer()
         else:
-            cond = lambda *_: counter.get_integer() >= end.get_integer()
+            cond = lambda *_: counter.val.get_integer() >= self.visit_expr(stmt.end).get_integer()
 
         while cond():
             intp.visit_block(None)
@@ -1799,6 +1798,7 @@ class Interpreter:
             c = intp.variables[stmt.counter.ident]
             intp.variables = self.variables.copy()
             intp.variables[stmt.counter.ident] = c
+
             if intp._returned:
                 proc, func = self.can_return()
 
@@ -1812,7 +1812,7 @@ class Interpreter:
                 self.retval = intp.retval
                 return
 
-            counter.integer = counter.integer + step  # type: ignore
+            counter.val.integer += step # type: ignore 
 
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)
