@@ -88,7 +88,7 @@ TokenKind = typing.Literal[
 class Token:
     kind: TokenKind
     pos: Pos 
-    data: str | BCPrimitiveType | None = None
+    data: str | BCPrimitiveType | typing.Literal["array"] | None = None
 
     def print(self, file=sys.stdout):
         match self.kind:

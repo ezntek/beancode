@@ -4,11 +4,11 @@ import sys
 import argparse
 from typing import NoReturn
 
-#from .repl import Repl
+from .repl import Repl
 
-#from .interpreter import Interpreter
+from .interpreter import Interpreter
 from .lexer import *
-#from .parser import Parser
+from .parser import Parser
 from .error import *
 from . import __version__
 
@@ -79,8 +79,6 @@ def real_main():
             tok.print(file=sys.stderr)
         print("\033[1m==============\033[0m", file=sys.stderr)
         sys.stderr.flush()
-
-    exit(1) # FIXME: remove
 
     parser = Parser(toks)
 
