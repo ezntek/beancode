@@ -65,7 +65,7 @@ class Parser:
         h = "\n" + help if help else str()
 
         if tok.kind != expected:
-            raise BCError(f"expected token {expected}{s}, but got {tok}{h}", tok.pos)
+            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}", tok.pos)
         return tok
 
     def peek_next_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
@@ -75,10 +75,10 @@ class Parser:
         h = "\n" + help if help else str()
 
         if not tok:
-            raise BCError(f"expected token {expected}{s}, but reached end of file{h}", eof=True)
+            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but reached end of file{h}", eof=True)
 
         if tok.kind != expected:
-            raise BCError(f"expected token {expected}{s}, but got {tok}{h}", tok.pos)
+            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}", tok.pos)
 
         return tok
 
@@ -103,19 +103,8 @@ class Parser:
 
             if help:
                 h = "\n" + help
-            raise BCError(f"expected token {expected}{s}, but got {cons}{h}", cons.pos)
+            raise BCError(f"expected token {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}", cons.pos)
         return cons
-
-    def check_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
-        """check_and_consume, then expect"""
-
-        t = self.check_and_consume(expected)
-        if not t:
-            s = " " + ctx if ctx else str()
-            h = "\n" + help if help else str()
-
-            raise BCError(f"expected token {expected}{s}, but got {t}{h}", self.pos())
-        return t
 
     def consume(self) -> Token:
         if self.cur < len(self.tokens):
@@ -141,10 +130,7 @@ class Parser:
 
     def check_many(self, *typs: TokenKind) -> bool:
         """peek and check many"""
-        for typ in typs:
-            if self.check(typ):
-                return True
-        return False
+        return self.peek().kind in typs
 
     def is_integer(self, val: str) -> bool:
         for ch in val:
@@ -467,7 +453,7 @@ class Parser:
         return FunctionCall(leftb.pos, ident=str(ident.data), args=args)
 
     def typecast(self) -> Typecast | None:
-        typ = self.check_and_expect("type", "for typecast")
+        typ = self.consume_and_expect("type", "for typecast")
         if typ.data == "array":
             raise BCError("cannot typecast to an array!")
 
@@ -968,13 +954,9 @@ class Parser:
                 "found invalid or no expression for while loop condition", self.pos()
             )
 
-        if self.peek().kind == "newline":
-            self.clean_newlines()
-
+        self.clean_newlines()
         self.consume_and_expect("do", "after while loop condition")
-
-        if self.peek().kind == "newline":
-            self.clean_newlines()
+        self.clean_newlines()
 
         stmts = self.block("endwhile")
         end = self.consume()
@@ -1009,7 +991,8 @@ class Parser:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.pos()
                 )
-
+        
+        self.clean_newlines()
         stmts = self.block("next")
         next = self.consume()
 
@@ -1282,7 +1265,9 @@ class Parser:
         return Statement("trace", trace=res)
 
     def clean_newlines(self):
-        while self.cur < len(self.tokens) and self.peek().kind == "newline":
+        while self.cur < len(self.tokens):
+            if not self.check("newline"):
+                break
             self.consume()
 
     def stmt(self) -> Statement | None:
@@ -1384,6 +1369,9 @@ class Parser:
 
         while self.cur < len(self.tokens):
             self.clean_newlines()
+            if self.cur >= len(self.tokens):
+                break
+
             stmt = self.scan_one_statement()
             if not stmt:  # this has to be an EOF
                 continue
