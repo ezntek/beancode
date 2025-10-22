@@ -1225,7 +1225,7 @@ class Parser:
         if not begin:
             return
 
-        lparen =self.consume_and_expect("left_paren", "after TRACE keyword")
+        self.consume_and_expect("left_paren", "after TRACE keyword")
 
         vars = list()
         while self.consume_and_expect("right_paren"):

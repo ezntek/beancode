@@ -320,10 +320,6 @@ class Repl:
                     err.print("(repl)", self.buf.getvalue())
                     print()
                     return (None, ContinuationResult.ERROR)
-            except BCWarning as w:
-                w.print("(repl)", inp)
-                print()
-                return (None, ContinuationResult.ERROR)
 
             return (prog, ContinuationResult.SUCCESS)
 
@@ -417,9 +413,6 @@ class Repl:
                     err.print("(repl)", src)
                     print()
                     continue
-            except BCWarning as w:
-                w.print("(repl)", inp)
-                continue
 
             if len(program.stmts) < 1:
                 continue
@@ -433,7 +426,7 @@ class Repl:
 
             if program.stmts[-1].kind == "expr":
                 exp: ast.Expr = program.stmts[-1].expr  # type: ignore
-                output_stmt = ast.OutputStatement(pos=(0, 0, 0), items=[exp])
+                output_stmt = ast.OutputStatement(pos=Pos(1, 1, 0), items=[exp])
                 program.stmts[-1] = ast.Statement(kind="output", output=output_stmt)
 
             if self.debug:
