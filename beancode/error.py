@@ -26,8 +26,8 @@ class BCError(Exception):
             return
 
         line_no = self.pos.row
-        col = self.pos.col 
-        bol = 0 
+        col = self.pos.col
+        bol = 0
 
         i = 1
         j = -1
