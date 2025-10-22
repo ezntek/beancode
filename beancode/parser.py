@@ -983,7 +983,6 @@ class Parser:
         return Statement("while", while_s=res)
 
     def for_stmt(self):
-        # FOR <counter> <assign> <lit> TO <lit> [STEP <lit>]
         initial = self.check_and_consume("for")
         if not initial:
             return
@@ -1288,10 +1287,6 @@ class Parser:
 
     def stmt(self) -> Statement | None:
         self.clean_newlines()
-
-        if self.cur + 1 >= len(self.tokens):
-            self.cur += 1
-            return
 
         assign = self.assign_stmt()
         if assign:
