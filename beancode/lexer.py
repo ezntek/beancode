@@ -461,6 +461,9 @@ class Lexer:
 
             return False
 
+        if found_decimal and len(word) == 1:
+            return False
+
         return True
 
     def next_literal(self, word: str) -> Token | None:
@@ -475,6 +478,8 @@ class Lexer:
 
         if self._is_number(word):
             return Token("literal_number", self.pos(len(word)), data=word)
+        elif word[0].isdigit():
+            raise BCError("invalid number literal", self.pos(len(word)))
 
         if is_case_consistent(word):
             if word.lower() == "true":
@@ -483,7 +488,7 @@ class Lexer:
                 return Token("false", self.pos(len(word)))
 
     def _is_ident(self, word: str) -> bool:
-        if not word[0].isalpha():
+        if not word[0].isalpha() and word[0] not in "_":
             return False
 
         for ch in word:

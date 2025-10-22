@@ -127,7 +127,7 @@ class Parser:
         return self.prev()
 
     def consume_newlines(self):
-        while self.cur != len(self.tokens) - 1 and self.peek().kind == "newline":
+        while self.cur < len(self.tokens) and self.peek().kind == "newline":
             self.consume()
 
     def check_newline(self, s: str):
@@ -916,8 +916,7 @@ class Parser:
         if not case:
             return
 
-        if not self.check_and_consume("of"):
-            return
+        self.consume_and_expect("of", "after CASE keyword") 
 
         main_expr = self.expression()
         if not main_expr:
@@ -931,7 +930,6 @@ class Parser:
         otherwise: Statement | None = None
         while not self.check("endcase"):
             is_otherwise = self.check("otherwise")
-
             if not is_otherwise:
                 expr = self.expression()
                 if not expr:
@@ -944,6 +942,7 @@ class Parser:
                 self.consume()
 
             stmt = self.stmt()
+            self.consume_newlines()
 
             if not stmt:
                 raise BCError("expected statement for case of branch block")
@@ -953,8 +952,6 @@ class Parser:
             else:
                 branches.append(CaseofBranch(expr.pos, expr, stmt))  # type: ignore
 
-            # self.check_newline("CASE OF branch")
-            self.consume_newlines()
         self.consume()
 
         res = CaseofStatement(case.pos, main_expr, branches, otherwise)
