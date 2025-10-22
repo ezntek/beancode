@@ -299,7 +299,7 @@ class Repl:
                         self.i.reset_all()
                         continue
 
-            self.lx.file = inp
+            self.lx.src = inp
 
             try:
                 toks = self.lx.tokenize()
@@ -364,7 +364,7 @@ class Repl:
                         self.i.reset_all()
                         continue
 
-            self.lx.file = inp
+            self.lx.src = inp
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
