@@ -1,27 +1,22 @@
 import sys
 import os
 
+from . import Pos
+
 
 class BCError(Exception):
     # row, col, bol
-    pos: tuple[int, int, int] | None
+    pos: Pos | None
     eof: bool
     proc: str | None
     func: str | None
 
-    def __init__(self, msg: str, ctx=None, eof=False, proc=None, func=None) -> None:  # type: ignore
+    def __init__(self, msg: str, pos=None, eof=False, proc=None, func=None) -> None:  # type: ignore
         self.eof = eof
         self.len = 1
         self.proc = proc
         self.func = func
-        self.ctx = None
-        if type(ctx).__name__ == "Token":
-            self.pos = ctx.pos  # type: ignore
-            self.len = len(ctx.get_raw()[0])  # type: ignore
-        elif type(ctx) == tuple:
-            self.pos = ctx
-        else:
-            self.pos = (0, 0, 0)  # type: ignore
+        self.pos = pos
 
         s = f"\033[31;1merror: \033[0m{msg}\n"
         self.msg = s
@@ -32,30 +27,18 @@ class BCError(Exception):
             print(self.msg, end="")
             return
 
-        if self.pos == (0, 0, 0):
-            print(self.msg, end="")
-            return
+        line_no = self.pos.row
+        col = self.pos.col 
+        bol = 0 
 
-        line_no = self.pos[0]
-        col = self.pos[1]
-        bol = self.pos[2]
-
-        try:
-            if line_no != 1 and bol == 0:
-                i = 1
-                j = -1
-                while i < line_no and j < len(file_content):
-                    j += 1
-                    while file_content[j] != "\n":
-                        j += 1
-                    i += 1
-                bol = j + 1
-        except IndexError:
-            print(self.msg, end="")
-            print(
-                "\033[33mhint: \033[0mthis probably happened in a procedure or function in the REPL."
-            )
-            return
+        i = 1
+        j = -1
+        while i < line_no and j < len(file_content):
+            j += 1
+            while file_content[j] != "\n":
+                j += 1
+            i += 1
+        bol = j + 1
 
         eol = bol
         while eol != len(file_content) and file_content[eol] != "\n":
@@ -97,65 +80,6 @@ class BCError(Exception):
             indicator += "∟"
 
         indicator += f" \033[0m\033[1merror at line {line_no} column {col}\033[0m"
-        print(indicator)
-
-
-class BCWarning(Exception):
-    # row, col, bol
-    pos: tuple[int, int, int]
-
-    def __init__(self, msg: str, ctx=None, data=None) -> None:  # type: ignore
-        self.len = 1
-        self.data = data
-        if type(ctx).__name__ == "Token":
-            self.pos = ctx.pos  # type: ignore
-            self.len = len(ctx.get_raw()[0])  # type: ignore
-        elif type(ctx) == tuple[int, int, int]:
-            self.pos = ctx
-        else:
-            self.pos = (0, 0, 0)  # type: ignore
-
-        s = f"\033[35;1mwarning: \033[0m\033[2m{msg}\033[0m\n"
-        self.msg = s
-        super().__init__(s)
-
-    def print(self, filename: str, file_content: str):
-        line = self.pos[0]
-        col = self.pos[1]
-        bol = self.pos[2]
-
-        eol = bol
-        while eol != len(file_content) and file_content[eol] != "\n":
-            eol += 1
-
-        if self.pos == (0, 0, 0):
-            print(self.msg, end="")
-            return
-
-        line_begin = f" \033[35;1m{line}\033[0m | "
-        padding = len(str(line) + "  | ") + col - 1
-        tabs = 0
-        spaces = lambda *_: " " * padding + "\t" * tabs
-
-        print(f"\033[0m\033[1m{filename}:{line}: ", end="")
-        print(self.msg, end="")
-
-        print(line_begin, end="")
-        print(file_content[bol:eol])
-
-        for ch in file_content[bol:eol]:
-            if ch == "\t":
-                padding -= 1
-                tabs += 1
-
-        tildes = f"{spaces()}\033[35;1m{'~' * self.len}\033[0m"
-        print(tildes)
-        indicator = f"{spaces()}\033[35;1m"
-        if os.name == "nt":
-            indicator += "+-"
-        else:
-            indicator += "∟"
-        indicator += f" \033[0m\033[1mwarning at line {line} column {col}\033[0m"
         print(indicator)
 
 

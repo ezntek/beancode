@@ -46,7 +46,6 @@ TokenKind = typing.Literal[
     # extra feachur™
     "include",
     "include_ffi",
-    "null",
     "export",
     "scope",
     "endscope",
@@ -74,33 +73,35 @@ TokenKind = typing.Literal[
     "colon",
     "comma",
     "dot",
+    # types, literals
     "literal_string",
     "literal_char",
     "literal_number",
     "true",
     "false",
+    "null",
     "ident",
-    "eof",
+    "type",
 ]
 
 @dataclass
 class Token:
     kind: TokenKind
     pos: Pos 
-    data: str | None = None
+    data: str | BCPrimitiveType | None = None
 
     def print(self, file=sys.stdout):
         match self.kind:
             case "literal_string":
                 s = f'"{self.data}"'
-            case "true" | "false":
-                s = f"<{self.data}>"
             case "literal_char":
                 s = f"'{self.data}'"
             case "literal_number" | "ident":
                 s = self.data
+            case "type":
+                s = f"<{str(self.data).upper()}>"
             case _:
-                s = self.kind
+                s = f"<{self.kind}>"
 
         print(f"token[{self.pos}]: {s}", file=file)
 
@@ -117,9 +118,6 @@ class Lexer:
     types: list[str]
 
     def __init__(self, src: str) -> None:
-        self.cur = 0
-        self.bol = 0
-        self.row = 1
         self.src = src
         self.keywords = [
             "declare",
@@ -167,9 +165,10 @@ class Lexer:
             "print",
         ]
         self.types = ["integer", "real", "boolean", "string", "char", "array"]
+        self.reset()
 
     def reset(self):
-        self.row = 0
+        self.row = 1
         self.bol = 0
         self.cur = 0
 
@@ -340,11 +339,24 @@ class Lexer:
         return res
 
     def next_keyword(self, word: str) -> Token | None:
-        if word not in self.keywords:
+        if is_case_consistent(word):
+            if word.lower() not in self.keywords:
+                return None
+        else:
             return None
         
-        kind: TokenKind = word # type: ignore
+        kind: TokenKind = word.lower() # type: ignore
         return Token(kind, self.pos(len(word)))
+    
+    def next_type(self, word: str) -> Token | None:
+        if is_case_consistent(word):
+            if word.lower() not in self.types:
+                return None
+        else:
+            return None
+        
+        typ: BCPrimitiveType = word.lower() # type: ignore
+        return Token("type", self.pos(len(word)), data=typ)
 
     def _is_number(self, word: str) -> bool:
         found_decimal = False
@@ -403,23 +415,28 @@ class Lexer:
     def next_token(self) -> Token:
         self.trim_spaces()
         if not self.in_bounds():
-            return Token("eof", self.pos(1))
+            raise BCError("reached end of file in lexer")
 
         if self.get_cur() == '\n':
-            return Token("newline", self.pos(1))
+            t = Token("newline", self.pos_here(1))
+            self.bump_newline()
+            return t
 
         res: Token | None
-        if res := self.next_single_symbol():
+        if res := self.next_double_symbol():
             return res
 
-        if res := self.next_double_symbol():
+        if res := self.next_single_symbol():
             return res
         
         word = self.next_word()
 
         if res := self.next_keyword(word):
             return res
-            
+
+        if res := self.next_type(word):
+            return res            
+
         if res := self.next_literal(word):
             return res
 
@@ -429,4 +446,5 @@ class Lexer:
         res = list()
         while self.in_bounds():
             res.append(self.next_token())
+            res[-1].print()
         return res
