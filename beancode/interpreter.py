@@ -12,7 +12,7 @@ from .lexer import Lexer
 from .parser import *
 from .error import *
 from .libroutines import *
-from . import __version__, is_case_consistent
+from . import __version__, Pos, is_case_consistent
 from .tracer import *
 
 
@@ -791,7 +791,7 @@ class Interpreter:
         args: list[Expr],
         lr: Libroutine,
         name: str,
-        pos: tuple[int, int, int] | None,
+        pos: Pos | None,
     ) -> list[BCValue]:
         if len(args) < len(lr):
             self.error(
@@ -1160,7 +1160,7 @@ class Interpreter:
         intp.visit_block(proc.block)
         intp.calls.pop()
 
-    def _typecast_string(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
+    def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue:
         _ = pos  # shut up the type checker
         s = ""
 
@@ -1187,7 +1187,7 @@ class Interpreter:
 
         return BCValue.new_string(s)
 
-    def _typecast_integer(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
+    def _typecast_integer(self, inner: BCValue, pos: Pos) -> BCValue:
         i = 0
         match inner.kind:
             case "string":
@@ -1207,7 +1207,7 @@ class Interpreter:
 
         return BCValue.new_integer(i)
 
-    def _typecast_real(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
+    def _typecast_real(self, inner: BCValue, pos: Pos) -> BCValue:
         r = 0.0
 
         match inner.kind:
@@ -1228,7 +1228,7 @@ class Interpreter:
 
         return BCValue.new_real(r)
 
-    def _typecast_char(self, inner: BCValue, pos: tuple[int, int, int]) -> BCValue:
+    def _typecast_char(self, inner: BCValue, pos: Pos) -> BCValue:
         c = ""
 
         match inner.kind:
@@ -1552,7 +1552,7 @@ class Interpreter:
                 else:
                     self.error("expected REAL for INPUT", s.ident.pos)
 
-        self.trace(s.pos[0])
+        self.trace(s.pos.row)
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         proc, func = self.can_return()
@@ -1648,18 +1648,12 @@ class Interpreter:
         except BCError as err:
             err.print(filename, file_content)
             exit(1)
-        except BCWarning as warn:
-            warn.print(filename, file_content)
-            exit(1)
 
         intp = self.new(program.stmts)
         try:
             intp.visit_block(None)
         except BCError as err:
             err.print(filename, file_content)
-            exit(1)
-        except BCWarning as warn:
-            warn.print(filename, file_content)
             exit(1)
 
         for name, var in intp.variables.items():
@@ -1732,7 +1726,7 @@ class Interpreter:
             intp.visit_block(block)
 
             # trace all I/O that happened
-            intp.trace(stmt.end_pos[0], loop_trace=True)
+            intp.trace(stmt.end_pos.row, loop_trace=True)
 
             # FIXME: barbaric aah
             # reset all declares
@@ -1791,7 +1785,7 @@ class Interpreter:
         while cond():
             intp.visit_block(None)
 
-            intp.trace(stmt.end_pos[0], loop_trace=True)
+            intp.trace(stmt.end_pos.row, loop_trace=True)
 
             #  FIXME: barbaric
             # clear declared variables
@@ -1829,7 +1823,7 @@ class Interpreter:
         while True:
             intp.visit_block(None)
 
-            intp.trace(stmt.end_pos[0], loop_trace=True)
+            intp.trace(stmt.end_pos.row, loop_trace=True)
 
             # FIXME: barbaric
             intp.variables = self.variables.copy()
@@ -1981,7 +1975,7 @@ class Interpreter:
                     self.error(f"mismatched array sizes in array assignment", s.pos)
             self.variables[key].val = copy.deepcopy(exp)
 
-        self.trace(s.pos[0])
+        self.trace(s.pos.row)
 
     def visit_constant_stmt(self, c: ConstantStatement):
         key = c.ident.ident
@@ -1999,7 +1993,7 @@ class Interpreter:
 
         val = self.visit_expr(c.value)
         self.variables[key] = Variable(val, True, export=c.export)
-        self.trace(c.pos[0])
+        self.trace(c.pos.row)
 
     def _declare_array(self, d: DeclareStatement, key: str):
         at: ArrayType = d.typ  # type: ignore
@@ -2083,7 +2077,7 @@ class Interpreter:
                 if d.expr is not None:
                     expr = self.visit_expr(d.expr)
                     self.variables[key].val = expr
-        self.trace(d.pos[0])
+        self.trace(d.pos.row)
 
     def visit_trace_stmt(self, s: TraceStatement):
         vars = s.vars

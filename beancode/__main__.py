@@ -51,7 +51,7 @@ def real_main():
     elif args.stdin:
         file_content = sys.stdin.read()
     elif args.file is None:
-        #Repl(args.debug).repl()
+        Repl(args.debug).repl()
         return
     else:
         if not os.path.exists(args.file):
