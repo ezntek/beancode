@@ -11,7 +11,7 @@ class BCError(Exception):
     proc: str | None
     func: str | None
 
-    def __init__(self, msg: str, pos=None, eof=False, proc=None, func=None) -> None:  # type: ignore
+    def __init__(self, msg: str, pos: Pos | None = None, eof=False, proc=None, func=None) -> None:  # type: ignore
         self.eof = eof
         self.len = 1
         self.proc = proc

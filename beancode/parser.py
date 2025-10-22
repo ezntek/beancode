@@ -1,6 +1,7 @@
-from . import lexer as l
-from . import *
+import copy
 
+from . import *
+from .lexer import *
 from .bean_ast import *
 
 from .error import *
@@ -32,39 +33,78 @@ def _convert_escape_code(ch: str) -> str | None:
 
 
 class Parser:
-    tokens: list[l.Token]
+    tokens: list[Token]
     cur: int
 
-    def __init__(self, tokens: list[l.Token]) -> None:
+    def __init__(self, tokens: list[Token]) -> None:
         self.cur = 0
         self.tokens = tokens
         self.PRIM_TYPES = ["integer", "real", "boolean", "char", "string"]
 
-    def check(self, tok: tuple[l.TokenType, str]) -> bool:
-        if self.cur == len(self.tokens):
+    def prev(self) -> Token:
+        return self.tokens[self.cur - 1]
+
+    def peek(self) -> Token:
+        if self.cur >= len(self.tokens):
+            raise BCError(
+                f"unexpected end of file", self.tokens[-1].pos, eof=True
+            )
+
+        return self.tokens[self.cur]
+
+    def peek_next(self) -> Token | None:
+        if self.cur + 1 >= len(self.tokens):
+            return None
+
+        return self.tokens[self.cur + 1]
+
+    def peek_and_expect(self, expected: TokenKind) -> Token:
+        tok = self.peek()
+        if tok.kind != expected:
+            raise BCError(f"expected token {expected}, but got {tok}", tok.pos)
+        return tok
+
+    def check(self, tok: TokenKind) -> bool:
+        if self.cur >= len(self.tokens):
             return False
 
-        peek = self.peek()
-        if tok[0] != peek.kind:
-            return False
+        return self.peek().kind == tok 
 
-        match tok[0]:
-            case "type":
-                return tok[1] == peek.typ
-            case "ident":
-                return tok[1] == peek.ident
-            case "keyword":
-                return tok[1] == peek.keyword
-            case "literal":
-                return tok[1] == peek.literal
-            case "operator":
-                return tok[1] == peek.operator
-            case "separator":
-                return tok[1] == peek.separator
+    def check_and_consume(self, expected: TokenKind) -> Token | None:
+        if self.check(expected):
+            return self.consume()
+        else:
+            return None
 
-        return False
+    def consume_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
+        cons = self.consume()
+        if cons.kind != expected:
+            s = str()
+            if ctx is not None:
+                s = " " + ctx
+            h = str()
+            if help is not None:
+                h = '\n' + help
+            raise BCError(f"expected token {expected}{s}, but got {cons}\n{h}", cons.pos)
+        return cons
+       
+    def check_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
+        """check_and_consume, then expect"""
 
-    def consume(self) -> l.Token:
+        t = self.check_and_consume(expected)
+        if t is None:
+            s = str()
+            if ctx is not None:
+                s = ' ' + ctx
+
+            h = str()
+            if help is not None:
+                h = '\n' + help
+            
+            raise BCError(f"expected token {expected}{s}, but got {t}\n{h}", self.peek().pos)
+        return t
+
+    def consume(self) -> Token:
         if self.cur < len(self.tokens):
             self.cur += 1
 
@@ -75,40 +115,24 @@ class Parser:
             self.consume()
 
     def check_newline(self, s: str):
-        nl = self.consume()
-        if nl.kind != "newline":
-            raise BCError(f"expected newline after {s}, but found `{self.prev()}`", nl)
+        self.consume_and_expect("newline", ctx=f"after {s}")
 
-    def prev(self) -> l.Token:
-        return self.tokens[self.cur - 1]
-
-    def peek(self) -> l.Token:
-        if self.cur >= len(self.tokens):
-            raise BCError(
-                f"unexpected end of file", self.tokens[len(self.tokens) - 1], eof=True
-            )
-
-        return self.tokens[self.cur]
-
-    def peek_next(self) -> l.Token | None:
-        if self.cur + 1 >= len(self.tokens):
-            return None
-
-        return self.tokens[self.cur + 1]
-
-    def match(self, typs: list[tuple[l.TokenType, str]]) -> bool:
+    def match(self, typs: list[TokenKind]) -> bool:
         for typ in typs:
             if self.check(typ):
                 self.consume()
                 return True
         return False
 
-    def is_integer(self, val: str) -> bool:
-        if val[0] == "-" and val[1].isdigit():
-            val = val[1:]
+    def is_one_of(self, typs: list[TokenKind]) -> bool:
+        for typ in typs:
+            if self.check(typ):
+                return True
+        return False
 
+    def is_integer(self, val: str) -> bool:
         for ch in val:
-            if not ch.isdigit() and ch != "_":
+            if not ch.isdigit():
                 return False
         return True
 
@@ -127,20 +151,16 @@ class Parser:
         return found_decimal
 
     def array_literal(self, nested=False) -> Expr | None:
-        lbrace = self.consume()  # TODO: allow other braced literals later
-        if lbrace.separator != "left_curly":
-            raise BCError(
-                "expected left curly brace for array or matrix literal!", lbrace
-            )
+        lbrace = self.consume_and_expect("left_curly", "for array or matrix literal")
 
         exprs = []
-        while self.peek().separator != "right_curly":
+        while self.peek().kind != "right_curly":
             self.clean_newlines()
 
-            if self.peek().separator == "left_curly":
+            if self.peek().kind == "left_curly":
                 if nested:
                     raise BCError(
-                        "cannot nest array literals over 2 dimensions!", self.peek()
+                        "cannot nest array literals over 2 dimensions!", self.peek().pos
                     )
                 arrlit = self.array_literal(nested=True)
                 exprs.append(arrlit)
@@ -149,18 +169,18 @@ class Parser:
                 if expr is None:
                     raise BCError(
                         "invalid or no expression supplied as argument to array literal",
-                        self.peek(),
+                        self.peek().pos,
                     )
                 exprs.append(expr)
 
             self.clean_newlines()
             comma = self.peek()
-            if comma.separator == "right_curly":
+            if comma.kind == "right_curly":
                 break
-            elif comma.separator != "comma":
+            elif comma.kind != "comma":
                 raise BCError(
                     f"expected comma after expression in array literal, found {comma.kind}",
-                    comma,
+                    comma.pos,
                 )
             self.consume()
 
@@ -169,54 +189,47 @@ class Parser:
         if len(exprs) == 0:
             raise BCError(
                 f"array literals may not have no elements, as the resulting array has no space",
-                self.peek(),
+                self.peek().pos,
             )
 
-        # allow for trailing comma
-        if self.peek().separator == "right_curly":
-            self.consume()
+        self.check_and_consume("right_curly")
 
         return ArrayLiteral(lbrace.pos, exprs)
 
     def literal(self) -> Expr | None:
-        tok = self.consume()
-
-        if tok.kind != "literal":
+        if not self.match(["literal_string", "literal_char", "literal_number", "true", "false", "null"]):
             return None
 
-        lit: l.Literal
-        lit = tok.literal  # type: ignore
+        lit = self.consume()
 
         match lit.kind:
-            case "null":
-                return Literal(tok.pos, "null")
-            case "char":
-                if len(lit.value) == 0:
+            case "literal_char":
+                if len(lit.data) == 0: # type: ignore
                     raise BCError(
-                        "CHAR literal cannot have no characters in it!", tok.pos
+                        "CHAR literal cannot have no characters in it!", lit.pos
                     )
 
-                val = lit.value
+                val: str = lit.data # type: ignore 
                 if val[0] == "\\":
                     if len(val) == 1:
-                        return Literal(tok.pos, "char", char="\\")
+                        return Literal(lit.pos, "char", char="\\")
 
                     ch = _convert_escape_code(val[1])
                     if ch is None:
                         raise BCError(
-                            f"invalid escape sequence in literal '{lit.value}'",
-                            tok.pos,
+                            f"invalid escape sequence in literal '{val}'",
+                            lit.pos,
                         )
 
-                    return Literal(tok.pos, "char", char=ch)
+                    return Literal(lit.pos, "char", char=ch)
                 else:
                     if len(val) > 1:
                         raise BCError(
-                            f"more than 1 character in char literal '{lit.value}'", tok
+                            f"more than 1 character in char literal '{val}'", lit.pos 
                         )
-                    return Literal(tok.pos, "char", char=val[0])
-            case "string":
-                val = lit.value
+                    return Literal(lit.pos, "char", char=val[0])
+            case "literal_string":
+                val: str = lit.data # type: ignore
                 res = StringIO()
                 i = 0
 
@@ -228,9 +241,11 @@ class Parser:
                             i += 1
                             ch = _convert_escape_code(val[i])
                             if ch is None:
-                                pos = (tok.pos[0], tok.pos[1] + i + 1, tok.pos[2])
+                                pos = copy.copy(lit.pos)
+                                pos.col += i
+                                pos.span = 2
                                 raise BCError(
-                                    f'invalid escape sequence in literal "{lit.value}"',
+                                    f'invalid escape sequence in literal "{val}"',
                                     pos,
                                 )
                             res.write(ch)
@@ -238,132 +253,106 @@ class Parser:
                         res.write(val[i])
                     i += 1
 
-                return Literal(tok.pos, "string", string=res.getvalue())
-            case "boolean":
-                val = lit.value.lower()
-                if val == "true":
-                    return Literal(tok.pos, "boolean", boolean=True)
-                elif val == "false":
-                    return Literal(tok.pos, "boolean", boolean=False)
-                else:
-                    raise BCError(f"invalid boolean literal `{lit.value}`", tok)
-            case "number":
-                val = lit.value
+                return Literal(lit.pos, "string", string=res.getvalue())
+            case "literal_number":
+                val: str = lit.data # type: ignore
 
                 if self.is_real(val):
                     try:
                         res = float(val)
                     except ValueError:
-                        raise BCError(f"invalid number literal `{val}`", tok)
+                        raise BCError(f"invalid number literal \"{val}\"", lit.pos)
 
-                    return Literal(tok.pos, "real", real=res)
+                    return Literal(lit.pos, "real", real=res)
                 elif self.is_integer(val):
                     try:
                         res = int(val)
                     except ValueError:
-                        raise BCError(f"invalid number literal `{val}`", tok)
+                        raise BCError(f"invalid number literal \"{val}\"", lit.pos)
 
-                    return Literal(tok.pos, "integer", integer=res)
+                    return Literal(lit.pos, "integer", integer=res)
                 else:
-                    raise BCError(f"invalid number literal `{val}`", tok)
+                    raise BCError(f"invalid number literal \"{val}\"", lit.pos)
+            case "true":
+                return Literal(lit.pos, "boolean", boolean=True)
+            case "false":
+                return Literal(lit.pos, "boolean", boolean=False)
+            case "null":
+                return Literal(lit.pos, "null")
 
-    def _array_type(self) -> Type | None:
+    def _array_type(self) -> Type:
         flat_bounds = None
         matrix_bounds = None
         is_matrix = False
         inner: BCPrimitiveType
 
-        left_bracket = self.consume()
-        if left_bracket.separator == "left_bracket":
-            begin = self.expression()
-            if begin is None:
+        self.consume_and_expect("left_bracket", "for array type declaration")
+        begin = self.expression()
+        if begin is None:
+            raise BCError(
+                "invalid or no expression as beginning value of array declaration",
+                begin,
+            )
+
+        self.consume_and_expect("colon", "after beginning value of array declaration")
+
+        end = self.expression()
+        if end is None:
+            raise BCError(
+                "invalid or no expression as ending value of array declaration",
+                end,
+            )
+
+        flat_bounds = (begin, end)
+
+        right_bracket = self.consume()
+        if right_bracket.kind == "right_bracket":
+            pass
+        elif right_bracket.kind == "comma":
+            inner_begin = self.expression()
+            if inner_begin is None:
                 raise BCError(
                     "invalid or no expression as beginning value of array declaration",
-                    begin,
+                    inner_begin,
                 )
 
-            colon = self.consume()
-            if colon.separator != "colon":
-                raise BCError(
-                    "expected colon after beginning value of array declaration",
-                    colon,
-                )
+            self.consume_and_expect("colon", "after beginning value of array declaration")
 
-            end = self.expression()
-            if end is None:
+            inner_end = self.expression()
+            if inner_end is None:
                 raise BCError(
                     "invalid or no expression as ending value of array declaration",
-                    end,
-                )
-
-            flat_bounds = (begin, end)
-
-            right_bracket = self.consume()
-            if right_bracket.separator == "right_bracket":
-                pass
-            elif right_bracket.separator == "comma":
-                inner_begin = self.expression()
-                if inner_begin is None:
-                    raise BCError(
-                        "invalid or no expression as beginning value of array declaration",
-                        inner_begin,
-                    )
-
-                inner_colon = self.consume()
-                if inner_colon.separator != "colon":
-                    raise BCError(
-                        "expected colon after beginning value of array declaration",
-                        inner_colon,
-                    )
-
-                inner_end = self.expression()
-                if inner_end is None:
-                    raise BCError(
-                        "invalid or no expression as ending value of array declaration",
-                        inner_end,
-                    )
-
-                matrix_bounds = (
-                    flat_bounds[0],
-                    flat_bounds[1],
-                    inner_begin,
                     inner_end,
                 )
 
-                flat_bounds = None
+            matrix_bounds = (
+                flat_bounds[0],
+                flat_bounds[1],
+                inner_begin,
+                inner_end,
+            )
 
-                right_bracket = self.consume()
-                if right_bracket.separator != "right_bracket":
-                    raise BCError(
-                        "expected ending right bracket after matrix length declaration",
-                        right_bracket,
-                    )
+            flat_bounds = None
 
-                is_matrix = True
-            else:
-                raise BCError(
-                    "expected right bracket or comma after array bounds declaration",
-                    right_bracket,
-                )
+            self.consume_and_expect("right_bracket", "after matrix length declaration")
+
+            is_matrix = True
         else:
             raise BCError(
-                "expected opening bracket `[` after `ARRAY` keyword", left_bracket
+                "expected right bracket or comma after array bounds declaration",
+                right_bracket.pos,
             )
 
-        of = self.consume()
-        if of.kind != "keyword" and of.keyword != "of":
-            raise BCError("expected `OF` after size declaration", of)
+        self.consume_and_expect("of", "after array size declaration")
 
-        arrtyp = self.consume()
-
-        if arrtyp.typ == "array":
+        arrtyp = self.consume_and_expect("type", "after array size declaration")
+        if arrtyp.data == "array":
             raise BCError(
                 "cannot have array as array element type, please use the matrix syntax instead",
-                arrtyp,
+                arrtyp.pos,
             )
-
-        if arrtyp.typ not in self.PRIM_TYPES:
-            raise BCError("invalid type used as array element type", arrtyp)
+        if arrtyp.data not in self.PRIM_TYPES:
+            raise BCError("invalid type used as array element type", arrtyp.pos)
 
         inner = arrtyp.typ  # type: ignore
 
@@ -374,71 +363,48 @@ class Parser:
             inner=inner,
         )
 
-    def typ(self) -> Type | None:
-        adv = self.consume()
-
-        if adv.kind == "newline":
-            raise BCError("unexpected newline when scanning for type", adv)
-
-        if adv.kind == "type" and adv.typ != "array":
-            if adv.typ not in self.PRIM_TYPES:
-                return None
-
-            t: BCPrimitiveType = adv.typ  # type: ignore
-            return t
-        elif adv.kind == "type" and adv.typ == "array":
+    def typ(self) -> Type:
+        adv = self.consume_and_expect("type")
+        if adv.data == "array":
             return self._array_type()
+        else:
+            t: BCPrimitiveType = adv.data # type: ignore
+            return t
 
-    def ident(self) -> Expr | None:
-        c = self.consume()
-
-        if c.kind != "ident":
-            return None
-
-        return Identifier(c.pos, c.ident)  # type: ignore
+    def ident(self) -> Identifier:
+        c = self.consume_and_expect("ident")
+        return Identifier(c.pos, c.data) # type: ignore
 
     def array_index(self) -> Expr | None:
         pn = self.peek_next()
         if pn is None:
             return None
-
-        if pn.kind != "separator" and pn.separator != "left_bracket":
+        if pn.kind != "left_bracket":
             return None
 
         ident = self.ident()
 
-        leftb = self.consume()
-        if leftb.separator != "left_bracket":
-            raise BCError("expected left_bracket after ident in array index", leftb)
-
+        leftb = self.consume_and_expect("left_bracket")
         exp = self.expression()
         if exp is None:
-            raise BCError("expected expression as array index", leftb)
+            raise BCError("expected expression as array index", leftb.pos)
 
         rightb = self.consume()
         exp_inner = None
-        if rightb.separator == "right_bracket":
+        if rightb.kind == "right_bracket":
             pass
-        elif rightb.separator == "comma":
+        elif rightb.kind == "comma":
             exp_inner = self.expression()
             if exp_inner is None:
                 raise BCError("expected expression as array index", exp_inner)
 
-            rightb = self.consume()
-            if rightb.separator != "right_bracket":
-                raise BCError(
-                    "expected right_bracket after expression in array index", rightb
-                )
+            self.consume_and_expect("right_bracket", "after expression in array index")
         else:
             raise BCError(
-                "expected right_bracket after expression in array index", rightb
+                "expected right_bracket or comma after expression in array index", rightb.pos
             )
 
-        return ArrayIndex(leftb.pos, ident=ident, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
-
-    def operator(self) -> l.Operator | None:
-        o = self.consume()
-        return o.operator
+        return ArrayIndex(leftb.pos, ident=ident, idx_outer=exp, idx_inner=exp_inner) 
 
     def function_call(self) -> Expr | None:
         # avoid consuming tokens
@@ -449,16 +415,15 @@ class Parser:
         leftb = self.peek_next()
         if leftb is None:
             return None
-
-        if leftb.separator != "left_paren":
+        if leftb.kind != "left_paren":
             return None
 
+        # consume both the ident and left_paren
         self.consume()
         self.consume()
 
         args = []
-
-        while self.peek().separator != "right_paren":
+        while self.peek().kind != "right_paren":
             expr = self.expression()
             if expr is None:
                 raise BCError("invalid or no expression as function argument", leftb)
@@ -466,58 +431,56 @@ class Parser:
             args.append(expr)
 
             comma = self.peek()
-            if comma.separator != "comma" and comma.separator != "right_paren":
+            if comma.kind != "comma" and comma.kind != "right_paren":
                 raise BCError(
                     "expected comma or right parenthesis after argument in function call argument list",
-                    comma,
+                    comma.pos,
                 )
-            elif comma.separator == "comma":
+            elif comma.kind == "comma":
                 self.consume()
 
-        rightb = self.consume()
-        if rightb.separator != "right_paren":
-            raise BCError(
-                "expected right paren after arg list in function call", rightb
-            )
-        return FunctionCall(leftb.pos, ident=ident.ident, args=args)  # type: ignore
+        self.consume_and_expect("right_paren", "after argument list in function call")
+        return FunctionCall(leftb.pos, ident=str(ident.data), args=args) 
 
     def typecast(self) -> Typecast | None:
-        typ = self.consume()
-        if typ.typ is None:
-            raise BCError("invalid type supplied for type cast", typ)
+        typ = self.check_and_expect("type", "for typecast")
+        if typ.data == "array":
+            raise BCError("cannot typecast to an array!")
 
-        if typ.typ not in self.PRIM_TYPES:
-            raise BCError("array type supplied for type cast", typ)
-
-        t: BCPrimitiveType = typ.typ  # type: ignore
-
+        t: BCPrimitiveType = typ.data # type: ignore
         self.consume()  # checked already
 
         expr = self.expression()
         if expr is None:
             raise BCError("invalid or no expression supplied for type cast", expr)
 
-        rbracket = self.consume()
-        if rbracket.separator != "right_paren":
-            raise BCError("expected right paren after type cast expression", rbracket)
+        self.consume_and_expect("right_paren", "after type cast expression")
 
         return Typecast(typ.pos, t, expr)
+
+    def grouping(self) -> Expr | None:
+        begin = self.consume_and_expect("left_paren", "in grouping")
+        e = self.expression()
+        if e is None:
+            raise BCError("invalid or no expression inside grouping", e)
+
+        self.consume_and_expect("right_paren", "after expression in grouping")
+        return Grouping(begin.pos, inner=e)
 
     def unary(self) -> Expr | None:
         p = self.peek()
         if p.kind == "literal":
             return self.literal()
-        elif p.separator == "left_curly":
+        elif p.kind == "left_curly":
             return self.array_literal()
         elif p.kind == "ident":
             pn = self.peek_next()
             if pn is None:
                 return None
 
-            if pn.separator == "left_bracket":
+            if pn.kind == "left_bracket":
                 return self.array_index()
-
-            if pn.separator == "left_paren":
+            elif pn.kind == "left_paren":
                 return self.function_call()
 
             return self.ident()
@@ -526,31 +489,21 @@ class Parser:
             if pn is None:
                 return None
 
-            if pn.separator == "left_paren":
+            if pn.kind == "left_paren":
                 return self.typecast()
-        elif p.separator == "left_paren":
-            begin = self.consume()
-            e = self.expression()
-            if e is None:
-                raise BCError("invalid or no expression inside grouping", e)
-
-            end = self.consume()
-
-            if end.separator != "right_paren":
-                raise BCError("expected ending ) delimiter after (", begin)
-
-            return Grouping(begin.pos, inner=e)
-        elif p.operator == "sub":
+        elif p.kind == "left_paren":
+            return self.grouping()
+        elif p.kind == "sub":
             begin = self.consume()
             e = self.unary()
             if e is None:
-                raise BCError("invalid or no expression for negation", begin)
+                raise BCError("invalid or no expression for negation", begin.pos)
             return Negation(begin.pos, e)
-        elif p.keyword == "not":
+        elif p.kind == "not":
             begin = self.consume()
             e = self.expression()
             if e is None:
-                raise BCError("invalid or no expression for logical NOT", begin)
+                raise BCError("invalid or no expression for logical NOT", begin.pos)
             return Not(begin.pos, e)
         else:
             return None
@@ -560,15 +513,9 @@ class Parser:
         if expr is None:
             return None
 
-        if self.peek().operator == "pow":
-            op = self.consume().operator
-
-            if op is None:
-                raise BCError("pow: op is None", op)
-
+        if self.peek().kind == "pow":
             right = self.pow()
-
-            expr = BinaryExpr(expr.pos, expr, op, right)  # type: ignore
+            expr = BinaryExpr(expr.pos, expr, "pow", right)  # type: ignore
 
         return expr
 
@@ -577,11 +524,8 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match([("operator", "mul"), ("operator", "div")]):
-            op = self.prev().operator
-
-            if op is None:
-                raise BCError("factor: op is None", op)
+        while self.match(["mul", "div"]):
+            op: Operator = self.prev().kind # type: ignore
 
             right = self.pow()
 
@@ -598,11 +542,8 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match([("operator", "add"), ("operator", "sub")]):
-            op = self.prev().operator
-
-            if op is None:
-                raise BCError("term: no operator provided", op)
+        while self.match(["add", "sub"]):
+            op: Operator = self.prev().kind # type: ignore
 
             right = self.factor()
             if right is None:
@@ -620,15 +561,13 @@ class Parser:
 
         while self.match(
             [
-                ("operator", "greater_than"),
-                ("operator", "less_than"),
-                ("operator", "greater_than_or_equal"),
-                ("operator", "less_than_or_equal"),
+                "greater_than",
+                "less_than",
+                "greater_than_or_equal",
+                "less_than_or_equal",
             ]
         ):
-            op = self.prev().operator
-            if op is None:
-                raise BCError("comparison: no operator provided", op)
+            op: Operator = self.prev().kind # type: ignore
 
             right = self.term()
             if right is None:
@@ -643,15 +582,8 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match(
-            [
-                ("operator", "not_equal"),
-                ("operator", "equal"),
-            ]
-        ):
-            op = self.prev().operator
-            if op is None:
-                raise BCError("equality: no operator provided", op)
+        while self.match(["equal", "not_equal"]):
+            op: Operator = self.prev().kind # type: ignore
 
             right = self.comparison()
             if right is None:
@@ -666,21 +598,13 @@ class Parser:
         if expr is None:
             return None
 
-        while self.match([("keyword", "and"), ("keyword", "or")]):
-            kw = self.prev().keyword
-            if kw is None:
-                raise BCError("logical_comparison: no keyword provided", kw)
+        while self.match(["and", "or"]):
+            op: Operator = self.prev().kind # type: ignore
 
             right = self.equality()
 
             if right is None:
                 return None
-
-            op: Operator = ""  # type: ignore
-            if kw == "and":
-                op = "and"
-            elif kw == "or":
-                op = "or"
 
             expr = BinaryExpr(expr.pos, expr, op, right)  # kw must be and or or
 
@@ -1124,7 +1048,7 @@ class Parser:
         # FOR <counter> <assign> <lit> TO <lit> [STEP <lit>]
         initial = self.peek()
 
-        if initial.keyword != "for":
+        if initiakeyword != "for":
             return
 
         self.consume()
@@ -1206,7 +1130,7 @@ class Parser:
                 self.peek(),
             )
 
-        res = RepeatUntilStatement(begin.pos, until.pos, expr, stmts)
+        res = RepeatUntilStatement(begin.pos, untipos, expr, stmts)
         return Statement("repeatuntil", repeatuntil=res)
 
     def function_arg(self) -> FunctionArgument | None:
@@ -1405,10 +1329,10 @@ class Parser:
                 "Include must be followed by a literal of the name of the file to include"
             )
 
-        if name.literal.kind != "string":  # type: ignore
+        if name.literakind != "string":  # type: ignore
             raise BCError("literal for include must be a string!")
 
-        res = IncludeStatement(include.pos, name.literal.value, ffi=ffi)  # type: ignore
+        res = IncludeStatement(include.pos, name.literavalue, ffi=ffi)  # type: ignore
         return Statement("include", include=res)
 
     def trace_stmt(self) -> Statement | None:
@@ -1452,7 +1376,7 @@ class Parser:
         stmt: CallStatement | FunctionCall
         call = self.call_stmt()
         if call is not None:
-            stmt = call.call  # type: ignore
+            stmt = calcall  # type: ignore
         else:
             fncall = self.function_call()
             if fncall is None:

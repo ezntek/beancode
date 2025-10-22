@@ -1,13 +1,16 @@
-from io import StringIO
 import typing
+
+from io import StringIO
 from dataclasses import dataclass
+
+from . import Pos
 from .error import *
 
 
 @dataclass
 class Expr:
     # location of the token
-    pos: tuple[int, int, int] | None
+    pos: Pos | None
 
 
 BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
@@ -370,7 +373,7 @@ StatementKind = typing.Literal[
 
 @dataclass
 class CallStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     ident: str
     args: list[Expr]
 
@@ -383,19 +386,19 @@ class FunctionCall(Expr):
 
 @dataclass
 class OutputStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     items: list[Expr]
 
 
 @dataclass
 class InputStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     ident: Identifier | ArrayIndex
 
 
 @dataclass
 class ConstantStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     ident: Identifier
     value: Expr
     export: bool = False
@@ -403,7 +406,7 @@ class ConstantStatement:
 
 @dataclass
 class DeclareStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     ident: list[Identifier]
     typ: Type
     export: bool = False
@@ -412,14 +415,14 @@ class DeclareStatement:
 
 @dataclass
 class AssignStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     ident: Identifier | ArrayIndex
     value: Expr
 
 
 @dataclass
 class IfStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     cond: Expr
     if_block: list["Statement"]
     else_block: list["Statement"]
@@ -427,14 +430,14 @@ class IfStatement:
 
 @dataclass
 class CaseofBranch:
-    pos: tuple[int, int, int]
+    pos: Pos
     expr: Expr
     stmt: "Statement"
 
 
 @dataclass
 class CaseofStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     expr: Expr
     branches: list[CaseofBranch]
     otherwise: "Statement | None"
@@ -442,16 +445,16 @@ class CaseofStatement:
 
 @dataclass
 class WhileStatement:
-    pos: tuple[int, int, int]
-    end_pos: tuple[int, int, int]  # for tracing
+    pos: Pos
+    end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
 
 
 @dataclass
 class ForStatement:
-    pos: tuple[int, int, int]
-    end_pos: tuple[int, int, int]  # for tracing
+    pos: Pos
+    end_pos: Pos  # for tracing
     counter: Identifier
     block: list["Statement"]
     begin: Expr
@@ -461,22 +464,22 @@ class ForStatement:
 
 @dataclass
 class RepeatUntilStatement:
-    pos: tuple[int, int, int]
-    end_pos: tuple[int, int, int]  # for tracing
+    pos: Pos
+    end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
 
 
 @dataclass
 class FunctionArgument:
-    pos: tuple[int, int, int]
+    pos: Pos
     name: str
     typ: Type
 
 
 @dataclass
 class ProcedureStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
@@ -485,7 +488,7 @@ class ProcedureStatement:
 
 @dataclass
 class FunctionStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     name: str
     args: list[FunctionArgument]
     returns: Type
@@ -495,26 +498,26 @@ class FunctionStatement:
 
 @dataclass
 class ReturnStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     expr: Expr | None
 
 
 @dataclass
 class ScopeStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     block: list["Statement"]
 
 
 @dataclass
 class IncludeStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     file: str
     ffi: bool
 
 
 @dataclass
 class TraceStatement:
-    pos: tuple[int, int, int]
+    pos: Pos
     vars: list[str]
     stmt: FunctionCall | CallStatement
     file_name: str
