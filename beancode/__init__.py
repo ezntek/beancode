@@ -35,7 +35,6 @@ def humanize_index(idx: int) -> str:
 
     return s + "th"
 
-
 def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
 

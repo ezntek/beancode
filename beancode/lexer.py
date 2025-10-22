@@ -42,7 +42,6 @@ TokenKind = typing.Literal[
     "readfile",
     "writefile",
     "closefile",
-    "newline",
     # extra feachur™
     "include",
     "include_ffi",
@@ -73,6 +72,7 @@ TokenKind = typing.Literal[
     "colon",
     "comma",
     "dot",
+    "newline",
     # types, literals
     "literal_string",
     "literal_char",
@@ -83,6 +83,65 @@ TokenKind = typing.Literal[
     "ident",
     "type",
 ]
+
+def humanize_token_kind(k: TokenKind) -> str:
+    match k:
+        case "assign":
+            return "'<-'"
+        case "equal":
+            return "'='"
+        case "less_than":
+            return "'<'"
+        case "greater_than":
+            return "'>'"
+        case "less_than_or_equal":
+            return "'<='"
+        case "greater_than_or_equal":
+            return "'>='"
+        case "not_equal":
+            return "'<>'"
+        case "mul":
+            return "'*'"
+        case "div":
+            return "'/'"
+        case "add":
+            return "'+'"
+        case "sub":
+            return "'-'"
+        case "pow":
+            return "'^'"
+        case "left_paren":
+            return "'('"
+        case "right_paren":
+            return "')'"
+        case "left_bracket":
+            return "'['"
+        case "right_bracket":
+            return "']'"
+        case "left_curly":
+            return "'{'"
+        case "right_curly":
+            return "'}'"
+        case "colon":
+            return "':'"
+        case "comma":
+            return "','"
+        case "dot":
+            return "'.'"
+        case "newline":
+            return "newline"
+        case "literal_string":
+            return "string literal"
+        case "literal_char":
+            return "character literal"
+        case "literal_number":
+            return "number literal"
+        case "ident":
+            return "identifier or name"
+        case "type":
+            return "type"
+        case _:
+            return k.upper() 
 
 @dataclass
 class Token:
@@ -104,6 +163,13 @@ class Token:
                 s = f"<{self.kind}>"
 
         print(f"token[{self.pos}]: {s}", file=file)
+
+    def to_humanized_string(self) -> str:
+        match self.kind:
+            case "type":
+                return f"{str(self.data).upper()}"
+            case _:
+                return humanize_token_kind(self.kind)
 
     def __repr__(self) -> str:
         return f"token({self.kind})"
@@ -310,7 +376,7 @@ class Lexer:
             if is_delimited_literal:
                 stop = cur in ("\n\r"+DELIMS)
             else:
-                stop = self.is_operator_start(cur) or self.is_separator(cur) or cur.isspace()
+                stop = self.is_operator_start(cur) or self.is_separator(cur) or cur.isspace() or cur in DELIMS
 
             if cur == '\\':
                 len += 1
@@ -417,10 +483,10 @@ class Lexer:
         else:
             raise BCError("invalid identifier", p)
 
-    def next_token(self) -> Token:
+    def next_token(self) -> Token | None:
         self.trim_spaces()
         if not self.in_bounds():
-            raise BCError("reached end of file in lexer")
+            return
 
         if self.get_cur() == '\n':
             t = Token("newline", self.pos_here(1))
@@ -450,6 +516,9 @@ class Lexer:
     def tokenize(self) -> list[Token]:
         res = list()
         while self.in_bounds():
-            res.append(self.next_token())
+            t = self.next_token()
+            if not t:
+                break
+            res.append(t)
         res.append(Token("newline", self.pos_here(1)))
         return res
