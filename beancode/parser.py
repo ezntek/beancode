@@ -144,26 +144,6 @@ class Parser:
         """peek and check many"""
         return self.peek().kind in typs
 
-    def is_integer(self, val: str) -> bool:
-        for ch in val:
-            if not ch.isdigit():
-                return False
-        return True
-
-    def is_real(self, val: str) -> bool:
-        if self.is_integer(val):
-            return False
-
-        found_decimal = False
-
-        for ch in val:
-            if ch == ".":
-                if found_decimal:
-                    return False
-                found_decimal = True
-
-        return found_decimal
-
     def array_literal(self, nested=False) -> Expr | None:
         lbrace = self.consume_and_expect("left_curly", "for array or matrix literal")
 
@@ -272,14 +252,14 @@ class Parser:
             case "literal_number":
                 val: str = lit.data  # type: ignore
 
-                if self.is_real(val):
+                if is_real(val):
                     try:
                         res = float(val)
                     except ValueError:
                         raise BCError(f'invalid number literal "{val}"', lit.pos)
 
                     return Literal(lit.pos, "real", real=res)
-                elif self.is_integer(val):
+                elif is_integer(val):
                     try:
                         res = int(val)
                     except ValueError:

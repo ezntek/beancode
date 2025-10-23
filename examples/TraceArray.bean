@@ -16,3 +16,16 @@ PROCEDURE Code
 ENDPROCEDURE
 
 TRACE(Array, Counter) CALL Code TO "arraytrace.html"
+
+/*
+TRACE(Array, Counter) 
+    TargetFile <- "arraytrace.html"
+    TraceEveryLine <- FALSE
+    DontWriteDuplicateEntries <- TRUE
+    CondenseArrays <- FALSE
+    ShowOutputs <- FALSE
+    PromptOnInputs <- TRUE
+DO
+    CALL Code
+ENDTRACE
+*/

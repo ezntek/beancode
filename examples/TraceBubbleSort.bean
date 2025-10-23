@@ -26,15 +26,6 @@ PROCEDURE PrintArray(Array: ARRAY[1:End] of INTEGER, End: INTEGER)
 ENDPROCEDURE
 
 DECLARE Nums: ARRAY[1:10] of INTEGER
-Nums[1] <- 8
-Nums[2] <- 9
-Nums[3] <- 7
-Nums[4] <- 4
-Nums[5] <- 3
-Nums[6] <- 6
-Nums[7] <- 5
-Nums[8] <- 10
-Nums[9] <- 2
-Nums[10] <- 1
+Nums <- {10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
 TRACE(Array, Temp, i, j) CALL BubbleSort(Nums, 10) TO "bsort.html"

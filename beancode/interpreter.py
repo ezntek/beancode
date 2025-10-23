@@ -1458,10 +1458,9 @@ class Interpreter:
             print(res)
 
     def _guess_input_type(self, inp: str) -> BCValue:
-        p = Parser([])
-        if p.is_real(inp):
+        if is_real(inp):
             return BCValue(kind="real")
-        elif p.is_integer(inp):
+        elif is_integer(inp):
             return BCValue(kind="integer")
 
         if inp.strip().lower() in ["true", "false", "no", "yes"]:
@@ -1525,8 +1524,7 @@ class Interpreter:
                     target.boolean = False
             case "integer":
                 inp = inp.lower().strip()
-                p = Parser([])
-                if p.is_integer(inp):
+                if is_integer(inp):
                     try:
                         res = int(inp)
                         target.kind = "integer"
@@ -1537,8 +1535,7 @@ class Interpreter:
                     self.error("expected INTEGER for INPUT", s.ident.pos)
             case "real":
                 inp = inp.lower().strip()
-                p = Parser([])
-                if p.is_real(inp) or p.is_integer(inp):
+                if is_real(inp) or is_integer(inp):
                     try:
                         res = float(inp)
                         target.kind = "real"
@@ -1780,7 +1777,6 @@ class Interpreter:
 
         while cond():
             intp.visit_block(None)
-
             intp.trace(stmt.end_pos.row, loop_trace=True)
 
             #  FIXME: barbaric

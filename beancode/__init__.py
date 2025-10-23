@@ -41,6 +41,33 @@ def humanize_index(idx: int) -> str:
 def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
 
+    
+def is_integer(val: str) -> bool:
+    if len(val) == 0:
+        return False
+
+    for ch in val:
+        if not ch.isdigit():
+            return False
+    return True
+
+def is_real(val: str) -> bool:
+    if len(val) == 0:
+        return False
+
+    if is_integer(val):
+        return False
+
+    found_decimal = False
+
+    for ch in val:
+        if ch == ".":
+            if found_decimal:
+                return False
+            found_decimal = True
+
+    return found_decimal
+
 
 def error(msg: str):
     print(f"\033[31;1merror: \033[0m{msg}")
