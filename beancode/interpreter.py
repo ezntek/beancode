@@ -213,12 +213,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an ordered comparison!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an ordered comparison!",
                         expr.rhs.pos,
@@ -258,12 +258,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an ordered comparison!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an ordered comparison!",
                         expr.rhs.pos,
@@ -303,12 +303,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an ordered comparison!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an ordered comparison!",
                         expr.rhs.pos,
@@ -348,12 +348,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an ordered comparison!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an ordered comparison!",
                         expr.rhs.pos,
@@ -391,12 +391,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an arithmetic expression!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an arithmetic expression!",
                         expr.rhs.pos,
@@ -437,12 +437,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an arithmetic expression!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an arithmetic expression!",
                         expr.rhs.pos,
@@ -483,12 +483,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an arithmetic expression!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an arithmetic expression!",
                         expr.rhs.pos,
@@ -530,12 +530,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of an arithmetic expression!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of an arithmetic expression!",
                         expr.rhs.pos,
@@ -589,12 +589,12 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind == "null":
+                if lhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the left hand side of a binary expression!",
                         expr.lhs.pos,
                     )
-                elif rhs.kind == "null":
+                elif rhs.is_uninitialized():
                     self.error(
                         "cannot have NULL in the right hand side of a binary expression!",
                         expr.rhs.pos,

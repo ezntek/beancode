@@ -486,6 +486,8 @@ class Lexer:
                 return Token("true", self.pos(len(word)))
             elif word.lower() == "false":
                 return Token("false", self.pos(len(word)))
+            elif word.lower() == "null":
+                return Token("null", self.pos(len(word)))
 
     def _is_ident(self, word: str) -> bool:
         if not word[0].isalpha() and word[0] not in "_":
