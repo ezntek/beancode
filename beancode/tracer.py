@@ -35,7 +35,7 @@ pre {
 
 
 class Tracer:
-    vars: dict[str, list[BCValue | None]]
+    vars: dict[str, list[BCValue]]
     var_types: dict[str, BCType]
     last_updated_vals: dict[str, BCValue | None] # None only initially
     line_numbers: dict[int, int]
@@ -77,9 +77,16 @@ class Tracer:
             if k not in vars:
                 v.append(BCValue.new_null())
             else:
+                # XXX: The algorithm to figure out repeated values breaks when you use arrays.
+                # Therefore, we just copy the pointers for repeated values to make sure that at
+                # the data level, there are no blank rows (unlike before). We use magic iterator
+                # trickery to figure it out at generation-time.
+                #
                 if len(v) > 0 and vars[k].val == self.last_updated_vals[k]:
-                    v.append(None)
+                    # copy the pointer of the last owned value if it is repeated
+                    v.append(self.last_updated_vals[k]) # type: ignore
                 else:
+                    # copy the object and create a new owned value
                     new_obj = copy.deepcopy(vars[k].val)
                     v.append(new_obj)
                     self.last_updated_vals[k] = new_obj
@@ -164,9 +171,31 @@ class Tracer:
         res.write("</tr>\n")
         res.write("</thead>\n")
 
-        res.write("<tbody>\n")
-
         return res.getvalue() 
+
+    def _gen_html_table_line_num(self, row_num: int) -> str:
+        if self._should_print_line_numbers():
+            if row_num in self.line_numbers:
+                return f"<td>{self.line_numbers[row_num]}</td>\n"
+        return str()
+
+    def _gen_html_table_body(self):
+        res = StringIO()
+
+        res.write("<tbody>\n")
+        rows = list(enumerate(zip(*self.vars.values())))
+        for row_num, row in rows:
+            res.write("<tr>\n")
+
+            res.write(self._gen_html_table_line_num(row_num))
+            res.write(self._gen_html_table_row(rows, row_num, row))
+            res.write(self._gen_html_table_row_io(row_num))
+            
+            res.write("</tr>\n")
+
+        res.write("</tbody>\n")
+
+        return res.getvalue()
 
     def _gen_html_table_row(self, rows: list[tuple[int, tuple[BCValue, ...]]], row_num: int, row: tuple[BCValue, ...]) -> str:
         res = StringIO()
@@ -182,22 +211,26 @@ class Tracer:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
                     arr: BCArray = var.get_array()
                     if not arr.typ.is_matrix:
-                        prev: list[BCValue] | None = None
+                        prev_arr: list[BCValue] | None = None
                         if row_num != 0:
                             prev_var = rows[row_num-1][1][col]
                             if prev_var:
-                                prev = prev_var.get_array().get_flat()
+                                prev_arr = prev_var.get_array().get_flat()
                         
                         for idx, itm in enumerate(arr.get_flat()):
-                            if prev and prev[idx] == itm: # if it is a repeated entry
+                            if prev_arr and prev_arr[idx] == itm: # if it is a repeated entry
                                 res.write("<td></td>\n")
                             else:
                                 res.write(self._highlight_var(itm))
-            elif not var:
-                res.write(f"<td></td>\n")
-                continue
-            else: 
-                res.write(self._highlight_var(var))
+            else:
+                prev: BCValue | None = None
+                if row_num != 0:
+                    prev = rows[row_num-1][1][col]
+                
+                if var == prev:
+                    res.write("<td></td>\n")
+                else: 
+                    res.write(self._highlight_var(var))
 
         return res.getvalue()
 
@@ -233,22 +266,8 @@ class Tracer:
             res.write("</caption>\n")
 
         res.write(self._gen_html_table_header(should_print_line_nums))
+        res.write(self._gen_html_table_body())
 
-        # cursed python
-        rows = list(enumerate(zip(*self.vars.values())))
-        for row_num, row in rows:
-            res.write("<tr>\n")
-
-            if should_print_line_nums:
-                if row_num in self.line_numbers:
-                    res.write(f"<td>{self.line_numbers[row_num]}</td>\n")
-
-            res.write(self._gen_html_table_row(rows, row_num, row))
-            res.write(self._gen_html_table_row_io(row_num))
-            
-            res.write("</tr>\n")
-
-        res.write("</tbody>\n")
         res.write("</table>\n")
 
         return res.getvalue()
