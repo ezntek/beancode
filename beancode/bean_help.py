@@ -45,7 +45,7 @@ def _ucase() -> str:
     res = StringIO()
 
     res.write(LIBROUTINE_ENTRIES["ucase"][0] + "\n")
-    res.write("Arguments: (STRING), Returns: STRING\n\n")
+    res.write("Arguments: (STRING or CHAR), Returns: STRING or CHAR\n\n")
     res.write(
         """Examples:
   UCASE("hello") \033[2m// returns "HELLO"\033[0m
@@ -108,20 +108,22 @@ def _substring() -> str:
     res.write(
         f"""{LIBROUTINE_ENTRIES["substring"][0]} 
 SUBSTRING works on the base string, where you want to begin taking characters
-and how many characters to take in total.\n
+and how many characters to take in total. \033[31;1mIn beancode, if you call SUBSTRING()
+with length 1, it will return a CHAR.\033[0m\n
 \033[1mNote: IGCSE Pseudocode strings start at 1.\n\033[0m
 """
     )
-    res.write("Arguments: (STRING, INTEGER, INTEGER), Returns: STRING\n")
+    res.write("Arguments: (STRING, INTEGER, INTEGER), Returns: STRING or CHAR\n")
     res.write(
         """Example:
   DECLARE Original, First, Second: STRING
+  DECLARE Letter: CHAR
   Original <- "Fish and Chips"
 
   First <- SUBSTRING(Original, 1, 4) \033[2m// stores "Fish" into First\033[0m
   Second <- SUBSTRING(Original, 10, 5) \033[2m// stores "Chips" into Second\033[0m
-    """
-    )
+  Letter <- SUBSTRING(Original, 3, 1) \033[2m// stores 's' into Letter as a CHAR\033[0m
+""")
 
     return res.getvalue()
 

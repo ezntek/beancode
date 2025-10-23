@@ -11,8 +11,8 @@ Libroutine = list[tuple[Type, ...] | Type]
 Libroutines = dict[str, Libroutine]
 
 LIBROUTINES: Libroutines = {
-    "ucase": ["string"],
-    "lcase": ["string"],
+    "ucase": [("string", "char")],
+    "lcase": [("string", "char")],
     "div": [("integer", "real"), ("integer", "real")],
     "mod": [("integer", "real"), ("integer", "real")],
     "substring": ["string", "integer", "integer"],
@@ -35,12 +35,18 @@ LIBROUTINES_NORETURN: Libroutines = {
 }
 
 
-def bean_ucase(txt: str) -> BCValue:
-    return BCValue.new_string(txt.upper())
+def bean_ucase(txt: BCValue) -> BCValue:
+    if txt.kind == "string":
+        return BCValue.new_string(txt.get_string().upper())
+    else:
+        return BCValue.new_char(txt.get_char().upper()[0])
 
 
-def bean_lcase(txt: str) -> BCValue:
-    return BCValue.new_string(txt.lower())
+def bean_lcase(txt: BCValue) -> BCValue:
+    if txt.kind == "string":
+        return BCValue.new_string(txt.get_string().lower())
+    else:
+        return BCValue.new_char(txt.get_char().lower()[0])
 
 
 def bean_substring(txt: str, begin: int, length: int) -> BCValue:

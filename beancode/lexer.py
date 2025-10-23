@@ -409,7 +409,7 @@ class Lexer:
                 if cur in DELIMS:
                     raise BCError(
                         "mismatched delimiter in literal\n"
-                        + "did you insert the wrong ending quotation mark>",
+                        + "did you insert the wrong ending quotation mark?",
                         self.pos(len),
                     )
                 else:

@@ -855,16 +855,10 @@ class Interpreter:
             match name.lower():
                 case "ucase":
                     [txt, *_] = evargs
-                    if txt.kind == "char":
-                        return bean_ucase(txt.get_char())
-                    elif txt.kind == "string":
-                        return bean_ucase(txt.get_string())
+                    return bean_ucase(txt)
                 case "lcase":
                     [txt, *_] = evargs
-                    if txt.kind == "char":
-                        return bean_lcase(txt.get_char())
-                    elif txt.kind == "string":
-                        return bean_lcase(txt.get_string())
+                    return bean_ucase(txt)
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
@@ -960,7 +954,8 @@ class Interpreter:
                     s = bean_help(query)
                     if s is None:
                         self.error(
-                            f'No help information for query "{query}" was found.',
+                            f'No help information for query "{query}" was found.\n' +
+                            'Type help("help") to get started.',
                             stmt.pos,
                         )
 
