@@ -675,7 +675,6 @@ class Parser:
         if not begin:
             return
 
-        # CALL <ident>(<expr>, <expr>)
         ident = self.expect_ident("after procedure call")
 
         leftb = self.peek()

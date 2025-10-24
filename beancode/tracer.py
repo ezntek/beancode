@@ -8,8 +8,8 @@ table {
 }
 tr, td, th {
     border: 1px solid;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 0.8em;
+    padding-right: 0.8em;
     text-align: center;
 }
 
@@ -34,21 +34,40 @@ pre {
 """
 
 
+@dataclass
+class TracerConfig:
+    trace_every_line = False
+    hide_repeating_entries = True
+    condense_arrays = False
+    syntax_highlighting = True
+    # handled by the interpreter
+    show_outputs = False
+    prompt_on_inputs = True
+
+
 class Tracer:
     vars: dict[str, list[BCValue | None]]
     var_types: dict[str, BCType]
-    last_updated_vals: dict[str, BCValue | None] # None only initially
+    last_updated_vals: dict[str, BCValue | None]  # None only initially
     line_numbers: dict[int, int]
     outputs: dict[int, list[str]]
     inputs: dict[int, list[str]]
 
-    def __init__(self, wanted_vars: list[str]) -> None:
+    def __init__(
+        self, wanted_vars: list[str], config: TracerConfig | None = None
+    ) -> None:
         self.vars = dict()
         self.outputs = dict()
         self.inputs = dict()
         self.line_numbers = dict()
         self.last_updated_vals = dict()
         self.var_types = dict()
+
+        # weird python object copy/move semantics
+        if config:
+            self.config = config
+        else:
+            self.config = TracerConfig()
 
         for var in wanted_vars:
             self.vars[var] = list()
@@ -62,7 +81,8 @@ class Tracer:
         outputs: list[str] | None = None,
         inputs: list[str] | None = None,
     ) -> None:
-        should_collect = False
+        should_collect = self.config.trace_every_line
+
         for k in self.vars:
             if k not in vars:
                 continue
@@ -71,7 +91,7 @@ class Tracer:
 
         if not should_collect:
             return
-                
+
         last_idx = int()
         for k, v in self.vars.items():
             if k not in vars:
@@ -87,7 +107,7 @@ class Tracer:
                 #
                 if len(v) > 0 and vars[k].val == self.last_updated_vals[k]:
                     # copy the pointer of the last owned value if it is repeated
-                    v.append(self.last_updated_vals[k]) # type: ignore
+                    v.append(self.last_updated_vals[k])  # type: ignore
                 else:
                     # copy the object and create a new owned value
                     new_obj = copy.deepcopy(vars[k].val)
@@ -114,6 +134,9 @@ class Tracer:
         print(f"Outputs: {self.inputs}")
 
     def _should_print_line_numbers(self) -> bool:
+        if self.config.trace_every_line:
+            return True
+
         first = tuple(self.line_numbers.keys())[0]
         print_lines = False
         for idx in self.line_numbers:
@@ -131,11 +154,18 @@ class Tracer:
             if self.line_numbers[idx] != first:
                 print_lines = True
                 break
+
         return print_lines
 
     def _highlight_var(self, var: BCValue) -> str:
         if var.is_uninitialized():
-            return f"<td><pre class=dim>(null)</pre></td>"
+            if self.config.syntax_highlighting:
+                return f"<td><pre class=dim>(null)</pre></td>"
+            else:
+                return "<td><pre>(null)</pre></td>"
+
+        if not self.config.syntax_highlighting:
+            return f"<td><pre>{str(var)}</pre></td>"
 
         match var.kind:
             case "boolean":
@@ -152,29 +182,49 @@ class Tracer:
         res.write("<thead>\n")
         res.write("<tr>\n")
 
-        if should_print_line_nums:
-            res.write("<th style=padding:0>Line</th>")
+        has_array = False
+        for typ in self.var_types.values():
+            if (
+                not self.config.condense_arrays
+                and isinstance(typ, BCArrayType)
+                and not typ.is_matrix
+            ):
+                has_array = True
+                break
+        
+        rs = " rowspan=2" if has_array else ""
 
-        for name, var in self.vars.items():
-            if var[0] is not None and isinstance(var[0].kind, BCArrayType):
-                arrtyp = var[0].kind 
-                if not arrtyp.is_matrix:
-                    bounds: tuple[int, int] = arrtyp.flat_bounds # type: ignore
-                    for num in range(bounds[0], bounds[1]+1): # never None
-                        res.write(f"<th>{name}[{num}]</th>") 
+        if should_print_line_nums:
+            res.write(f"<th style=padding:0.2em{rs}>Line</th>\n")
+
+        # first pass
+        for name, typ in self.var_types.items():
+            if not self.config.condense_arrays and isinstance(typ, BCArrayType):
+                if not typ.is_matrix:
+                    width = typ.flat_bounds[1] - typ.flat_bounds[0] + 1  # type: ignore
+                    res.write(f"<th colspan={width}>{name}</th>")
             else:
-                res.write(f"<th>{name}</th>\n")
+                res.write(f"<th{rs}>{name}</th>")
+
+        # second pass
+        if has_array:
+            res.write("</tr><tr>")
+            for name, typ in self.var_types.items():
+                if isinstance(typ, BCArrayType) and not typ.is_matrix:
+                    bounds: tuple[int, int] = typ.flat_bounds  # type: ignore
+                    for num in range(bounds[0], bounds[1] + 1):  # never None
+                        res.write(f"<th>[{num}]</th>")
 
         if len(self.inputs) > 0:
-            res.write("<th>Inputs</th>\n")
+            res.write("<th>Inputs</th>")
 
         if len(self.outputs) > 0:
-            res.write("<th>Outputs</th>\n")
+            res.write("<th>Outputs</th>")
 
         res.write("</tr>\n")
         res.write("</thead>\n")
 
-        return res.getvalue() 
+        return res.getvalue()
 
     def _gen_html_table_line_num(self, row_num: int) -> str:
         if self._should_print_line_numbers():
@@ -182,15 +232,22 @@ class Tracer:
                 return f"<td>{self.line_numbers[row_num]}</td>\n"
         return str()
 
-    def _gen_html_table_row(self, rows: list[tuple[int, tuple[BCValue | None, ...]]], row_num: int, row: tuple[BCValue | None, ...]) -> str:
+    def _gen_html_table_row(
+        self,
+        rows: list[tuple[int, tuple[BCValue | None, ...]]],
+        row_num: int,
+        row: tuple[BCValue | None, ...],
+    ) -> str:
         res = StringIO()
 
         for col, (var_name, var) in enumerate(zip(self.vars, row)):
-            if isinstance(self.var_types[var_name], BCArrayType):
+            if not self.config.condense_arrays and isinstance(
+                self.var_types[var_name], BCArrayType
+            ):
                 if not var:
                     # blank the region out
-                    bounds = self.var_types[var_name].get_flat_bounds() # type: ignore
-                    for _ in range(bounds[0], bounds[1]+1):
+                    bounds = self.var_types[var_name].get_flat_bounds()  # type: ignore
+                    for _ in range(bounds[0], bounds[1] + 1):
                         res.write(f"<td></td>")
                 else:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
@@ -198,23 +255,26 @@ class Tracer:
                     if not arr.typ.is_matrix:
                         prev_arr: list[BCValue] | None = None
                         if row_num != 0:
-                            prev_var = rows[row_num-1][1][col]
+                            prev_var = rows[row_num - 1][1][col]
                             if prev_var:
                                 prev_arr = prev_var.get_array().get_flat()
-                        
+
                         for idx, itm in enumerate(arr.get_flat()):
-                            if prev_arr and prev_arr[idx] == itm: # if it is a repeated entry
-                                res.write("<td></td>\n")
+                            repeated = prev_arr and prev_arr[idx] == itm
+                            if (
+                                self.config.hide_repeating_entries and repeated
+                            ) or not prev_arr:
+                                res.write("<td></td>")
                             else:
                                 res.write(self._highlight_var(itm))
             else:
                 prev: BCValue | None = None
                 if row_num != 0:
-                    prev = rows[row_num-1][1][col]
-                
-                if var == prev or not var:
-                    res.write("<td></td>\n")
-                else: 
+                    prev = rows[row_num - 1][1][col]
+
+                if (self.config.hide_repeating_entries and var == prev) or not var:
+                    res.write("<td></td>")
+                else:
                     res.write(self._highlight_var(var))
 
         return res.getvalue()
@@ -242,10 +302,15 @@ class Tracer:
         res = StringIO()
 
         res.write("<tbody>\n")
-        rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(enumerate(zip(*self.vars.values())))
+        rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(
+            enumerate(zip(*self.vars.values()))
+        )
         skipped = 0
         for row_num, row in rows:
-            if row_num not in self.inputs and row_num not in self.outputs:
+            # skip empty rows
+            if not self.config.trace_every_line and (
+                row_num not in self.inputs and row_num not in self.outputs
+            ):
                 # no I/O
                 empty = True
                 for col, var in enumerate(row):
@@ -255,7 +320,7 @@ class Tracer:
                     if isinstance(var.kind, BCArrayType) and not var.kind.is_matrix:
                         prev_arr: list[BCValue] | None = None
                         if row_num != 0:
-                            prev_var = rows[row_num-1][1][col]
+                            prev_var = rows[row_num - 1][1][col]
                             if prev_var:
                                 prev_arr = prev_var.get_array().get_flat()
                         arr = var.get_array().get_flat()
@@ -264,14 +329,14 @@ class Tracer:
                             if prev_arr:
                                 if prev_arr[idx] == itm:
                                     continue
-                            
+
                             if itm.is_uninitialized():
                                 continue
-                            
+
                             empty = False
                             break
                     else:
-                        prev = rows[row_num-1][1][col]
+                        prev = rows[row_num - 1][1][col]
 
                         if prev and prev == var:
                             continue
@@ -282,18 +347,18 @@ class Tracer:
                 if empty:
                     skipped += 1
                     continue
-            res.write("<tr>\n")
+
+            res.write("<tr>")
 
             res.write(self._gen_html_table_line_num(row_num))
             res.write(self._gen_html_table_row(rows, row_num, row))
             res.write(self._gen_html_table_row_io(row_num))
-            
+
             res.write("</tr>\n")
 
         res.write("</tbody>\n")
 
         return res.getvalue()
-
 
     def _gen_html_table(self) -> str:
         res = StringIO()

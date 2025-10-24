@@ -1,0 +1,54 @@
+// Trace every line of the program. By default, the tracer will trace every
+// declaration, assignment, input and/or output at the top level of the
+// program, but will only trace the end of each iteration of a loop. To trace
+// every line, set this variable to TRUE.
+//
+// Default: FALSE
+//
+TraceEveryLine <- FALSE
+
+// Hide repeated entries in the trace table. If a value is repeated across
+// rows, it will be hidden if set to TRUE.
+//
+// Default: TRUE
+//
+HideRepeatingEntries <- TRUE
+
+// Condense arrays into a single cell. As per Cambridge specifications, arrays
+// in trace tables should not be condensed into one cell, i.e.
+//
+// ----+----------+-----------------+----
+// ... | Variable |      Array      | ...
+// ----+----------+-----------------+----
+//     |  <data>  | [3, 4, 5, 6, 7] |    
+// 
+// The default is to keep each index of the array a separate cell. In order to
+// condense arrays into a single cell, set this variable to TRUE.
+//
+// Default: FALSE
+//
+CondenseArrays <- FALSE
+
+// Enable syntax highlighting for values of different types, like in a proper
+// code editor/IDE. This will show in the generated HTML. If you want colored
+// output, set this variable to TRUE.
+//
+SyntaxHighlighting <- TRUE
+
+// Display contents of OUTPUT statements, as well as tracing them.
+// By default, the interpreter will capture the text of OUTPUT statements,
+// but will not actually print anything to the console. To enable it, set
+// this variable to TRUE.
+//
+// Default: FALSE
+//
+ShowOutputs <- FALSE
+
+// Prompt the user on INPUT statements.
+// Since the tracer captures OUTPUT statements, the tracer may appear frozen
+// on INPUT statements, which may confuse you. In order to display a prompt,
+// set this variable to TRUE.
+//
+// Default: FALSE
+//
+PromptOnInputs <- TRUE

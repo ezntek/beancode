@@ -12,21 +12,6 @@ from . import bean_ffi as ffi
 from . import __version__
 from .error import *
 
-try:
-    import readline
-    import atexit
-
-    histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
-    try:
-        readline.read_history_file(histfile)
-        # default history len is -1 (infinite), which may grow unruly
-        readline.set_history_length(10000)
-    except FileNotFoundError:
-        open(histfile, "wb").close()
-    atexit.register(readline.write_history_file, histfile)
-except ImportError:
-    warn("could not import readline, continuing without shell history")
-
 from enum import Enum
 
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
@@ -47,6 +32,21 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .exit            exit the interpreter (.quit also works)
 """
 
+def setup_readline():
+    try:
+        import readline
+        import atexit
+
+        histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
+        try:
+            readline.read_history_file(histfile)
+            # default history len is -1 (infinite), which may grow unruly
+            readline.set_history_length(10000)
+        except FileNotFoundError:
+            open(histfile, "wb").close()
+        atexit.register(readline.write_history_file, histfile)
+    except ImportError:
+        warn("could not import readline, continuing without shell history")
 
 class DotCommandResult(Enum):
     NO_OP = (0,)
@@ -324,6 +324,7 @@ class Repl:
             return (prog, ContinuationResult.SUCCESS)
 
     def repl(self) -> int:
+        setup_readline()
         print(BANNER, end=str())
 
         inp = str()

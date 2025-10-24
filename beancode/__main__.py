@@ -30,6 +30,9 @@ def real_main():
         "-v", "--version", action="version", version=f"beancode version {__version__}"
     )
     parser.add_argument(
+        "--trace-config", help="path to the tracer's configuration options."
+    )
+    parser.add_argument(
         "-i",
         "--stdin",
         action="store_true",
