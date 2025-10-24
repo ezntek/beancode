@@ -8,11 +8,13 @@ table {
 }
 tr, td, th {
     border: 1px solid;
-    padding-left: 0.8em;
-    padding-right: 0.8em;
+    padding-left: 0.7em;
+    padding-right: 0.7em;
     text-align: center;
 }
-
+caption {
+    color: rgb(150, 150, 150);
+}
 .fls {
     color: rgb(230, 41, 55); 
 }
@@ -137,21 +139,13 @@ class Tracer:
     def _should_print_line_numbers(self) -> bool:
         if self.config.trace_every_line:
             return True
+            
+        if len(self.line_numbers) == 0:
+            return False
 
-        first = tuple(self.line_numbers.keys())[0]
+        first = tuple(self.line_numbers.values())[0]
         print_lines = False
         for idx in self.line_numbers:
-            if idx not in self.inputs and idx not in self.outputs:
-                line_empty = True
-                for v in self.vars.keys():
-                    var = self.vars[v][idx]
-                    if var is None:
-                        break
-                    if not var.is_uninitialized():
-                        line_empty = False
-                        break
-                if line_empty:
-                    continue
             if self.line_numbers[idx] != first:
                 print_lines = True
                 break
@@ -173,7 +167,7 @@ class Tracer:
     def _highlight_var(self, var: BCValue) -> str:
         if var.is_uninitialized():
             if self.config.syntax_highlighting:
-                return f"<td><pre class=dim>(null)</pre></td>"
+                return f"<td><pre class=dim>null</pre></td>"
             else:
                 return "<td><pre>(null)</pre></td>"
 
@@ -371,7 +365,10 @@ class Tracer:
 
         if not should_print_line_nums:
             res.write("<caption>")
-            res.write(f"All values are captured at line {self.line_numbers}")
+            if len(self.line_numbers) == 0:
+                res.write("No values were captured.")
+            else:
+                res.write(f"All values are captured at line {self.line_numbers[0]}")
             res.write("</caption>\n")
 
         res.write(self._gen_html_table_header(should_print_line_nums))

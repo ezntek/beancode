@@ -2071,28 +2071,20 @@ class Interpreter:
                     self.variables[key].val = expr
         self.trace(d.pos.row)
 
-    def visit_trace_stmt(self, s: TraceStatement):
-        vars = s.vars
+    def visit_trace_stmt(self, stmt: TraceStatement):
+        vars = stmt.vars
         tracer = Tracer(vars)
 
-        # XXX: this is super scuffed!
-        # both FunctionCall and CallStmt have this field.
-        fn_name = s.stmt.ident
-        fn = self.functions.get(fn_name)
-        if fn is None:
-            self.error(f'"{fn_name}" is not a valid function or procedure!')
+        intp = self.new(stmt.block, loop=False, tracer=tracer)
+        intp.variables = dict(self.variables)
+        intp.functions = dict(self.functions)
+        intp.visit_block(None)
 
-        if isinstance(s.stmt, FunctionCall):
-            self.visit_fncall(s.stmt, tracer=tracer)
-        elif isinstance(s.stmt, CallStatement):
-            self.visit_call(s.stmt, tracer=tracer)
-
-        if os.path.exists(s.file_name):
-            warn(
-                f'file name or path "{s.file_name}" provided to tracer already exists! overwriting...'
-            )
-
-        with open(s.file_name, "w") as f:
+        file_name = "tracer_output.html" if not stmt.file_name else stmt.file_name
+        if os.path.exists(file_name):
+            warn(f"\"{file_name}\" already exists on disk! overwriting...")
+        
+        with open(file_name, "w") as f:
             f.write(tracer.gen_html())
 
     def visit_stmt(self, stmt: Statement):

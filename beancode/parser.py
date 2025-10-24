@@ -1224,42 +1224,31 @@ class Parser:
             elif self.check("comma"):
                 self.consume()
 
-        self.consume_and_expect(
-            "right_paren", "after variable list in TRACE statement!"
-        )
+        self.consume_and_expect("right_paren", "after variable list in TRACE statement")
 
-        stmt: CallStatement | FunctionCall
-        call = self.call_stmt()
-        if call:
-            stmt = call.call  # type: ignore
-        else:
-            fncall = self.function_call()
-            if not fncall:
+        file_name: str | None = None
+        if self.check_and_consume("to"):
+            lit: Literal | None = self.literal()  # type: ignore
+            if not lit:
                 raise BCError(
-                    "invalid function or procedure call in trace statement!", begin.pos
+                    "expected valid literal after TO keyword in TRACE statement!",
+                    self.pos(),
                 )
-            stmt = fncall  # type: ignore
 
-        self.consume_and_expect(
-            "to", "after procedure or function call in TRACE statement"
-        )
+            val = lit.to_bcvalue()
+            if val.kind != "string":
+                raise BCError(
+                    "expected string literal after TO keyword in TRACE statement!\n"
+                    + "pass the file name of the output trace table in a string.",
+                    self.pos(),
+                )
+            file_name = val.get_string()
 
-        lit: Literal | None = self.literal()  # type: ignore
-        if not lit:
-            raise BCError(
-                "expected valid literal after TO keyword in TRACE statement!",
-                self.pos(),
-            )
+        self.consume_newlines()
+        block = self.block("endtrace")
+        self.consume() # byebye ENDTRACE
 
-        file_name = lit.to_bcvalue()
-        if file_name.kind != "string":
-            raise BCError(
-                "expected string literal after TO keyword in TRACE statement!\n"
-                + "pass the file name of the output trace table in a string.",
-                self.pos(),
-            )
-
-        res = TraceStatement(begin.pos, vars, stmt, file_name.get_string())
+        res = TraceStatement(begin.pos, vars, file_name, block)
         return Statement("trace", trace=res)
 
     def clean_newlines(self):

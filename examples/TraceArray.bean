@@ -15,4 +15,6 @@ PROCEDURE Code
     NEXT Counter
 ENDPROCEDURE
 
-TRACE(Array, Counter) CALL Code TO "arraytrace.html"
+TRACE(Array, Counter) TO "arraytrace.html"
+    CALL Code
+ENDTRACE

@@ -17,7 +17,7 @@ BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean",
 
 @dataclass
 class ArrayType:
-    """parse-time specification of the array type"""
+    """parse-time representation of the array type"""
 
     inner: BCPrimitiveType
     is_matrix: bool  # true: 2d array
@@ -521,8 +521,8 @@ class IncludeStatement:
 class TraceStatement:
     pos: Pos
     vars: list[str]
-    stmt: FunctionCall | CallStatement
-    file_name: str
+    file_name: str | None
+    block: list["Statement"]
 
 
 @dataclass

@@ -50,6 +50,7 @@ TokenKind = typing.Literal[
     "endscope",
     "print",
     "trace",
+    "endtrace",
     # symbols
     "assign",
     "equal",
@@ -224,7 +225,8 @@ class Lexer:
             "writefile",
             "closefile",
             # extra feature
-            "trace",
+            "trace", 
+            "endtrace",
             "scope",
             "endscope",
             "include",

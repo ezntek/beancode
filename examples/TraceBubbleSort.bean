@@ -28,4 +28,6 @@ ENDPROCEDURE
 DECLARE Nums: ARRAY[1:10] of INTEGER
 Nums <- {10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
-TRACE(Array, Temp, i, j) CALL BubbleSort(Nums, 10) TO "bsort.html"
+TRACE(Array, Temp, i, j) TO "bsort.html"
+    CALL BubbleSort(Nums, 10)
+ENDTRACE
