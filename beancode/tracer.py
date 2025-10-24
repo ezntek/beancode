@@ -88,6 +88,7 @@ class Tracer:
                 continue
             if not vars[k].is_uninitialized():
                 should_collect = True
+                break
 
         if not should_collect:
             return
@@ -157,6 +158,18 @@ class Tracer:
 
         return print_lines
 
+    def _has_array(self) -> bool:
+        has_array = False
+        for typ in self.var_types.values():
+            if (
+                not self.config.condense_arrays
+                and isinstance(typ, BCArrayType)
+                and not typ.is_matrix
+            ):
+                has_array = True
+                break
+        return has_array
+
     def _highlight_var(self, var: BCValue) -> str:
         if var.is_uninitialized():
             if self.config.syntax_highlighting:
@@ -181,17 +194,8 @@ class Tracer:
 
         res.write("<thead>\n")
         res.write("<tr>\n")
-
-        has_array = False
-        for typ in self.var_types.values():
-            if (
-                not self.config.condense_arrays
-                and isinstance(typ, BCArrayType)
-                and not typ.is_matrix
-            ):
-                has_array = True
-                break
         
+        has_array = self._has_array()
         rs = " rowspan=2" if has_array else ""
 
         if should_print_line_nums:
@@ -206,6 +210,12 @@ class Tracer:
             else:
                 res.write(f"<th{rs}>{name}</th>")
 
+        if len(self.inputs) > 0:
+            res.write(f"<th{rs}>Inputs</th>")
+
+        if len(self.outputs) > 0:
+            res.write(f"<th{rs}>Outputs</th>")
+
         # second pass
         if has_array:
             res.write("</tr><tr>")
@@ -214,12 +224,6 @@ class Tracer:
                     bounds: tuple[int, int] = typ.flat_bounds  # type: ignore
                     for num in range(bounds[0], bounds[1] + 1):  # never None
                         res.write(f"<th>[{num}]</th>")
-
-        if len(self.inputs) > 0:
-            res.write("<th>Inputs</th>")
-
-        if len(self.outputs) > 0:
-            res.write("<th>Outputs</th>")
 
         res.write("</tr>\n")
         res.write("</thead>\n")
@@ -237,6 +241,7 @@ class Tracer:
         rows: list[tuple[int, tuple[BCValue | None, ...]]],
         row_num: int,
         row: tuple[BCValue | None, ...],
+        printed_first: bool = True
     ) -> str:
         res = StringIO()
 
@@ -260,10 +265,8 @@ class Tracer:
                                 prev_arr = prev_var.get_array().get_flat()
 
                         for idx, itm in enumerate(arr.get_flat()):
-                            repeated = prev_arr and prev_arr[idx] == itm
-                            if (
-                                self.config.hide_repeating_entries and repeated
-                            ) or not prev_arr:
+                            repeated = self.config.hide_repeating_entries and (prev_arr and prev_arr[idx] == itm)
+                            if repeated or not prev_arr and printed_first:
                                 res.write("<td></td>")
                             else:
                                 res.write(self._highlight_var(itm))
@@ -272,7 +275,8 @@ class Tracer:
                 if row_num != 0:
                     prev = rows[row_num - 1][1][col]
 
-                if (self.config.hide_repeating_entries and var == prev) or not var:
+                repeated = self.config.hide_repeating_entries and var == prev
+                if not var or repeated and printed_first:
                     res.write("<td></td>")
                 else:
                     res.write(self._highlight_var(var))
@@ -305,7 +309,7 @@ class Tracer:
         rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(
             enumerate(zip(*self.vars.values()))
         )
-        skipped = 0
+        printed_first = False
         for row_num, row in rows:
             # skip empty rows
             if not self.config.trace_every_line and (
@@ -330,9 +334,6 @@ class Tracer:
                                 if prev_arr[idx] == itm:
                                     continue
 
-                            if itm.is_uninitialized():
-                                continue
-
                             empty = False
                             break
                     else:
@@ -345,14 +346,15 @@ class Tracer:
                         break
 
                 if empty:
-                    skipped += 1
                     continue
 
             res.write("<tr>")
 
             res.write(self._gen_html_table_line_num(row_num))
-            res.write(self._gen_html_table_row(rows, row_num, row))
+            res.write(self._gen_html_table_row(rows, row_num, row, printed_first))
             res.write(self._gen_html_table_row_io(row_num))
+            
+            printed_first = True
 
             res.write("</tr>\n")
 

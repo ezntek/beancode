@@ -107,7 +107,7 @@ class BCArray:
     @classmethod
     def new_matrix(cls, typ: BCArrayType, matrix: list[list["BCValue"]]) -> "BCArray":
         return cls(typ=typ, matrix=matrix)
-
+    
     def get_flat(self) -> list["BCValue"]:
         if self.flat is None:
             raise BCError("tried to access 1D array from a 2D array")
@@ -153,13 +153,16 @@ class BCValue:
     array: BCArray | None = None
 
     def is_uninitialized(self) -> bool:
+        # arrays are always initialized to NULLs
+        if self.array:
+            return False
+        
         return (
             self.integer is None
             and self.real is None
             and self.char is None
             and self.string is None
             and self.boolean is None
-            and self.array is None
         )
 
     def is_null(self) -> bool:
