@@ -1,6 +1,6 @@
 [project]
 name = "beancode"
-version = "0.4.0-beta2"
+version = "0.4.0"
 description = "A portable and cursed IGCSE Pseudocode interpreter with no dependencies."
 authors = [
     {name = "ezntek", email = "eason@ezntek.com"}

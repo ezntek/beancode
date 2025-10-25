@@ -2079,7 +2079,7 @@ class Interpreter:
             if end_v < 0:
                 self.error("ending value for array bound declaration cannot be <0!", atype.flat_bounds[1].pos)  # type: ignore
 
-            if begin_v >= end_v:
+            if begin_v > end_v:
                 self.error("invalid range for array bound declaration", atype.flat_bounds[0].pos)  # type: ignore
 
             size = end_v - begin_v
