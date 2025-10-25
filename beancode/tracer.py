@@ -54,6 +54,7 @@ class Tracer:
     line_numbers: dict[int, int]
     outputs: dict[int, list[str]]
     inputs: dict[int, list[str]]
+    last_idx: int
 
     def __init__(
         self, wanted_vars: list[str], config: TracerConfig | None = None
@@ -64,6 +65,7 @@ class Tracer:
         self.line_numbers = dict()
         self.last_updated_vals = dict()
         self.var_types = dict()
+        self.last_idx = -1
 
         # weird python object copy/move semantics
         if config:
@@ -92,10 +94,16 @@ class Tracer:
                 should_collect = True
                 break
 
+        if outputs and len(outputs) > 0:
+            should_collect = True
+
+        if inputs and len(inputs) > 0:
+            should_collect = True
+
         if not should_collect:
             return
 
-        last_idx = int()
+        last_idx = 0
         for k, v in self.vars.items():
             if k not in vars:
                 # NOTE: No value.
@@ -120,21 +128,26 @@ class Tracer:
             last_idx = len(v)
         last_idx -= 1
 
+        if len(self.vars) == 0:
+            self.last_idx += 1
+        else:
+            self.last_idx = last_idx
+
         if outputs is not None and len(outputs) > 0:
-            self.outputs[last_idx] = copy.copy(outputs)
+            self.outputs[self.last_idx] = copy.copy(outputs)
 
         if inputs is not None and len(inputs) > 0:
-            self.inputs[last_idx] = copy.copy(inputs)
+            self.inputs[self.last_idx] = copy.copy(inputs)
 
-        self.line_numbers[last_idx] = line_num
+        self.line_numbers[self.last_idx] = line_num
 
     def print_raw(self) -> None:
         for key, items in self.vars.items():
             print(f"{key}: {items}")
 
         print(f"Lines: {self.line_numbers}")
-        print(f"Inputs: {self.outputs}")
-        print(f"Outputs: {self.inputs}")
+        print(f"Outputs: {self.outputs}")
+        print(f"Inputs: {self.inputs}")
 
     def _should_print_line_numbers(self) -> bool:
         if self.config.trace_every_line:
@@ -379,6 +392,7 @@ class Tracer:
         return res.getvalue()
 
     def gen_html(self, filename: str | None = None) -> str:
+        self.print_raw()
         res = StringIO()
         res.write("<!DOCTYPE html>\n")
         res.write("<!-- Generated HTML by beancode's TRACE statement -->\n")
