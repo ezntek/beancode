@@ -1,6 +1,8 @@
 FUNCTION Factorial(Num: INTEGER) RETURNS INTEGER
+    DECLARE BaseCase: BOOLEAN
+    DECLARE Result: INTEGER
+
     BaseCase <- (Num = 1)
-    Result <- 0
     IF BaseCase THEN
         Result <- 1
         RETURN Result

@@ -406,7 +406,6 @@ class Tracer:
         return res.getvalue()
 
     def gen_html(self, filename: str | None = None) -> str:
-        self.print_raw()
         res = StringIO()
         res.write("<!DOCTYPE html>\n")
         res.write("<!-- Generated HTML by beancode's trace table generator -->\n")

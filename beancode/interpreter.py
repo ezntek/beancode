@@ -2062,7 +2062,10 @@ class Interpreter:
         for ident in d.ident:
             key: str = ident.ident
             if key in self.variables:
-                self.error(f"variable {key} declared!", d.pos)
+                actual_type = self.visit_type(d.typ)
+                existing_var = self.variables[key]
+                if existing_var.val.kind != actual_type:
+                    self.error(f"variable {key} declared with a different type!", d.pos)
 
             is_libroutine = (
                 key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
