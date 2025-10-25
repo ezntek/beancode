@@ -1213,7 +1213,7 @@ class Parser:
 
         vars = list()
         while not self.check("right_paren"):
-            ident = self.expect_ident("in variable list in TRACE statement!")
+            ident = self.expect_ident("in variable list in TRACE statement")
 
             vars.append(ident.ident)  # type: ignore
 
@@ -1238,7 +1238,7 @@ class Parser:
             val = lit.to_bcvalue()
             if val.kind != "string":
                 raise BCError(
-                    "expected string literal after TO keyword in TRACE statement!\n"
+                    "expected string literal after TO keyword in TRACE statement\n"
                     + "pass the file name of the output trace table in a string.",
                     self.pos(),
                 )

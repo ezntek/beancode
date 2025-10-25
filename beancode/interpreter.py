@@ -3,6 +3,7 @@ import sys
 import importlib
 import copy
 import math
+import subprocess
 
 from typing import Any, NoReturn
 
@@ -960,6 +961,15 @@ class Interpreter:
                         )
 
                     return BCValue.new_string(s)
+                case "execute":
+                    [cmd, *_] = evargs
+                    out = str()
+                    try:
+                        out = subprocess.check_output(cmd.get_string(), shell=True)
+                    except Exception as e:
+                        pass
+
+                    return BCValue.new_string(str(out))
 
         except BCError as e:
             e.pos = stmt.pos
@@ -1453,7 +1463,10 @@ class Interpreter:
                 res += str(evaled)
 
         if self.tracer_outputs is not None:
-            self.tracer_outputs.append(res)  # type: ignore
+            if not self.loop and self.tracer:
+                self.tracer.collect_new({}, stmt.pos.row, outputs=[res])
+            else:
+                self.tracer_outputs.append(res)  # type: ignore
         else:
             print(res)
 
@@ -2081,9 +2094,15 @@ class Interpreter:
         intp.visit_block(None)
 
         file_name = "tracer_output.html" if not stmt.file_name else stmt.file_name
+        if os.path.splitext(file_name)[1] != ".html":
+            warn(f"provided file path does not have the .html file extension!")
+            file_name += ".html"
+
         if os.path.exists(file_name):
             warn(f"\"{file_name}\" already exists on disk! overwriting...")
-        
+        else:
+            info(f"writing output to \"{file_name}\"...")
+
         with open(file_name, "w") as f:
             f.write(tracer.gen_html())
 

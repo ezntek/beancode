@@ -125,8 +125,7 @@ class Tracer:
                     v.append(new_obj)
                     self.last_updated_vals[k] = new_obj
                     self.var_types[k] = new_obj.kind
-            last_idx = len(v)
-        last_idx -= 1
+            last_idx = len(v) - 1
 
         if len(self.vars) == 0:
             self.last_idx += 1
@@ -190,11 +189,11 @@ class Tracer:
         match var.kind:
             case "boolean":
                 klass = "tru" if var.boolean == True else "fls"
-                return f"<td><pre class={klass}>{str(var)}</pre></td>\n"
+                return f"<td><pre class={klass}>{str(var)}</pre></td>"
             case "integer" | "real":
-                return f"<td><pre class=int>{str(var)}</pre></td>\n"
+                return f"<td><pre class=int>{str(var)}</pre></td>"
             case _:
-                return f"<td><pre>{str(var)}</pre></td>\n"
+                return f"<td><pre>{str(var)}</pre></td>"
 
     def _gen_html_table_header(self, should_print_line_nums: bool) -> str:
         res = StringIO()
@@ -395,7 +394,7 @@ class Tracer:
         self.print_raw()
         res = StringIO()
         res.write("<!DOCTYPE html>\n")
-        res.write("<!-- Generated HTML by beancode's TRACE statement -->\n")
+        res.write("<!-- Generated HTML by beancode's trace table generator -->\n")
         res.write("<html>\n")
         res.write(f"<head>\n")
         res.write("<meta charset=UTF-8>\n")

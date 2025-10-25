@@ -25,6 +25,7 @@ LIBROUTINES: Libroutines = {
     "help": ["string"],
     "getchar": [],
     "random": [],
+    "execute": ["string"],
 }
 
 LIBROUTINES_NORETURN: Libroutines = {

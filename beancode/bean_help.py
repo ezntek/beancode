@@ -261,6 +261,14 @@ def _flush() -> str:
 
     return res.getvalue()
 
+def _execute() -> str:
+    res = StringIO()
+
+    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + "\n")
+    res.write(EXTENSION_TXT)
+    res.write("Arguments: (STRING), Returns: STRING")
+
+    return res.getvalue()
 
 _bcext = "\033[2m[beancode extension]\033[0m"
 
@@ -285,6 +293,7 @@ LIBROUTINE_ENTRIES = {
     "exit": (f"{_bcext} Exit from the running program with an exit code.", _exit),
     "sleep": (f"{_bcext} Sleep for n seconds.", _sleep),
     "flush": (f"{_bcext} Flush the standard output.", _flush),
+    "execute": (f"{_bcext} Execute a system command.", _execute),
 }
 
 HELP_ENTRIES: dict[str, HelpEntry] = {
