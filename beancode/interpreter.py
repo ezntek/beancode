@@ -955,8 +955,8 @@ class Interpreter:
                     s = bean_help(query)
                     if s is None:
                         self.error(
-                            f'No help information for query "{query}" was found.\n' +
-                            'Type help("help") to get started.',
+                            f'No help information for query "{query}" was found.\n'
+                            + 'Type help("help") to get started.',
                             stmt.pos,
                         )
 
@@ -1467,8 +1467,13 @@ class Interpreter:
                 self.tracer.collect_new({}, stmt.pos.row, outputs=[res])
             else:
                 self.tracer_outputs.append(res)  # type: ignore
-        else:
+
+        if self.tracer and self.tracer.config.show_outputs:
+            print("(tracer output): " + res)
+            sys.stdout.flush()
+        elif not self.tracer:
             print(res)
+            sys.stdout.flush()
 
     def _guess_input_type(self, inp: str) -> BCValue:
         if is_real(inp):
@@ -1485,7 +1490,11 @@ class Interpreter:
             return BCValue(kind="string")
 
     def visit_input_stmt(self, s: InputStatement):
-        inp = input()
+        prompt = str()
+        if (self.tracer and self.tracer.config.prompt_on_inputs):
+            prompt = "(tracer input): "
+
+        inp = input(prompt)
         target: BCValue
 
         if self.tracer_inputs is not None:
@@ -1781,12 +1790,18 @@ class Interpreter:
             var_prev_value = intp.variables[stmt.counter.ident]
 
         counter = Variable(copy.copy(begin), const=False)
-        intp.variables[stmt.counter.ident] = counter 
+        intp.variables[stmt.counter.ident] = counter
 
         if step > 0:
-            cond = lambda *_: counter.val.get_integer() <= self.visit_expr(stmt.end).get_integer()
+            cond = (
+                lambda *_: counter.val.get_integer()
+                <= self.visit_expr(stmt.end).get_integer()
+            )
         else:
-            cond = lambda *_: counter.val.get_integer() >= self.visit_expr(stmt.end).get_integer()
+            cond = (
+                lambda *_: counter.val.get_integer()
+                >= self.visit_expr(stmt.end).get_integer()
+            )
 
         while cond():
             intp.visit_block(None)
@@ -1811,7 +1826,7 @@ class Interpreter:
                 self.retval = intp.retval
                 return
 
-            counter.val.integer += step # type: ignore 
+            counter.val.integer += step  # type: ignore
 
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)
@@ -2102,9 +2117,9 @@ class Interpreter:
             file_name += ".html"
 
         if os.path.exists(file_name):
-            warn(f"\"{file_name}\" already exists on disk! overwriting...")
+            warn(f'"{file_name}" already exists on disk! overwriting...')
         else:
-            info(f"writing output to \"{file_name}\"...")
+            info(f'writing output to "{file_name}"...')
 
         with open(file_name, "w") as f:
             f.write(tracer.gen_html())
