@@ -296,14 +296,14 @@ class Tracer:
             s = str()
             if row_num in self.inputs:
                 l = self.inputs[row_num]
-                s = "\n".join(l)
+                s = "<br></br>".join(l)
             res.write(f"<td><pre>{s}</pre></td>\n")
 
         if len(self.outputs) > 0:
             s = str()
             if row_num in self.outputs:
                 l = self.outputs[row_num]
-                s = "\n".join(l)
+                s = "<br></br>".join(l)
             res.write(f"<td><pre>{s}</pre></td>\n")
 
         return res.getvalue()
@@ -312,6 +312,23 @@ class Tracer:
         res = StringIO()
 
         res.write("<tbody>\n")
+       
+        if len(self.vars) == 0:
+            keys = set()
+            for k in self.outputs:
+                keys.add(k)
+            for k in self.inputs:
+                keys.add(k)
+
+            for k in keys:
+                res.write("<tr>")
+                res.write(self._gen_html_table_line_num(k))
+                res.write(self._gen_html_table_row_io(k))
+                res.write("</tr>\n")
+
+            res.write("</tbody>\n")
+            return res.getvalue()
+
         rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(
             enumerate(zip(*self.vars.values()))
         )
@@ -365,7 +382,6 @@ class Tracer:
             res.write("</tr>\n")
 
         res.write("</tbody>\n")
-
         return res.getvalue()
 
     def _gen_html_table(self) -> str:
@@ -387,7 +403,6 @@ class Tracer:
         res.write(self._gen_html_table_body())
 
         res.write("</table>\n")
-
         return res.getvalue()
 
     def gen_html(self, filename: str | None = None) -> str:
