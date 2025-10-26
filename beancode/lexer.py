@@ -2,7 +2,7 @@ import typing
 
 from dataclasses import dataclass
 
-from beancode.bean_ast import BCPrimitiveType, Identifier
+from beancode.bean_ast import BCPrimitiveType
 from .error import *
 from . import Pos, __version__, is_case_consistent, panic
 
@@ -225,7 +225,7 @@ class Lexer:
             "writefile",
             "closefile",
             # extra feature
-            "trace", 
+            "trace",
             "endtrace",
             "scope",
             "endscope",
@@ -504,6 +504,11 @@ class Lexer:
     def next_ident(self, word: str) -> Token:
         p = self.pos(len(word))
         if self._is_ident(word):
+            if is_case_consistent(word) and word == "endfor":
+                raise BCError(
+                    "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
+                    self.pos(len(word)),
+                )
             return Token("ident", p, data=word)
         else:
             raise BCError("invalid identifier", p)

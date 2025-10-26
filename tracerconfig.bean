@@ -29,6 +29,7 @@ HideRepeatingEntries <- TRUE
 //
 CondenseArrays <- FALSE
 
+
 // Enable syntax highlighting for values of different types, like in a proper
 // code editor/IDE. This will show in the generated HTML. If you want colored
 // output, set this variable to TRUE.
@@ -52,3 +53,8 @@ ShowOutputs <- FALSE
 // Default: FALSE
 //
 PromptOnInputs <- TRUE
+
+// Print debugging information and the raw contents of the tracer.
+// Do not turn this on, this is intended for development purposes only.
+//
+Debug <- FALSE

@@ -418,17 +418,16 @@ class Repl:
             if len(program.stmts) < 1:
                 continue
 
-            if program.stmts[0].kind == "procedure":
-                proc: ast.ProcedureStatement = program.stmts[0].procedure  # type: ignore
+            if isinstance(program.stmts[0], ast.ProcedureStatement):
+                proc = program.stmts[0]
                 self.proc_src[proc.name] = self.buf.getvalue()
-            elif program.stmts[0].kind == "function":
-                func: ast.FunctionStatement = program.stmts[0].function  # type: ignore
-                self.func_src[func.name] = self.buf.getvalue()
+            elif isinstance(program.stmts[0], ast.FunctionStatement):
+                func = program.stmts[0]
+                self.proc_src[func.name] = self.buf.getvalue()
 
-            if program.stmts[-1].kind == "expr":
-                exp: ast.Expr = program.stmts[-1].expr  # type: ignore
-                output_stmt = ast.OutputStatement(pos=Pos(1, 1, 0), items=[exp])
-                program.stmts[-1] = ast.Statement(kind="output", output=output_stmt)
+            if isinstance(program.stmts[-1], ast.ExprStatement):
+                exp = program.stmts[-1].inner
+                program.stmts[-1] = ast.OutputStatement(pos=Pos(1, 1, 0), items=[exp])
 
             if self.debug:
                 print("\033[2m=== AST ===", file=sys.stderr)

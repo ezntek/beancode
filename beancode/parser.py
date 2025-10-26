@@ -639,8 +639,7 @@ class Parser:
 
             exprs.append(new)
 
-        res = OutputStatement(begin.pos, items=exprs)
-        return Statement("output", output=res)
+        return OutputStatement(begin.pos, items=exprs)
 
     def input_stmt(self) -> Statement | None:
         begin = self.check_and_consume("input")
@@ -654,8 +653,7 @@ class Parser:
         else:
             ident = array_index  # type: ignore
 
-        res = InputStatement(begin.pos, ident)
-        return Statement("input", input=res)
+        return InputStatement(begin.pos, ident)
 
     def return_stmt(self) -> Statement | None:
         begin = self.check_and_consume("return")
@@ -668,7 +666,7 @@ class Parser:
                 "invalid or no expression used as RETURN expression", begin.pos
             )
 
-        return Statement("return", return_s=ReturnStatement(begin.pos, expr))
+        return ReturnStatement(begin.pos, expr)
 
     def call_stmt(self) -> Statement | None:
         begin = self.check_and_consume("call")
@@ -703,8 +701,7 @@ class Parser:
 
         self.consume_newlines()
 
-        res = CallStatement(begin.pos, ident=ident.ident, args=args)
-        return Statement("call", call=res)
+        return CallStatement(begin.pos, ident=ident.ident, args=args)
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -773,8 +770,7 @@ class Parser:
 
         self.check_newline("variable declaration (DECLARE)")
 
-        res = DeclareStatement(begin.pos, ident=idents, typ=typ, expr=expr, export=export)  # type: ignore
-        return Statement("declare", declare=res)
+        return DeclareStatement(begin.pos, ident=idents, typ=typ, expr=expr, export=export)  # type: ignore
 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -809,10 +805,9 @@ class Parser:
 
         self.check_newline("constant declaration (CONSTANT)")
 
-        res = ConstantStatement(
+        return ConstantStatement(
             begin.pos, Identifier(ident.pos, str(ident.data)), expr, export=export
         )
-        return Statement("constant", constant=res)
 
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
@@ -847,8 +842,7 @@ class Parser:
 
         self.check_newline("assignment")
 
-        res = AssignStatement(ident.pos, ident, expr)  # type: ignore
-        return Statement("assign", assign=res)
+        return AssignStatement(ident.pos, ident, expr)  # type: ignore
 
     # multiline statements go here
     def block(self, delim: TokenKind) -> list[Statement]:
@@ -885,10 +879,9 @@ class Parser:
 
         self.consume()  # byebye endif
 
-        res = IfStatement(
+        return IfStatement(
             begin.pos, cond=cond, if_block=if_stmts, else_block=else_stmts
         )
-        return Statement("if", if_s=res)
 
     def caseof_stmt(self) -> Statement | None:
         case = self.check_and_consume("case")
@@ -933,8 +926,7 @@ class Parser:
 
         self.consume()
 
-        res = CaseofStatement(case.pos, main_expr, branches, otherwise)
-        return Statement(kind="caseof", caseof=res)
+        return CaseofStatement(case.pos, main_expr, branches, otherwise)
 
     def while_stmt(self) -> Statement | None:
         begin = self.check_and_consume("while")
@@ -954,8 +946,7 @@ class Parser:
         stmts = self.block("endwhile")
         end = self.consume()
 
-        res = WhileStatement(begin.pos, end.pos, expr, stmts)
-        return Statement("while", while_s=res)
+        return WhileStatement(begin.pos, end.pos, expr, stmts)
 
     def for_stmt(self):
         initial = self.check_and_consume("for")
@@ -997,7 +988,7 @@ class Parser:
                 self.prev().pos,
             )
 
-        res = ForStatement(
+        return ForStatement(
             initial.pos,
             next.pos,
             counter=counter,
@@ -1006,7 +997,6 @@ class Parser:
             end=end,
             step=step,
         )
-        return Statement("for", for_s=res)
 
     def repeatuntil_stmt(self) -> Statement | None:
         begin = self.check_and_consume("repeat")
@@ -1025,8 +1015,7 @@ class Parser:
                 self.pos(),
             )
 
-        res = RepeatUntilStatement(begin.pos, until.pos, expr, stmts)
-        return Statement("repeatuntil", repeatuntil=res)
+        return RepeatUntilStatement(begin.pos, until.pos, expr, stmts)
 
     def function_arg(self) -> FunctionArgument | None:
         # ident : type
@@ -1098,10 +1087,9 @@ class Parser:
 
         self.consume()
 
-        res = ProcedureStatement(
+        return ProcedureStatement(
             begin.pos, name=ident.ident, args=args, block=stmts, export=export
         )
-        return Statement("procedure", procedure=res)
 
     def function_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -1163,7 +1151,7 @@ class Parser:
         stmts = self.block("endfunction")
         self.consume()
 
-        res = FunctionStatement(
+        return FunctionStatement(
             begin.pos,
             name=ident.ident,
             args=args,
@@ -1171,7 +1159,6 @@ class Parser:
             block=stmts,
             export=export,
         )
-        return Statement("function", function=res)
 
     def scope_stmt(self) -> Statement | None:
         begin = self.check_and_consume("scope")
@@ -1182,8 +1169,7 @@ class Parser:
         stmts = self.block("endscope")
         self.consume()
 
-        res = ScopeStatement(begin.pos, stmts)
-        return Statement("scope", scope=res)
+        return ScopeStatement(begin.pos, stmts)
 
     def include_stmt(self) -> Statement | None:
         if not self.check_many("include", "include_ffi"):
@@ -1201,8 +1187,7 @@ class Parser:
                 name.pos,
             )
 
-        res = IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
-        return Statement("include", include=res)
+        return IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
 
     def trace_stmt(self) -> Statement | None:
         begin = self.check_and_consume("trace")
@@ -1248,8 +1233,7 @@ class Parser:
         block = self.block("endtrace")
         self.consume() # byebye ENDTRACE
 
-        res = TraceStatement(begin.pos, vars, file_name, block)
-        return Statement("trace", trace=res)
+        return TraceStatement(begin.pos, vars, file_name, block)
 
     def clean_newlines(self):
         while self.cur < len(self.tokens):
@@ -1331,7 +1315,7 @@ class Parser:
         cur = self.peek()
         expr = self.expression()
         if expr:
-            return Statement("expr", expr=expr)
+            return ExprStatement.from_expr(expr)
         else:
             raise BCError("invalid statement or expression", cur.pos)
 

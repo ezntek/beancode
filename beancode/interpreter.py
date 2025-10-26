@@ -2125,43 +2125,43 @@ class Interpreter:
             f.write(tracer.gen_html())
 
     def visit_stmt(self, stmt: Statement):
-        match stmt.kind:
-            case "if":
-                self.visit_if_stmt(stmt.if_s)  # type: ignore
-            case "caseof":
-                self.visit_caseof_stmt(stmt.caseof)  # type: ignore
-            case "for":
-                self.visit_for_stmt(stmt.for_s)  # type: ignore
-            case "while":
-                self.visit_while_stmt(stmt.while_s)  # type: ignore
-            case "repeatuntil":
-                self.visit_repeatuntil_stmt(stmt.repeatuntil)  # type: ignore
-            case "output":
-                self.visit_output_stmt(stmt.output)  # type: ignore
-            case "input":
-                self.visit_input_stmt(stmt.input)  # type: ignore
-            case "return":
-                self.visit_return_stmt(stmt.return_s)  # type: ignore
-            case "procedure":
-                self.visit_procedure(stmt.procedure)  # type: ignore
-            case "function":
-                self.visit_function(stmt.function)  # type: ignore
-            case "scope":
-                self.visit_scope_stmt(stmt.scope)  # type: ignore
-            case "include":
-                self.visit_include_stmt(stmt.include)  # type: ignore
-            case "call":
-                self.visit_call(stmt.call)  # type: ignore
-            case "assign":
-                self.visit_assign_stmt(stmt.assign)  # type: ignore
-            case "constant":
-                self.visit_constant_stmt(stmt.constant)  # type: ignore
-            case "declare":
-                self.visit_declare_stmt(stmt.declare)  # type: ignore
-            case "trace":
-                self.visit_trace_stmt(stmt.trace)  # type: ignore
-            case "expr":
-                self.visit_expr(stmt.expr)  # type: ignore
+        match stmt:
+            case IfStatement():
+                self.visit_if_stmt(stmt)
+            case CaseofStatement():
+                self.visit_caseof_stmt(stmt)
+            case ForStatement():
+                self.visit_for_stmt(stmt)
+            case WhileStatement():
+                self.visit_while_stmt(stmt)
+            case RepeatUntilStatement():
+                self.visit_repeatuntil_stmt(stmt)
+            case OutputStatement():
+                self.visit_output_stmt(stmt)
+            case InputStatement():
+                self.visit_input_stmt(stmt)
+            case ReturnStatement():
+                self.visit_return_stmt(stmt)
+            case ProcedureStatement():
+                self.visit_procedure(stmt)
+            case FunctionStatement():
+                self.visit_function(stmt)
+            case ScopeStatement():
+                self.visit_scope_stmt(stmt)
+            case IncludeStatement():
+                self.visit_include_stmt(stmt)
+            case CallStatement():
+                self.visit_call(stmt)
+            case AssignStatement():
+                self.visit_assign_stmt(stmt)
+            case ConstantStatement():
+                self.visit_constant_stmt(stmt)
+            case DeclareStatement():
+                self.visit_declare_stmt(stmt)
+            case TraceStatement():
+                self.visit_trace_stmt(stmt)
+            case ExprStatement():
+                self.visit_expr(stmt.inner)
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

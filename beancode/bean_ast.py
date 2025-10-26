@@ -351,31 +351,12 @@ class ArrayIndex(Expr):
     idx_inner: Expr | None = None
 
 
-StatementKind = typing.Literal[
-    "declare",
-    "output",
-    "input",
-    "constant",
-    "assign",
-    "if",
-    "caseof",
-    "while",
-    "for",
-    "repeatuntil",
-    "function",
-    "procedure",
-    "call",
-    "return",
-    "scope",
-    "include",
-    "trace",
-    "expr",
-]
-
+@dataclass
+class Statement:
+    pos: Pos
 
 @dataclass
-class CallStatement:
-    pos: Pos
+class CallStatement(Statement):
     ident: str
     args: list[Expr]
 
@@ -387,28 +368,24 @@ class FunctionCall(Expr):
 
 
 @dataclass
-class OutputStatement:
-    pos: Pos
+class OutputStatement(Statement):
     items: list[Expr]
 
 
 @dataclass
-class InputStatement:
-    pos: Pos
+class InputStatement(Statement):
     ident: Identifier | ArrayIndex
 
 
 @dataclass
-class ConstantStatement:
-    pos: Pos
+class ConstantStatement(Statement):
     ident: Identifier
     value: Expr
     export: bool = False
 
 
 @dataclass
-class DeclareStatement:
-    pos: Pos
+class DeclareStatement(Statement):
     ident: list[Identifier]
     typ: Type
     export: bool = False
@@ -416,15 +393,13 @@ class DeclareStatement:
 
 
 @dataclass
-class AssignStatement:
-    pos: Pos
+class AssignStatement(Statement):
     ident: Identifier | ArrayIndex
     value: Expr
 
 
 @dataclass
-class IfStatement:
-    pos: Pos
+class IfStatement(Statement):
     cond: Expr
     if_block: list["Statement"]
     else_block: list["Statement"]
@@ -438,24 +413,21 @@ class CaseofBranch:
 
 
 @dataclass
-class CaseofStatement:
-    pos: Pos
+class CaseofStatement(Statement):
     expr: Expr
     branches: list[CaseofBranch]
     otherwise: "Statement | None"
 
 
 @dataclass
-class WhileStatement:
-    pos: Pos
+class WhileStatement(Statement):
     end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
 
 
 @dataclass
-class ForStatement:
-    pos: Pos
+class ForStatement(Statement):
     end_pos: Pos  # for tracing
     counter: Identifier
     block: list["Statement"]
@@ -465,8 +437,7 @@ class ForStatement:
 
 
 @dataclass
-class RepeatUntilStatement:
-    pos: Pos
+class RepeatUntilStatement(Statement):
     end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
@@ -480,8 +451,7 @@ class FunctionArgument:
 
 
 @dataclass
-class ProcedureStatement:
-    pos: Pos
+class ProcedureStatement(Statement):
     name: str
     args: list[FunctionArgument]
     block: list["Statement"]
@@ -489,8 +459,7 @@ class ProcedureStatement:
 
 
 @dataclass
-class FunctionStatement:
-    pos: Pos
+class FunctionStatement(Statement):
     name: str
     args: list[FunctionArgument]
     returns: Type
@@ -499,93 +468,35 @@ class FunctionStatement:
 
 
 @dataclass
-class ReturnStatement:
-    pos: Pos
+class ReturnStatement(Statement):
     expr: Expr | None
 
+# extra statements
 
 @dataclass
-class ScopeStatement:
-    pos: Pos
+class ScopeStatement(Statement):
     block: list["Statement"]
 
 
 @dataclass
-class IncludeStatement:
-    pos: Pos
+class IncludeStatement(Statement):
     file: str
     ffi: bool
 
 
 @dataclass
-class TraceStatement:
-    pos: Pos
+class TraceStatement(Statement):
     vars: list[str]
     file_name: str | None
     block: list["Statement"]
 
-
 @dataclass
-class Statement:
-    kind: StatementKind
-    declare: DeclareStatement | None = None
-    output: OutputStatement | None = None
-    input: InputStatement | None = None
-    constant: ConstantStatement | None = None
-    assign: AssignStatement | None = None
-    if_s: IfStatement | None = None
-    caseof: CaseofStatement | None = None
-    while_s: WhileStatement | None = None
-    for_s: ForStatement | None = None
-    repeatuntil: RepeatUntilStatement | None = None
-    function: FunctionStatement | None = None
-    procedure: ProcedureStatement | None = None
-    call: CallStatement | None = None
-    return_s: ReturnStatement | None = None
-    scope: ScopeStatement | None = None
-    include: IncludeStatement | None = None
-    trace: TraceStatement | None = None
-    expr: Expr | None = None
+class ExprStatement(Statement):
+    inner: Expr
 
-    def __repr__(self) -> str:
-        match self.kind:
-            case "declare":
-                return self.declare.__repr__()
-            case "output":
-                return self.output.__repr__()
-            case "input":
-                return self.input.__repr__()
-            case "constant":
-                return self.constant.__repr__()
-            case "assign":
-                return self.assign.__repr__()
-            case "if":
-                return self.if_s.__repr__()
-            case "caseof":
-                return self.caseof.__repr__()
-            case "while":
-                return self.while_s.__repr__()
-            case "for":
-                return self.for_s.__repr__()
-            case "repeatuntil":
-                return self.repeatuntil.__repr__()
-            case "function":
-                return self.function.__repr__()
-            case "procedure":
-                return self.procedure.__repr__()
-            case "call":
-                return self.call.__repr__()
-            case "return":
-                return self.return_s.__repr__()
-            case "scope":
-                return self.scope.__repr__()
-            case "include":
-                return self.include.__repr__()
-            case "trace":
-                return self.trace.__repr__()
-            case "expr":
-                return self.expr.__repr__()
-
+    @classmethod
+    def from_expr(cls, e: Expr) -> "ExprStatement":
+        return cls(e.pos, e)
 
 @dataclass
 class Program:
