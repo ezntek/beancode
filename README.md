@@ -16,8 +16,7 @@ Once I deem it stable enough, I will tag `v1.0.0`.
 
 ## Dependencies
 
-* `typed-argument-parser`
-* `pipx` if you wish to install it system-wide while being safe.
+None!
 
 ## Installation
 
@@ -30,11 +29,11 @@ Check the appendix for some stats.
 ### Installing from PyPI (pip)
 
 * `pip install --break-system-packages beancode` ***since this package does not actually have dependencies, you can pass `--break-system-packages` safely. It can still be a bad idea.***
-* `pipx install beancode` (the safer way)
+* `pipx install beancode` (the safer way, but you need `pipx` on your system first.)
 
 ### Installing from this repository
 
-* Clone the respository with `git clone https://github.com/ezntek/beancode --branch=py --depth=1`
+* Clone the respository with `git clone https://github.com/ezntek/beancode`
 * `cd beancode`
 * `pipx install .`
 
@@ -56,9 +55,9 @@ note: If you believe this is a mistake, please contact your Python installation 
 hint: See PEP 668 for the detailed specification.
 ```
 
-You can either choose to run `pip install . --break-system-packages`, which is not recommended but is likely to work, or you can run it in a virtual environment.
+You can either choose to run `pip install . --break-system-packages`, which does not actually cause any issues, as to my knowledge, nobody packages beancode outside of PyPI. You can always run it in a virtual environment.
 
-Either way, it is still recommended to use `pipx`, as all the hard work is done for you.
+Either way, it is still recommended to use `pipx`, as all the hard work of isolating beancode is done for you.
 
 ## Running
 
@@ -72,12 +71,46 @@ If you wish to run it in the project directory:
 
 `python -m beancode file.bean`
 
-## extra features™
+You may also run
 
-There are many extra features, which are not standard to IGCSE Pseudocode.
+`./main.py file.bean`
 
-1. Lowercase keywords are supported; but cases may not be mixed. All library routines are fully case-insensitive.
-2. Includes can be done with `include "file.bean"`, relative to the file.
+## The REPL
+
+The REPL (or Read-Eval-Print-Loop) allows you to write beancode directly in your terminal. Run beancode (with the above instructions) without any arguments (i.e. just the command), and you will be dropped into this prompt:
+
+```
+=== welcome to beancode 0.5.0 ===
+Using Python 3.13.7 (main, Sep  9 2025, 16:20:24) [GCC 15.2.1 20250813]
+type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
+>> 
+```
+
+You can immediately begin typing Pseudocode, and all errors will be reported to you. If you want to run a beancode script, you can just `INCLUDE "MyScript.bean"` to execute it, and then immediately return to the REPL.
+
+You can also start typing dot-commands, which do not control the beancode interpreter, but controls the wrapper around it that provides you with REPL functionality. You can see the list of commands with `.help`, and detailed help is listed below:
+
+### REPL features
+   
+* `.var [name]` gets information regarding an _existing variable_. It prints its name, type, and value.
+  Substitute `[name]` for an actual constant or variable variable's name.
+* `.vars` prints information regarding _all variables_.
+* `.func [name]` gets information regarding *existing functions* ***or procedures***.
+  Substitute `[name]` for an actual function or procedure's name.
+* `.funcs` prints information regarding _all functions and procedures_.
+* `.delete [name]` lets
+* Delete a variable if you need to with `.delete [name]`. (Version `0.3.4` and up)
+* reset the entire interpreter's state with `.reset`.
+  - This effectively clears all variables, functions, constants, procedures, and included symbols.
+
+## Extra Features
+
+There are many extra features, or beancode extensions, which are not standard to IGCSE Pseudocode.
+
+*In theory, you can write this in your exams, and examiners should understand what you are doing, but it is safer to steer away from these extensions for formal purposes, and only use them for your own personal testing.*
+
+1. **Lowercase keywords are supported; but cases may not be mixed. All library routines are fully case-insensitive.**
+2. Includes can be done with `INCLUDE "file.bean"`, relative to the file.
  * Mark a declaration, constant, procedure, or function as exportable with `EXPORT`, like `EXPORT DECLARE X:INTEGER`.
  * Symbols marked as export will be present in whichever scope the include was called.
  * Use `include_ffi` to include a bundled FFI module. Support for custom external modules will be added later.
@@ -103,44 +136,87 @@ There are many extra features, which are not standard to IGCSE Pseudocode.
  * `FUNCTION GETCHAR() RETURNS CHAR`
  * `PROCEDURE PUTCHAR(ch: CHAR)`
  * `PROCEDURE EXIT(code: INTEGER)`
+   And many more. Look at the full list of library routines by running `help("libroutines")` in the REPL.
 5. Type casting is supported:
  * `Any Type -> STRING`
  * `STRING -> INTEGER` (returns `null` on failure)
  * `STRING -> REAL` (returns `null` on failure)
  * `INTEGER -> REAL`
- *`REAL -> INTEGER`
+ * `REAL -> INTEGER`
  * `INTEGER -> BOOLEAN` (`0` is false, `1` is true)
  * `BOOLEAN -> INTEGER`
 6. Declaration and assignment on the same line is also supported: `DECLARE Num:INTEGER <- 5`
  * You can also declare variables without types and directly assign them: `DECLARE Num <- 5`
-7. Array literals are supported:
+7. Get the type of any value as a string with `TYPE(value)` or `TYPEOF(value)`.
+8. Array literals are supported:
  * `Arr <- {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}`
-8. Get the type of any value as a string with `TYPE(value)` or `TYPEOF(value)`
+   It will declare an array of the given type, with the size of the elements in it. You may not append items,
+   but you can always get the type of the array with `TYPEOF(Arr)`.
 9. You can directly assign variables without declaring its type through type inference:
    ```
    X <- 5
    OUTPUT X // works
    ```
-
-### REPL features
+10. If you need more help, or a reference to some features in the language, always check out the `help()` library routine. Pass in a string, like `help("help")` to get help.
    
-* `.var` gets information regarding an _existing variable_. It prints its name, type, and value.
-* `.vars` prints information regarding _all variables_.
-* `.func` gets information regarding *existing functions* ***or procedures***. 
-* `.funcs` prints information regarding _all functions and procedures_.
-* Delete a variable if you need to with `.delete [name]`. (Version `0.3.4` and up)
-* Or, reset the entire interpreter's state with `.reset`.
+
+### Tips and Tricks
+
+1. If you want to pass arrays of an unknown size into functions or procedures, you can read the `BubbleSort.bean` example in the examples directory. In short, you can pass both the array and the length of it together:
+
+  ```
+  PROCEDURE PrintArray(Data: ARRAY[1:End] OF INTEGER, End: INTEGER)
+      FOR Counter <- 1 TO End
+          OUTPUT Data[Counter]
+      NEXT Counter
+  ENDPROCEDURE
+  ```
+2. If you somehow do want multiple statement in CASE OFs, you can abuse the following trick:
+  ```
+  CASE OF Var
+      CASE 'a': IF TRUE THEN
+          OUTPUT "Message 1"
+          OUTPUT "Message 2"
+      ENDIF
+      // Other stuff goes here
+  ENDCASE
+  ```
+  This works because beancode only looks for one statement after your case. Since an if statement is just a statement, this will work just fine :)
+
+3. Don't declare variables when you use the REPL! Just assign them.
+4. If you ever need to work with arrays in the REPL, just use array literals! Just like in Python with square brackets `[]`, you can declare and initialize an array already with elements in it on the spot. It works for 2D arrays too!
+  ```
+  EvenNumbers <- {2, 4, 6, 8, 10}
+  // EvenNumbers is now an ARRAY[1:5] OF INTEGER
+  Grid <- {
+    {1, 2},
+    {3, 4},
+    {5, 6},
+  }
+  // Grid is now an ARRAY[1:3,1:2] OF INTEGER.
+  // You can leave the declaration on the same line
+  ```
+5. If you are ever in a situation like so:
+  ```
+  >> FOR i <- 2 TO 10 STEP 2
+  .. OUTPUT "Num: ", i
+  ..
+  ```
+  And you want to quit editing the current block, type `Ctrl-C`, which will drop you back to the normal REPL.
+  If you want to properly exit the REPL, type `.exit` or `.quit`.
+
+6. If you are stuck in an infinite loop (that you may have written), you can always hit `Ctrl-C` to terminate the running program or the REPL.
 
 ## quirks
 
 * ***Multiple statements in CASE OFs are not supported! Therefore, the following code is illegal:***
   ```
   CASE OF Var
-      CASE 'a': OUTPUT "foo"
-                OUTPUT "bar"
+      'a': OUTPUT "foo"
+           OUTPUT "bar"
   ENDCASE
   ```
-  Please put your code into a procedure instead.
+  Please put your code into a procedure instead, or use the recommended trick above.
 * No-declare assignments are only bound to the `local block-level scope`, they are not global. Please declare it globally if you want to use it like a global variable.
 * ***File IO is completely unsupported.*** You might get cryptic errors if you try.
 * Not more than 1 parse error can be reported at one time.

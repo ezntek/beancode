@@ -1236,19 +1236,24 @@ class Parser:
         return TraceStatement(begin.pos, vars, file_name, block)
 
     def openfile_stmt(self) -> Statement | None:
-        raise BCError("File I/O has not been implemented yet!", self.pos())
+        if self.check("openfile"):
+            raise BCError("File I/O has not been implemented yet!", self.pos())
 
     def readfile_stmt(self) -> Statement | None:
-        raise BCError("File I/O has not been implemented yet!", self.pos())
+        if self.check("readfile"):
+            raise BCError("File I/O has not been implemented yet!", self.pos())
 
     def writefile_stmt(self) -> Statement | None:
-        raise BCError("File I/O has not been implemented yet!", self.pos())
+        if self.check("writefile"):
+            raise BCError("File I/O has not been implemented yet!", self.pos())
 
     def appendfile_stmt(self) -> Statement | None:
-        raise BCError("File I/O has not been implemented yet!", self.pos())
+        if self.check("appendfile"):
+            raise BCError("File I/O has not been implemented yet!", self.pos())
 
     def closefile_stmt(self) -> Statement | None:
-        raise BCError("File I/O has not been implemented yet!", self.pos())
+        if self.check("closefile"):
+            raise BCError("File I/O has not been implemented yet!", self.pos())
 
     def clean_newlines(self):
         while self.cur < len(self.tokens):
