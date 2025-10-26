@@ -471,12 +471,40 @@ class FunctionStatement(Statement):
 class ReturnStatement(Statement):
     expr: Expr | None
 
+FileMode = typing.Literal["read", "write", "append"]
+
+@dataclass
+class OpenfileStatement(Statement):
+    # file identifier or path
+    file_ident: Expr | str
+    modes: list[FileMode]
+
+@dataclass
+class ReadfileStatement(Statement):
+    # file identifier or path
+    file_ident: Expr | str
+    src: Identifier | ArrayIndex
+
+@dataclass
+class WritefileStatement(Statement):
+    # file identifier or path
+    file_ident: Expr | str
+    target: Identifier | ArrayIndex
+
+@dataclass
+class ClosefileStatement(Statement):
+    file_ident: Expr | str
+
 # extra statements
+@dataclass
+class AppendfileStatement(Statement):
+    # file identifier or path
+    file_ident: Expr | str
+    target: Identifier | ArrayIndex
 
 @dataclass
 class ScopeStatement(Statement):
     block: list["Statement"]
-
 
 @dataclass
 class IncludeStatement(Statement):

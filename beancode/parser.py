@@ -1235,6 +1235,21 @@ class Parser:
 
         return TraceStatement(begin.pos, vars, file_name, block)
 
+    def openfile_stmt(self) -> Statement | None:
+        raise BCError("File I/O has not been implemented yet!", self.pos())
+
+    def readfile_stmt(self) -> Statement | None:
+        raise BCError("File I/O has not been implemented yet!", self.pos())
+
+    def writefile_stmt(self) -> Statement | None:
+        raise BCError("File I/O has not been implemented yet!", self.pos())
+
+    def appendfile_stmt(self) -> Statement | None:
+        raise BCError("File I/O has not been implemented yet!", self.pos())
+
+    def closefile_stmt(self) -> Statement | None:
+        raise BCError("File I/O has not been implemented yet!", self.pos())
+
     def clean_newlines(self):
         while self.cur < len(self.tokens):
             if not self.check("newline"):
@@ -1244,13 +1259,13 @@ class Parser:
     def stmt(self) -> Statement | None:
         self.clean_newlines()
 
-        assign = self.assign_stmt()
-        if assign:
-            return assign
-
         constant = self.constant_stmt()
         if constant:
             return constant
+
+        declare = self.declare_stmt()
+        if declare:
+            return declare
 
         output = self.output_stmt()
         if output:
@@ -1259,6 +1274,10 @@ class Parser:
         inp = self.input_stmt()
         if inp:
             return inp
+
+        assign = self.assign_stmt()
+        if assign:
+            return assign
 
         proc_call = self.call_stmt()
         if proc_call:
@@ -1276,10 +1295,26 @@ class Parser:
         if trace:
             return trace
 
-        declare = self.declare_stmt()
-        if declare:
-            return declare
+        openfile = self.openfile_stmt()
+        if openfile:
+            return openfile
 
+        readfile = self.readfile_stmt()
+        if readfile:
+            return readfile
+
+        writefile = self.writefile_stmt()
+        if writefile:
+            return writefile
+
+        appendfile = self.appendfile_stmt()
+        if appendfile:
+            return appendfile
+
+        closefile = self.closefile_stmt()
+        if closefile:
+            return closefile
+        
         if_s = self.if_stmt()
         if if_s:
             return if_s

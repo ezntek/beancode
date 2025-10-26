@@ -42,7 +42,11 @@ TokenKind = typing.Literal[
     "readfile",
     "writefile",
     "closefile",
+    "read",
+    "write",
     # extra feachur™
+    "appendfile",
+    "append", # file mode
     "include",
     "include_ffi",
     "export",
@@ -224,7 +228,11 @@ class Lexer:
             "readfile",
             "writefile",
             "closefile",
+            "read",
+            "write",
             # extra feature
+            "appendfile",
+            "append",
             "trace",
             "endtrace",
             "scope",
