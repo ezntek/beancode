@@ -15,6 +15,7 @@ from .error import *
 from .libroutines import *
 from . import __version__, Pos, is_case_consistent
 from .tracer import *
+from .cfgparser import parse_config_from_file
 
 
 class Interpreter:
@@ -1339,8 +1340,8 @@ class Interpreter:
             vals.append(newval)
 
         bounds = (1, len(vals))
-        typ = BCArrayType.new_flat(typ, bounds)
-        return BCValue.new_array(BCArray.new_flat(typ, vals))
+        t = BCArrayType.new_flat(typ, bounds)
+        return BCValue.new_array(BCArray.new_flat(t, vals))
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Typecast):
@@ -2105,6 +2106,11 @@ class Interpreter:
     def visit_trace_stmt(self, stmt: TraceStatement):
         vars = stmt.vars
         tracer = Tracer(vars)
+
+        CONFIG_PATH = "./tracerconfig.bean"
+        if os.path.exists(CONFIG_PATH):
+            cfg = parse_config_from_file(CONFIG_PATH)
+            tracer.config = TracerConfig.from_config(cfg)
 
         intp = self.new(stmt.block, loop=False, tracer=tracer)
         intp.variables = dict(self.variables)

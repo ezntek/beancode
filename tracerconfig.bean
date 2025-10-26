@@ -29,7 +29,6 @@ HideRepeatingEntries <- TRUE
 //
 CondenseArrays <- FALSE
 
-
 // Enable syntax highlighting for values of different types, like in a proper
 // code editor/IDE. This will show in the generated HTML. If you want colored
 // output, set this variable to TRUE.

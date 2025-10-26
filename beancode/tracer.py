@@ -45,6 +45,48 @@ class TracerConfig:
     # handled by the interpreter
     show_outputs = False
     prompt_on_inputs = True
+    debug = False
+
+    @classmethod
+    def from_config(cls, cfg: dict[str, BCValue]) -> 'TracerConfig':
+        res = cls()
+
+        if "TraceEveryLine" in cfg:
+            data = cfg["TraceEveryLine"]
+            if data.kind == "boolean":
+                res.trace_every_line = data.get_boolean()
+
+        if "HideRepeatingEntries" in cfg:
+            data = cfg["HideRepeatingEntries"]
+            if data.kind == "boolean":
+                res.hide_repeating_entries = data.get_boolean()
+
+        if "CondenseArrays" in cfg:
+            data = cfg["CondenseArrays"]
+            if data.kind == "boolean":
+                res.condense_arrays = data.get_boolean()
+
+        if "SyntaxHighlighting" in cfg:
+            data = cfg["SyntaxHighlighting"]
+            if data.kind == "boolean":
+                res.syntax_highlighting = data.get_boolean()
+
+        if "ShowOutputs" in cfg:
+            data = cfg["ShowOutputs"]
+            if data.kind == "boolean":
+                res.show_outputs = data.get_boolean()
+
+        if "PromptOnInputs" in cfg:
+            data = cfg["PromptOnInputs"]
+            if data.kind == "boolean":
+                res.prompt_on_inputs = data.get_boolean()
+
+        if "Debug" in cfg:
+            data = cfg["Debug"]
+            if data.kind == "boolean":
+                res.debug = data.get_boolean()
+
+        return res
 
 
 class Tracer:

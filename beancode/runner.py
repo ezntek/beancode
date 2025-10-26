@@ -6,7 +6,7 @@ def run(filename: str):
     execute(file_content)
 
 
-def execute(src: str, filename="(execute)"):
+def execute(src: str, filename="(execute)") -> "Interpreter": # type: ignore
     from .error import BCError
     from .lexer import Lexer
     from .parser import Parser
@@ -35,3 +35,5 @@ def execute(src: str, filename="(execute)"):
     except BCError as err:
         err.print(filename, src)
         exit(1)
+
+    return i
