@@ -512,7 +512,7 @@ class Lexer:
     def next_ident(self, word: str) -> Token:
         p = self.pos(len(word))
         if self._is_ident(word):
-            if is_case_consistent(word) and word == "endfor":
+            if is_case_consistent(word) and word.lower() == "endfor":
                 raise BCError(
                     "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
                     self.pos(len(word)),
