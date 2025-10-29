@@ -22,7 +22,8 @@ class BCError(Exception):
 
     def print(self, filename: str, file_content: str):
         if self.pos is None:
-            print(self.msg, end="")
+            print(self.msg, end="", file=sys.stderr)
+            sys.stderr.flush()
             return
 
         line_no = self.pos.row
@@ -48,20 +49,20 @@ class BCError(Exception):
         spaces = lambda *_: " " * padding + "\t" * tabs
 
         info = f"{filename}:{line_no}: "
-        print(f"\033[0m\033[1m{info}", end="")
+        print(f"\033[0m\033[1m{info}", end="", file=sys.stderr)
         msg_lines = self.msg.splitlines()
         print(
-            msg_lines[0], end=""
+            msg_lines[0], end="", file=sys.stderr
         )  # splitlines on a non-empty string guarantees one elem
         if len(msg_lines) == 1:
-            print()
+            print(file=sys.stderr)
 
         for msg_line in msg_lines[1:]:
             sp = " " * len(info)
-            print(f"\033[2m\n{sp}{msg_line}\033[0m")
+            print(f"\033[2m\n{sp}{msg_line}\033[0m", file=sys.stderr)
 
-        print(line_begin, end="")
-        print(file_content[bol:eol])
+        print(line_begin, end="", file=sys.stderr)
+        print(file_content[bol:eol], file=sys.stderr)
 
         for ch in file_content[bol:eol]:
             if ch == "\t":
@@ -69,7 +70,7 @@ class BCError(Exception):
                 tabs += 1
 
         tildes = f"{spaces()}\033[31;1m{'~' * self.pos.span}\033[0m"
-        print(tildes)
+        print(tildes, file=sys.stderr)
 
         indicator = f"{spaces()}\033[31;1m"
         if os.name == "nt":
@@ -78,7 +79,8 @@ class BCError(Exception):
             indicator += "∟"
 
         indicator += f" \033[0m\033[1merror at line {line_no} column {col}\033[0m"
-        print(indicator)
+        print(indicator, file=sys.stderr)
+        sys.stderr.flush()
 
 
 def info(msg: str):

@@ -1647,8 +1647,7 @@ class Interpreter:
 
         # TODO: abstract this stuff into another file
         if not os.path.exists(path):
-            error(f"file {filename} does not exist!")
-            exit(1)
+            self.error(f"file {filename} in include does not exist!", stmt.pos)
 
         try:
             with open(filename, "r+") as f:
@@ -1663,14 +1662,16 @@ class Interpreter:
             program = parser.program()
         except BCError as err:
             err.print(filename, file_content)
-            exit(1)
+            print(file=sys.stderr)
+            self.error(f"error in included file \"{stmt.file}\".", stmt.pos)
 
         intp = self.new(program.stmts)
         try:
             intp.visit_block(None)
         except BCError as err:
             err.print(filename, file_content)
-            exit(1)
+            print(file=sys.stderr)
+            self.error(f"error in included file \"{stmt.file}\".", stmt.pos)
 
         for name, var in intp.variables.items():
             if var.export:
@@ -2107,10 +2108,12 @@ class Interpreter:
         vars = stmt.vars
         tracer = Tracer(vars)
 
-        CONFIG_PATH = "./tracerconfig.bean"
-        if os.path.exists(CONFIG_PATH):
-            cfg = parse_config_from_file(CONFIG_PATH)
-            tracer.config = TracerConfig.from_config(cfg)
+        CONFIG_PATHS = [f"{os.environ['HOME']}/.beancode_tracerconfig.bean", "./tracerconfig.bean"]
+        for path in CONFIG_PATHS:
+            if os.path.exists(path):
+                cfg = parse_config_from_file(path)
+                tracer.config = TracerConfig.from_config(cfg)
+                break
 
         intp = self.new(stmt.block, loop=False, tracer=tracer)
         intp.variables = dict(self.variables)

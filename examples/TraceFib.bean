@@ -16,6 +16,6 @@ PROCEDURE Code
     UNTIL i = Max
 ENDPROCEDURE
 
-TRACE(a, b, c, i, Max) TO "fibtrace.html" DO
+TRACE(a, b, c, i, Max) TO "fibtrace.html"
     CALL Code
 ENDTRACE
