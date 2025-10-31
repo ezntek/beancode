@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-__version__ = "0.5.0-alpha1"
+__version__ = "0.5.0-alpha2"
 
 
 @dataclass

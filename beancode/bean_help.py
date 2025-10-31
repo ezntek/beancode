@@ -158,19 +158,20 @@ def _round() -> str:
     return res.getvalue()
 
 
+def _random() -> str:
+    res = StringIO()
+
+    res.write(LIBROUTINE_ENTRIES["random"][0] + "\n")
+    res.write("Arguments: (), Returns: REAL\n")
+    
+    return res.getvalue()
+
+
 EXTENSION_TXT = """\033[31mThis is a library routine that is part of the beancode extensions.\033[0m
 This means that it is not found in standard IGCSE Pseudocode, but is specific
 to beancode. If you use this function on an exam, the examiner will know what
 you mean, but keep in mind that it is not in the IGCSE Pseudocode standard!
     \n"""
-
-
-def _random() -> str:
-    res = StringIO()
-
-    # TODO: write help
-
-    return res.getvalue()
 
 
 def _sqrt() -> str:
@@ -255,7 +256,7 @@ def _sleep() -> str:
 def _flush() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + "\n")
+    res.write(LIBROUTINE_ENTRIES["flush"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: ()")
 
@@ -264,7 +265,7 @@ def _flush() -> str:
 def _execute() -> str:
     res = StringIO()
 
-    res.write(LIBROUTINE_ENTRIES["FLUSH"][0] + "\n")
+    res.write(LIBROUTINE_ENTRIES["execute"][0] + "\n")
     res.write(EXTENSION_TXT)
     res.write("Arguments: (STRING), Returns: STRING")
 
@@ -293,7 +294,7 @@ LIBROUTINE_ENTRIES = {
     "exit": (f"{_bcext} Exit from the running program with an exit code.", _exit),
     "sleep": (f"{_bcext} Sleep for n seconds.", _sleep),
     "flush": (f"{_bcext} Flush the standard output.", _flush),
-    "execute": (f"{_bcext} Execute a system command.", _execute),
+    "execute": (f"{_bcext} Execute a system command in a shell.", _execute),
 }
 
 HELP_ENTRIES: dict[str, HelpEntry] = {
