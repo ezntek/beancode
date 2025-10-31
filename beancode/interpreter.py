@@ -2082,8 +2082,10 @@ class Interpreter:
                 actual_type = self.visit_type(d.typ)
                 existing_var = self.variables[key]
                 if existing_var.val.kind != actual_type:
-                    self.error(f"variable {key} declared with a different type!", d.pos)
-
+                    self.error(f"variable \"{key}\" declared with a different type!", d.pos)
+                elif existing_var.const:
+                    self.error(f"cannot shadow constant declaration for variable \"{key}\"")
+    
             is_libroutine = (
                 key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
             ) and is_case_consistent(key)
