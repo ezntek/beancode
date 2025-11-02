@@ -57,3 +57,7 @@ PromptOnInputs <- TRUE
 // Do not turn this on, this is intended for development purposes only.
 //
 Debug <- FALSE
+
+// Will you use the tracer to cheat?
+//
+IWillNotCheat <- FALSE

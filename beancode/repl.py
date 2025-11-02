@@ -1,6 +1,7 @@
 import sys
 import os
 
+from tkinter import Y
 from typing import Any
 from io import StringIO
 
@@ -29,7 +30,15 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .help            show this help message
  .clear           clear the screen
  .version         print the version
+ .license         print a license notice
  .exit            exit the interpreter (.quit also works)
+"""
+
+LICENSE = """This software is copyright (c) Eason Qin, <eason@ezntek.com>.
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
 
 def setup_readline():
@@ -254,6 +263,9 @@ class Repl:
                 return DotCommandResult.NO_OP
             case "version":
                 print(f"beancode version \033[1m{__version__}\033[0m")
+                return DotCommandResult.NO_OP
+            case "license":
+                print(LICENSE)
                 return DotCommandResult.NO_OP
             case "var":
                 return self._var(args)

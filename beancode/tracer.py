@@ -46,6 +46,7 @@ class TracerConfig:
     show_outputs = False
     prompt_on_inputs = True
     debug = False
+    i_will_not_cheat = False
 
     @classmethod
     def from_config(cls, cfg: dict[str, BCValue]) -> 'TracerConfig':
@@ -85,6 +86,11 @@ class TracerConfig:
             data = cfg["Debug"]
             if data.kind == "boolean":
                 res.debug = data.get_boolean()
+
+        if "IWillNotCheat" in cfg:
+            data = cfg["IWillNotCheat"]
+            if data.kind == "boolean":
+                res.i_will_not_cheat = data.get_boolean()
 
         return res
 
@@ -428,7 +434,10 @@ class Tracer:
 
     def _gen_html_table(self) -> str:
         res = StringIO()
-        res.write("<table>\n")
+        noclick = 'onmousedown="return false" onselectstart="return false"'
+        if self.config.i_will_not_cheat:
+            noclick = str()
+        res.write(f"<table {noclick}>\n")
 
         # generate header
         should_print_line_nums = self._should_print_line_numbers()
