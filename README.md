@@ -220,7 +220,10 @@ There are many extra features, or beancode extensions, which are not standard to
 * No-declare assignments are only bound to the `local block-level scope`, they are not global. Please declare it globally if you want to use it like a global variable.
 * ***File IO is completely unsupported.*** You might get cryptic errors if you try.
 * Not more than 1 parse error can be reported at one time.
-* Lowercase keywords are supported.
+* Variable shadowing is ***extremely weird!***
+  * You can shadow variables perfectly fine in functions and procedures, check `examples/ShadowingDemo.bean` for examples. However, you cannot do so in
+    any other scope, as there is no concept of a local/global variable, and the interpreter does not know when you declared a variable.
+  * You can shadow variable declarations of the same type and same kind (i.e. variable or constant), but you cannot, lets say, shadow a variable with a constant, etc.
 
 ## Appendix
 
@@ -257,15 +260,18 @@ It's really bad. However, PyPy makes it a lot better. Here's some data for the P
 
 ## Errata
 
-* Some errors will report as `unused expression`, like the following:
-```
-for i <- 1 to 10
-  output i
-nex ti
-```
+This section shares notable bugs that may impact daily use.
+
 * Some errors will report as `invalid statement or expression`, which is expected for this parser design.
 
 ### Version-specific
 
 * Before `v0.3.6`, equal expressions will actually result in `<>` being true. For example, `5 = 5` is `TRUE`, but `5 <> 5` is also `TRUE`.
-
+* Before `v0.4.0`, every word that is not a valid keyword is an identifier. Therefore, you could technically assign dollar signs and backslashes.
+* Before `v0.4.0`, function names could be strange, like empty quotation marks.
+* Before `v0.4.0`, you could shadow dot-commands in the REPL.
+* Before `v0.4.0`, arithmetic with INTEGERs and REALs were very inconsistent, especially in type checking. There may be very weird behavior.
+* Before `v0.4.0`, function return types were not checked at all, which may result in unexpected behavior. 
+* Before `v0.5.0`, assignments were not properly type-checked sometimes. You could not assign array literals to declared arrays.
+* Before `v0.5.0`, you could not assign arrays, even of the same length and type to one another.
+* Before `v0.5.0`, you could not declare arrays with only one item in it. 

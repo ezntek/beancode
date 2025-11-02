@@ -1146,7 +1146,7 @@ class Interpreter:
 
         intp = self.new(proc.block, proc=True, tracer=tracer)
         intp.calls = self.calls
-        intp.calls.append(CallStackEntry(proc.name, None))
+        intp.calls.append(CallStackEntry(proc.name, None, proc=True))
         vars = self.variables
         if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
@@ -1999,23 +1999,28 @@ class Interpreter:
 
         self.trace(s.pos.row)
 
-    def visit_constant_stmt(self, c: ConstantStatement):
-        key = c.ident.ident
+    def visit_constant_stmt(self, s: ConstantStatement):
+        key = s.ident.ident
 
-        if key in self.variables:
-            self.error(f"variable {key} declared!", c.pos)
+        is_prev_func = len(self.calls) > 0 and (self.calls[-1].proc or self.calls[-1].func)
+        if key in self.variables and not is_prev_func:
+            existing_var = self.variables[key]
+            if not existing_var.const:
+                self.error(f"cannot shadow variable declaration for constant \"{key}\"", s.pos)
+            else:
+                self.error(f"variable or constant {key} declared!", s.pos)
 
         is_libroutine = (
             key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
         ) and is_case_consistent(key)
         if key in self.functions or is_libroutine:
             self.error(
-                f'cannot shadow existing function or procedure named "{key}"', c.pos
+                f'cannot shadow existing function or procedure named "{key}"', s.pos
             )
 
-        val = self.visit_expr(c.value)
-        self.variables[key] = Variable(val, True, export=c.export)
-        self.trace(c.pos.row)
+        val = self.visit_expr(s.value)
+        self.variables[key] = Variable(val, True, export=s.export)
+        self.trace(s.pos.row)
 
     def _declare_array(self, d: DeclareStatement, key: str):
         at: ArrayType = d.typ  # type: ignore
@@ -2075,36 +2080,39 @@ class Interpreter:
 
         self.variables[key] = Variable(BCValue.new_array(res), False, export=d.export)
 
-    def visit_declare_stmt(self, d: DeclareStatement):
-        for ident in d.ident:
+    def visit_declare_stmt(self, s: DeclareStatement):
+        for ident in s.ident:
             key: str = ident.ident
-            if key in self.variables:
-                actual_type = self.visit_type(d.typ)
+            is_prev_func = len(self.calls) > 0 and (self.calls[-1].proc or self.calls[-1].func)
+            if key in self.variables and not is_prev_func:
                 existing_var = self.variables[key]
+                actual_type = self.visit_type(s.typ)
                 if existing_var.val.kind != actual_type:
-                    self.error(f"variable \"{key}\" declared with a different type!", d.pos)
+                    self.error(f"variable \"{key}\" declared with a different type!", s.pos)
                 elif existing_var.const:
-                    self.error(f"cannot shadow constant declaration for variable \"{key}\"")
-    
+                    self.error(f"cannot shadow variable declaration for constant \"{key}\"", s.pos)
+                else:
+                    self.error(f"variable or constant {key} declared!", s.pos)
+
             is_libroutine = (
                 key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
             ) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
                 self.error(
                     f'cannot shadow existing function or procedure named "{key}" with variable of the same name',
-                    d.pos,
+                    s.pos,
                 )
 
-            if isinstance(d.typ, ArrayType):
-                self._declare_array(d, key)
+            if isinstance(s.typ, ArrayType):
+                self._declare_array(s, key)
             else:
                 self.variables[key] = Variable(
-                    BCValue(kind=d.typ), False, export=d.export
+                    BCValue(kind=s.typ), False, export=s.export
                 )
-                if d.expr is not None:
-                    expr = self.visit_expr(d.expr)
+                if s.expr is not None:
+                    expr = self.visit_expr(s.expr)
                     self.variables[key].val = expr
-        self.trace(d.pos.row)
+        self.trace(s.pos.row)
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         vars = stmt.vars

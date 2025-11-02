@@ -660,6 +660,9 @@ class Parser:
         if not begin:
             return
 
+        if self.check("newline"):
+            return ReturnStatement(begin.pos)
+
         expr = self.expression()
         if not expr:
             raise BCError(

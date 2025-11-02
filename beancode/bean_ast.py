@@ -469,7 +469,7 @@ class FunctionStatement(Statement):
 
 @dataclass
 class ReturnStatement(Statement):
-    expr: Expr | None
+    expr: Expr | None = None
 
 FileMode = typing.Literal["read", "write", "append"]
 
@@ -549,3 +549,4 @@ class CallStackEntry:
     name: str
     rtype: Type | None
     func: bool = False
+    proc: bool = False

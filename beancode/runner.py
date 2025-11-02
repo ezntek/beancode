@@ -1,12 +1,12 @@
 from beancode.error import warn, info
 
-def _get_file_path_with_dialog() -> str | None:
+def _get_file_path_with_dialog() -> str:
     try:
         # inspired by https://www.pythontutorial.net/tkinter/tkinter-open-file-dialog/
         from tkinter import filedialog as fd
     except ImportError:
         warn("could not import tkinter to show a file picker!")
-        return None
+        return input("\033[1mEnter a file to run: \033[0m")
    
     filetypes = (
         ('Pseudocode/beancode scripts', '*.bean'),
@@ -19,10 +19,8 @@ def _get_file_path_with_dialog() -> str | None:
 
 def run_file(filename: str | None = None):
     if not filename:
-        info("opening tkinter dialog")
+        info("opening tkinter file picker")
         real_path = _get_file_path_with_dialog()
-        if real_path is None:
-            return
     else:
         real_path = filename
 
