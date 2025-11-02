@@ -42,7 +42,10 @@ def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpre
         toks = lexer.tokenize()
     except BCError as err:
         err.print(filename, src)
-        exit(1)
+        if save_interpreter:
+            exit(1)
+        else:
+            return
 
     parser = Parser(toks)
 
@@ -50,7 +53,10 @@ def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpre
         program = parser.program()
     except BCError as err:
         err.print(filename, src)
-        exit(1)
+        if save_interpreter:
+            exit(1)
+        else:
+            return
 
     i = Interpreter(program.stmts)
     i.toplevel = True
@@ -58,7 +64,10 @@ def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpre
         i.visit_block(None)
     except BCError as err:
         err.print(filename, src)
-        exit(1)
+        if save_interpreter:
+            exit(1)
+        else:
+            return
     
     if save_interpreter:
         return i
