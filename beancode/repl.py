@@ -20,19 +20,22 @@ type ".help" for a list of REPL commands, ".exit" to exit, or start typing some 
 """
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
- .var [names]     get information regarding a declared variable/constant
- .vars            get information regarding all declared variables/constants
- .func [names]    get information regarding a declared procedure/function
- .funcs           get information regarding all declared procedures/functions
- .delete [names]  delete a variable/constant/procedure/function
- .runfile (name)  run a beancode file. not specifying a name will open a file
-                  picker dialog.
- .reset           reset the interpreter
- .help            show this help message
- .clear           clear the screen
- .version         print the version
- .license         print a license notice
- .exit            exit the interpreter (.quit also works)
+ .var [names]          get info regarding a declared variable/constant
+ .vars                 get info regarding all declared variables/constants
+ .func [names]         get info regarding a declared procedure/function
+ .funcs                get info regarding all declared procedures/functions
+ .delete [names]       delete a variable/constant/procedure/function
+ .runfile (name)       run a beancode file. not specifying a name will open a
+                       file picker dialog.
+ .trace (name) [vars]  trace a beancode file. you must specify a path and all
+                       variables to record. the configuration file will be
+                       loaded from the default paths.
+ .reset      reset the interpreter
+ .help       show this help message
+ .clear      clear the screen
+ .version    print the version
+ .license    print a license notice
+ .exit       exit the interpreter (.quit also works)
 """
 
 LICENSE = """This software is copyright (c) Eason Qin, <eason@ezntek.com>.
@@ -261,6 +264,18 @@ class Repl:
 
         return DotCommandResult.NO_OP
 
+    def _trace(self, args: list[str]):
+        if len(args) < 2:
+            error("you must at least specify the path of the script to trace!")
+            return DotCommandResult.NO_OP
+
+        path = args[1]
+        vars = args[2:]
+
+        from .runner import trace
+        trace(path, vars=vars)
+        return DotCommandResult.NO_OP
+
     def handle_dot_command(self, s: str) -> DotCommandResult:
         args = s.strip().split(" ")
         base = args[0]
@@ -286,6 +301,8 @@ class Repl:
                 return DotCommandResult.NO_OP
             case "runfile":
                 return self._runfile(args)
+            case "trace":
+                return self._trace(args)
             case "var":
                 return self._var(args)
             case "vars":

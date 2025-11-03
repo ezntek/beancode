@@ -27,6 +27,7 @@ def get_file_path_with_dialog() -> str:
     res = fd.askopenfilename(
         title="Select file to run", initialdir=".", filetypes=filetypes
     )
+    res = os.path.expanduser(res)
     _tk_root.update()
     return res
 
@@ -37,6 +38,30 @@ def run_repl():
     Repl(debug=False).repl()
 
 
+def _read_whole_file_nicely(path: str) -> str | None:
+    """reads a whole file, running expanduser and catching exceptions."""
+
+    real_path = os.path.expanduser(path)
+    file_content = str()
+    try:
+        with open(real_path, "r") as f:
+            file_content = f.read()
+    except IsADirectoryError:
+        error("expected a file but got a directory!")
+        return None
+    except FileNotFoundError:
+        error(f'file "{path}" was not found!')
+        return None
+    except PermissionError:
+        error(f'no permissions to access "{path}"!')
+        return None
+    except Exception as e:
+        error(f"a Python exception was caught: {e}")
+        return None
+
+    return file_content
+
+
 def run_file(filename: str | None = None):
     if not filename:
         info("Opening tkinter file picker")
@@ -44,28 +69,67 @@ def run_file(filename: str | None = None):
     else:
         real_path = filename
 
-    real_path = os.path.expanduser(real_path)
-    file_content = str()
-    try:
-        with open(real_path, "r") as f:
-            file_content = f.read()
-    except IsADirectoryError:
-        error("cannot run a directory!")
-    except FileNotFoundError:
-        error("file to run was not found!")
-    except PermissionError:
-        error("no permissions to run script!")
-    except Exception as e:
-        error(f"a Python exception was caught: {e}")
+    file_content = _read_whole_file_nicely(real_path)
+    if not file_content:
+        return
 
     execute(file_content, filename=real_path)
 
 
-def trace(filename: str | None = None):
-    pass
+def trace(
+    filename: str | None = None,
+    vars: list[str] | None = None,
+    target_file: str | None = None,
+    config_path: str | None = None,
+):
+    if not filename:
+        info("Opening tkinter file picker")
+        real_path = get_file_path_with_dialog()
+    else:
+        real_path = filename
+    src = _read_whole_file_nicely(real_path)
+    if not src:
+        return
+
+    from .error import BCError
+    from .tracer import Tracer, TracerConfig
+    from .cfgparser import parse_config_from_source
+
+    if vars:
+        vars = [str(val.strip()) for val in vars]
+    else:
+        vars = list()
+
+    tracer = Tracer(vars)
+
+    actual_path = config_path
+    if config_path and config_path in ("", "default"):
+        CONFIG_PATHS = [
+            f"{os.environ['HOME']}/.beancode_tracerconfig.bean",
+            "./tracerconfig.bean",
+        ]
+        for path in CONFIG_PATHS:
+            if os.path.exists(path):
+                actual_path = path
+
+    if actual_path is not None:
+        file_content = _read_whole_file_nicely(actual_path)
+        if not file_content:
+            return
+
+        try:
+            cfg = parse_config_from_source(file_content)
+        except BCError as e:
+            e.print(actual_path, file_content)
+            exit(1)
+
+        tracer.config = TracerConfig.from_config(cfg)
+
+    execute(src, filename=real_path, save_interpreter=False, tracer=tracer)
+    tracer.write_out(target_file)
 
 
-def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpreter | None":  # type: ignore
+def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None) -> "Interpreter | None":  # type: ignore
     from .error import BCError
     from .lexer import Lexer
     from .parser import Parser
@@ -93,7 +157,11 @@ def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpre
         else:
             return
 
-    i = Interpreter(program.stmts)
+    if tracer is None:
+        i = Interpreter(program.stmts)
+    else:
+        i = Interpreter(program.stmts, tracer=tracer)
+
     i.toplevel = True
     try:
         i.visit_block(None)

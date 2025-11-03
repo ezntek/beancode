@@ -2144,18 +2144,7 @@ class Interpreter:
         intp.functions = dict(self.functions)
         intp.visit_block(None)
 
-        file_name = "tracer_output.html" if not stmt.file_name else stmt.file_name
-        if os.path.splitext(file_name)[1] != ".html":
-            warn(f"provided file path does not have the .html file extension!")
-            file_name += ".html"
-
-        if os.path.exists(file_name):
-            warn(f'"{file_name}" already exists on disk! overwriting...')
-        else:
-            info(f'writing output to "{file_name}"...')
-
-        with open(file_name, "w") as f:
-            f.write(tracer.gen_html())
+        tracer.write_out(stmt.file_name)
 
     def visit_stmt(self, stmt: Statement):
         match stmt:

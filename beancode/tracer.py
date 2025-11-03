@@ -483,3 +483,24 @@ class Tracer:
         res.write("</center></body>\n")
         res.write("</html>\n")
         return res.getvalue()
+
+    def write_out(self, file_name: str | None = None):
+        """write out tracer output with console output."""
+
+        real_name = "tracer_output.html" if not file_name else file_name
+        if os.path.splitext(real_name)[1] != ".html":
+            warn(f"provided file path does not have the .html file extension!")
+            real_name += ".html"
+
+        if os.path.exists(real_name):
+            warn(f'"{real_name}" already exists on disk! overwriting...')
+        else:
+            info(f'writing output to "{real_name}"...')
+
+        try:
+            with open(real_name, "w") as f:
+                f.write(self.gen_html())
+        except IsADirectoryError:
+            error(f"cannot write the tracer's output to a directory!")
+        except PermissionError:
+            error(f"no permission to write tracer's output")
