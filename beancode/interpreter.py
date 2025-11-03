@@ -1492,7 +1492,7 @@ class Interpreter:
 
     def visit_input_stmt(self, s: InputStatement):
         prompt = str()
-        if (self.tracer and self.tracer.config.prompt_on_inputs):
+        if self.tracer and self.tracer.config.prompt_on_inputs:
             prompt = "(tracer input): "
 
         inp = input(prompt)
@@ -1663,7 +1663,7 @@ class Interpreter:
         except BCError as err:
             err.print(filename, file_content)
             print(file=sys.stderr)
-            self.error(f"error in included file \"{stmt.file}\".", stmt.pos)
+            self.error(f'error in included file "{stmt.file}".', stmt.pos)
 
         intp = self.new(program.stmts)
         try:
@@ -1671,7 +1671,7 @@ class Interpreter:
         except BCError as err:
             err.print(filename, file_content)
             print(file=sys.stderr)
-            self.error(f"error in included file \"{stmt.file}\".", stmt.pos)
+            self.error(f'error in included file "{stmt.file}".', stmt.pos)
 
         for name, var in intp.variables.items():
             if var.export:
@@ -2002,11 +2002,15 @@ class Interpreter:
     def visit_constant_stmt(self, s: ConstantStatement):
         key = s.ident.ident
 
-        is_prev_func = len(self.calls) > 0 and (self.calls[-1].proc or self.calls[-1].func)
+        is_prev_func = len(self.calls) > 0 and (
+            self.calls[-1].proc or self.calls[-1].func
+        )
         if key in self.variables and not is_prev_func:
             existing_var = self.variables[key]
             if not existing_var.const:
-                self.error(f"cannot shadow variable declaration for constant \"{key}\"", s.pos)
+                self.error(
+                    f'cannot shadow variable declaration for constant "{key}"', s.pos
+                )
             else:
                 self.error(f"variable or constant {key} declared!", s.pos)
 
@@ -2083,14 +2087,21 @@ class Interpreter:
     def visit_declare_stmt(self, s: DeclareStatement):
         for ident in s.ident:
             key: str = ident.ident
-            is_prev_func = len(self.calls) > 0 and (self.calls[-1].proc or self.calls[-1].func)
+            is_prev_func = len(self.calls) > 0 and (
+                self.calls[-1].proc or self.calls[-1].func
+            )
             if key in self.variables and not is_prev_func:
                 existing_var = self.variables[key]
                 actual_type = self.visit_type(s.typ)
                 if existing_var.val.kind != actual_type:
-                    self.error(f"variable \"{key}\" declared with a different type!", s.pos)
+                    self.error(
+                        f'variable "{key}" declared with a different type!', s.pos
+                    )
                 elif existing_var.const:
-                    self.error(f"cannot shadow variable declaration for constant \"{key}\"", s.pos)
+                    self.error(
+                        f'cannot shadow variable declaration for constant "{key}"',
+                        s.pos,
+                    )
                 else:
                     self.error(f"variable or constant {key} declared!", s.pos)
 
@@ -2118,7 +2129,10 @@ class Interpreter:
         vars = stmt.vars
         tracer = Tracer(vars)
 
-        CONFIG_PATHS = [f"{os.environ['HOME']}/.beancode_tracerconfig.bean", "./tracerconfig.bean"]
+        CONFIG_PATHS = [
+            f"{os.environ['HOME']}/.beancode_tracerconfig.bean",
+            "./tracerconfig.bean",
+        ]
         for path in CONFIG_PATHS:
             if os.path.exists(path):
                 cfg = parse_config_from_file(path)

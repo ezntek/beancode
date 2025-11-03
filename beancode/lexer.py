@@ -46,7 +46,7 @@ TokenKind = typing.Literal[
     "write",
     # extra feachur™
     "appendfile",
-    "append", # file mode
+    "append",  # file mode
     "include",
     "include_ffi",
     "export",
@@ -386,7 +386,7 @@ class Lexer:
 
             cur = self.get_cur()
             if is_delimited_literal:
-                stop = cur == delim 
+                stop = cur == delim
             else:
                 stop = (
                     self.is_operator_start(cur)

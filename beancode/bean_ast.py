@@ -107,7 +107,7 @@ class BCArray:
     @classmethod
     def new_matrix(cls, typ: BCArrayType, matrix: list[list["BCValue"]]) -> "BCArray":
         return cls(typ=typ, matrix=matrix)
-    
+
     def get_flat(self) -> list["BCValue"]:
         if self.flat is None:
             raise BCError("tried to access 1D array from a 2D array")
@@ -156,7 +156,7 @@ class BCValue:
         # arrays are always initialized to NULLs
         if self.array:
             return False
-        
+
         return (
             self.integer is None
             and self.real is None
@@ -355,6 +355,7 @@ class ArrayIndex(Expr):
 class Statement:
     pos: Pos
 
+
 @dataclass
 class CallStatement(Statement):
     ident: str
@@ -471,7 +472,9 @@ class FunctionStatement(Statement):
 class ReturnStatement(Statement):
     expr: Expr | None = None
 
+
 FileMode = typing.Literal["read", "write", "append"]
+
 
 @dataclass
 class OpenfileStatement(Statement):
@@ -479,11 +482,13 @@ class OpenfileStatement(Statement):
     file_ident: Expr | str
     modes: list[FileMode]
 
+
 @dataclass
 class ReadfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
     src: Identifier | ArrayIndex
+
 
 @dataclass
 class WritefileStatement(Statement):
@@ -491,9 +496,11 @@ class WritefileStatement(Statement):
     file_ident: Expr | str
     target: Identifier | ArrayIndex
 
+
 @dataclass
 class ClosefileStatement(Statement):
     file_ident: Expr | str
+
 
 # extra statements
 @dataclass
@@ -502,9 +509,11 @@ class AppendfileStatement(Statement):
     file_ident: Expr | str
     target: Identifier | ArrayIndex
 
+
 @dataclass
 class ScopeStatement(Statement):
     block: list["Statement"]
+
 
 @dataclass
 class IncludeStatement(Statement):
@@ -518,6 +527,7 @@ class TraceStatement(Statement):
     file_name: str | None
     block: list["Statement"]
 
+
 @dataclass
 class ExprStatement(Statement):
     inner: Expr
@@ -525,6 +535,7 @@ class ExprStatement(Statement):
     @classmethod
     def from_expr(cls, e: Expr) -> "ExprStatement":
         return cls(e.pos, e)
+
 
 @dataclass
 class Program:

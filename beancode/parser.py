@@ -891,7 +891,7 @@ class Parser:
         if not case:
             return
 
-        self.consume_and_expect("of", "after CASE keyword") 
+        self.consume_and_expect("of", "after CASE keyword")
 
         main_expr = self.expression()
         if not main_expr:
@@ -1234,7 +1234,7 @@ class Parser:
 
         self.consume_newlines()
         block = self.block("endtrace")
-        self.consume() # byebye ENDTRACE
+        self.consume()  # byebye ENDTRACE
 
         return TraceStatement(begin.pos, vars, file_name, block)
 
@@ -1322,7 +1322,7 @@ class Parser:
         closefile = self.closefile_stmt()
         if closefile:
             return closefile
-        
+
         if_s = self.if_stmt()
         if if_s:
             return if_s

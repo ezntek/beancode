@@ -2,8 +2,10 @@ from dataclasses import dataclass
 
 __version__ = "0.5.0-beta2"
 
+
 def print_version():
     print(f"beancode version \033[1m{__version__}\033[0m")
+
 
 @dataclass
 class Pos:
@@ -43,7 +45,7 @@ def humanize_index(idx: int) -> str:
 def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
 
-    
+
 def is_integer(val: str) -> bool:
     if len(val) == 0:
         return False
@@ -52,6 +54,7 @@ def is_integer(val: str) -> bool:
         if not ch.isdigit():
             return False
     return True
+
 
 def is_real(val: str) -> bool:
     if len(val) == 0:

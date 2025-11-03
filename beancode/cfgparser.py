@@ -3,11 +3,12 @@ from .lexer import Lexer
 from .parser import Parser
 from .error import BCError
 
+
 # parser manhandling sure is fun!
 def parse_config_from_source(src: str) -> dict[str, BCValue]:
     lx = Lexer(src)
     tokens = lx.tokenize()
-    
+
     res = dict()
     ps = Parser(tokens)
     while ps.cur < len(ps.tokens):
@@ -15,17 +16,20 @@ def parse_config_from_source(src: str) -> dict[str, BCValue]:
         # Ident Assign Literal
         ident = ps.expect_ident("for configuration file key")
         ps.consume_and_expect("assign", "after each configuration file key")
-        lit: Literal | None = ps.literal() # type: ignore
+        lit: Literal | None = ps.literal()  # type: ignore
         if lit is None:
-            raise BCError("invalid or no literal after configuration file key!", ps.pos())
+            raise BCError(
+                "invalid or no literal after configuration file key!", ps.pos()
+            )
 
         if ps.cur != len(ps.tokens) - 1:
             ps.consume_and_expect("newline", "after configuration entry")
-        
+
         ps.consume_newlines()
         res[ident.ident] = lit.to_bcvalue()
-    
-    return res 
+
+    return res
+
 
 def parse_config_from_file(file_name: str) -> dict[str, BCValue]:
     """parses a config from a file, and exits on errors."""

@@ -24,7 +24,9 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .vars            get information regarding all declared variables/constants
  .func [names]    get information regarding a declared procedure/function
  .funcs           get information regarding all declared procedures/functions
- .delete [names]  delete a variable/constant/procedure/function 
+ .delete [names]  delete a variable/constant/procedure/function
+ .runfile (name)  run a beancode file. not specifying a name will open a file
+                  picker dialog.
  .reset           reset the interpreter
  .help            show this help message
  .clear           clear the screen
@@ -39,6 +41,7 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """
+
 
 def setup_readline():
     try:
@@ -55,6 +58,7 @@ def setup_readline():
         atexit.register(readline.write_history_file, histfile)
     except ImportError:
         warn("could not import readline, continuing without shell history")
+
 
 class DotCommandResult(Enum):
     NO_OP = (0,)
@@ -243,6 +247,20 @@ class Repl:
                 error(f'no name "{arg}" found')
         return DotCommandResult.NO_OP
 
+    def _runfile(self, args: list[str]):
+        if len(args) > 2:
+            error("you may only specify one or no arguments to .runfile!")
+            return DotCommandResult.NO_OP
+
+        from .runner import run_file
+
+        if len(args) == 1:
+            run_file()
+        else:
+            run_file(args[1])
+
+        return DotCommandResult.NO_OP
+
     def handle_dot_command(self, s: str) -> DotCommandResult:
         args = s.strip().split(" ")
         base = args[0]
@@ -266,6 +284,8 @@ class Repl:
             case "license":
                 print(LICENSE)
                 return DotCommandResult.NO_OP
+            case "runfile":
+                return self._runfile(args)
             case "var":
                 return self._var(args)
             case "vars":

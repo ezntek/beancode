@@ -123,7 +123,8 @@ with length 1, it will return a CHAR.\033[0m\n
   First <- SUBSTRING(Original, 1, 4) \033[2m// stores "Fish" into First\033[0m
   Second <- SUBSTRING(Original, 10, 5) \033[2m// stores "Chips" into Second\033[0m
   Letter <- SUBSTRING(Original, 3, 1) \033[2m// stores 's' into Letter as a CHAR\033[0m
-""")
+"""
+    )
 
     return res.getvalue()
 
@@ -163,7 +164,7 @@ def _random() -> str:
 
     res.write(LIBROUTINE_ENTRIES["random"][0] + "\n")
     res.write("Arguments: (), Returns: REAL\n")
-    
+
     return res.getvalue()
 
 
@@ -262,6 +263,7 @@ def _flush() -> str:
 
     return res.getvalue()
 
+
 def _execute() -> str:
     res = StringIO()
 
@@ -270,6 +272,7 @@ def _execute() -> str:
     res.write("Arguments: (STRING), Returns: STRING")
 
     return res.getvalue()
+
 
 _bcext = "\033[2m[beancode extension]\033[0m"
 

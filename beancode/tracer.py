@@ -49,7 +49,7 @@ class TracerConfig:
     i_will_not_cheat = False
 
     @classmethod
-    def from_config(cls, cfg: dict[str, BCValue]) -> 'TracerConfig':
+    def from_config(cls, cfg: dict[str, BCValue]) -> "TracerConfig":
         res = cls()
 
         if "TraceEveryLine" in cfg:
@@ -199,7 +199,7 @@ class Tracer:
     def _should_print_line_numbers(self) -> bool:
         if self.config.trace_every_line:
             return True
-            
+
         if len(self.line_numbers) == 0:
             return False
 
@@ -248,7 +248,7 @@ class Tracer:
 
         res.write("<thead>\n")
         res.write("<tr>\n")
-        
+
         has_array = self._has_array()
         rs = " rowspan=2" if has_array else ""
 
@@ -295,7 +295,7 @@ class Tracer:
         rows: list[tuple[int, tuple[BCValue | None, ...]]],
         row_num: int,
         row: tuple[BCValue | None, ...],
-        printed_first: bool = True
+        printed_first: bool = True,
     ) -> str:
         res = StringIO()
 
@@ -319,7 +319,9 @@ class Tracer:
                                 prev_arr = prev_var.get_array().get_flat()
 
                         for idx, itm in enumerate(arr.get_flat()):
-                            repeated = self.config.hide_repeating_entries and (prev_arr and prev_arr[idx] == itm)
+                            repeated = self.config.hide_repeating_entries and (
+                                prev_arr and prev_arr[idx] == itm
+                            )
                             if repeated or not prev_arr and printed_first:
                                 res.write("<td></td>")
                             else:
@@ -360,7 +362,7 @@ class Tracer:
         res = StringIO()
 
         res.write("<tbody>\n")
-       
+
         if len(self.vars) == 0:
             keys = set()
             for k in self.outputs:
@@ -424,7 +426,7 @@ class Tracer:
             res.write(self._gen_html_table_line_num(row_num))
             res.write(self._gen_html_table_row(rows, row_num, row, printed_first))
             res.write(self._gen_html_table_row_io(row_num))
-            
+
             printed_first = True
 
             res.write("</tr>\n")
