@@ -1,7 +1,6 @@
 import sys
 import os
 
-from tkinter import Y
 from typing import Any
 from io import StringIO
 
@@ -335,7 +334,7 @@ class Repl:
 
             return (prog, ContinuationResult.SUCCESS)
 
-    def repl(self) -> int:
+    def repl(self):
         setup_readline()
         print(BANNER, end=str())
 
@@ -481,4 +480,8 @@ class Repl:
                 warn("caught keyboard interrupt during REPL code execution")
                 continue
 
-        return 0
+        return
+
+    def repl_and_exit(self):
+        self.repl()
+        exit(0)

@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
-__version__ = "0.5.0-beta1"
+__version__ = "0.5.0-beta2"
 
+def print_version():
+    print(f"beancode version \033[1m{__version__}\033[0m")
 
 @dataclass
 class Pos:

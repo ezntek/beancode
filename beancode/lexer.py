@@ -386,7 +386,7 @@ class Lexer:
 
             cur = self.get_cur()
             if is_delimited_literal:
-                stop = cur in ("\n\r" + DELIMS)
+                stop = cur == delim 
             else:
                 stop = (
                     self.is_operator_start(cur)
@@ -410,24 +410,10 @@ class Lexer:
                 # we don't set eof to true, becuase we do not allow for multile string literals, and this
                 # would break the REPL.
                 raise BCError(
-                    "unexpected end of file while scanning for delimited literal",
+                    "could not find ending delimiter in literal\n"
+                    + "did you forget to insert an ending quotation mark?",
                     self.pos(len),
                 )
-
-            cur = self.get_cur()
-            if cur != delim:
-                if cur in DELIMS:
-                    raise BCError(
-                        "mismatched delimiter in literal\n"
-                        + "did you insert the wrong ending quotation mark?",
-                        self.pos(len),
-                    )
-                else:
-                    raise BCError(
-                        "unterminated delimited literal\n"
-                        + "did you forget to insert an ending quotation mark?",
-                        self.pos(len),
-                    )
             else:
                 self.cur += 1
                 len += 1

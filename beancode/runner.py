@@ -17,6 +17,10 @@ def _get_file_path_with_dialog() -> str:
     )
     return fd.askopenfilename(title='Select file to run', initialdir='.', filetypes=filetypes)
 
+def run_repl():
+    from .repl import Repl
+    Repl(debug=False).repl()
+
 def run_file(filename: str | None = None):
     if not filename:
         info("opening tkinter file picker")
@@ -29,6 +33,8 @@ def run_file(filename: str | None = None):
         file_content = f.read()
     execute(file_content)
 
+def trace(filename: str | None = None):
+    pass
 
 def execute(src: str, filename="(execute)", save_interpreter=False) -> "Interpreter | None": # type: ignore
     from .error import BCError
