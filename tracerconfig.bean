@@ -60,4 +60,4 @@ Debug <- FALSE
 
 // Will you use the tracer to cheat?
 //
-IWillNotCheat <- FALSE
+IWillNotCheat <- TRUE 

@@ -436,10 +436,7 @@ class Tracer:
 
     def _gen_html_table(self) -> str:
         res = StringIO()
-        noclick = 'onmousedown="return false" onselectstart="return false"'
-        if self.config.i_will_not_cheat:
-            noclick = str()
-        res.write(f"<table {noclick}>\n")
+        res.write("<table>\n")
 
         # generate header
         should_print_line_nums = self._should_print_line_numbers()
@@ -473,9 +470,19 @@ class Tracer:
         title = f"Generated Trace Table{title_s}"
 
         res.write(f"<title>{title}</title>\n")
-        res.write(f"<style>\n{TABLE_STYLE}\n</style>\n")
+       
+        noselect = str()
+        if not self.config.i_will_not_cheat:
+            noselect = """
+body {
+  user-select: none;
+}
+            """
+
+        res.write(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
         res.write("</head>\n")
-        res.write("<body><center>\n")
+
+        res.write(f"<body><center>\n")
 
         res.write(f"<h1>{title}</h1>\n")
         res.write(self._gen_html_table() + "\n")
