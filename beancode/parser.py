@@ -80,6 +80,7 @@ class Parser:
         if not tok:
             raise BCError(
                 f"expected token {humanize_token_kind(expected)}{s}, but reached end of file{h}",
+                self.pos(),
                 eof=True,
             )
 
@@ -122,7 +123,11 @@ class Parser:
         if self.cur < len(self.tokens):
             self.cur += 1
         else:
-            raise BCError("reached end of file", eof=True)
+            prevpos = None
+            if len(self.tokens) > 0:
+                prevpos = self.prev().pos
+
+            raise BCError("reached end of file", prevpos, eof=True)
 
         return self.prev()
 
@@ -447,7 +452,8 @@ class Parser:
     def typecast(self) -> Typecast | None:
         typ = self.consume_and_expect("type", "for typecast")
         if typ.data == "array":
-            raise BCError("cannot typecast to an array!")
+            # should be unreachable
+            raise BCError("cannot typecast to an array!", typ.pos)
 
         t: BCPrimitiveType = typ.data  # type: ignore
         self.consume()  # checked already
@@ -464,7 +470,7 @@ class Parser:
         begin = self.consume_and_expect("left_paren", "in grouping")
         e = self.expression()
         if not e:
-            raise BCError("invalid or no expression inside grouping", e)
+            raise BCError("invalid or no expression inside grouping", begin.pos)
 
         self.consume_and_expect("right_paren", "after expression in grouping")
         return Grouping(begin.pos, inner=e)

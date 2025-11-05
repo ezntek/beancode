@@ -470,7 +470,7 @@ class Tracer:
         title = f"Generated Trace Table{title_s}"
 
         res.write(f"<title>{title}</title>\n")
-       
+
         noselect = str()
         if not self.config.i_will_not_cheat:
             noselect = """

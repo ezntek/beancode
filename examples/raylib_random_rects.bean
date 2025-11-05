@@ -3,7 +3,7 @@ INCLUDE_FFI "beanray"
 CONSTANT MaxRect <- 1000
 CONSTANT WinWidth <- 800
 CONSTANT WinHeight <- 600
-CONSTANT SizeVar <- 50
+CONSTANT SizeVar <- 75 
 CONSTANT BaseSize <- 100
 
 DECLARE RectX: ARRAY[1:MaxRect] OF INTEGER

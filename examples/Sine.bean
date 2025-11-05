@@ -1,5 +1,6 @@
 CONSTANT PI <- 3.1415926536
 
+// Use the taylor series to get the sine of a value
 FUNCTION Sine(X: REAL) RETURNS REAL
     DECLARE Real_X: REAL 
     Real_X <- MOD(X,2*PI) - PI

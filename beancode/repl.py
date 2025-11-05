@@ -273,6 +273,7 @@ class Repl:
         vars = args[2:]
 
         from .runner import trace
+
         trace(path, vars=vars)
         return DotCommandResult.NO_OP
 
