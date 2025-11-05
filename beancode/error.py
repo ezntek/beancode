@@ -88,6 +88,7 @@ def info(msg: str):
         f"\033[34;1minfo:\033[0m {msg}",
         file=sys.stderr,
     )
+    sys.stderr.flush()
 
 
 def warn(msg: str):
@@ -95,6 +96,7 @@ def warn(msg: str):
         f"\033[33;1mwarn:\033[0m {msg}",
         file=sys.stderr,
     )
+    sys.stderr.flush()
 
 
 def error(msg: str):
@@ -102,3 +104,4 @@ def error(msg: str):
         f"\033[31;1merror:\033[0m {msg}",
         file=sys.stderr,
     )
+    sys.stderr.flush()

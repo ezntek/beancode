@@ -1219,7 +1219,8 @@ class Parser:
             lit: Literal | None = self.literal()  # type: ignore
             if not lit:
                 raise BCError(
-                    "expected valid literal after TO keyword in TRACE statement!",
+                    "expected valid literal after TO keyword in TRACE statement\n"
+                    + "pass the file name of the output trace table in a string.",
                     self.pos(),
                 )
 
