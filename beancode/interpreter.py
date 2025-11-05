@@ -2035,22 +2035,22 @@ class Interpreter:
             ob, oe, ib, ie = bounds
 
             if ob < 0:
-                self.error("outer beginning value for array bound declaration cannot be <0!", t.get_matrix_bounds()[0].pos)  # type: ignore
+                self.error("outer beginning value for array bound declaration cannot be <0!", at.get_matrix_bounds()[0].pos)  # type: ignore
 
             if oe < 0:
-                self.error("outer ending value for array bound declaration cannot be <0!", t.get_matrix_bounds()[1].pos)  # type: ignore
+                self.error("outer ending value for array bound declaration cannot be <0!", at.get_matrix_bounds()[1].pos)  # type: ignore
 
             if ib < 0:
-                self.error("inner beginning value for array bound declaration cannot be <0!", t.get_matrix_bounds()[2].pos)  # type: ignore
+                self.error("inner beginning value for array bound declaration cannot be <0!", at.get_matrix_bounds()[2].pos)  # type: ignore
 
             if ie < 0:
-                self.error("inner ending value for array bound declaration cannot be <0!", t.get_matrix_bounds()[3].pos)  # type: ignore
+                self.error("inner ending value for array bound declaration cannot be <0!", at.get_matrix_bounds()[3].pos)  # type: ignore
 
             if ob > oe:
-                self.error("invalid outer range for 2D array bound declaration", d.pos)
+                self.error("invalid outer range for 2D array bound declaration", at.get_matrix_bounds()[0].pos)
 
             if ib > ie:
-                self.error("invalid inner range for 2D array bound declaration", d.pos)
+                self.error("invalid inner range for 2D array bound declaration", at.get_matrix_bounds()[2].pos)
 
             # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
             in_size = ie - ib
@@ -2068,13 +2068,13 @@ class Interpreter:
             begin, end = bounds
 
             if begin < 0:
-                self.error("beginning value for array bound declaration cannot be <0!", t.flat_bounds[0].pos)  # type: ignore
+                self.error("beginning value for array bound declaration cannot be <0!", at.get_flat_bounds()[0].pos)  # type: ignore
 
             if end < 0:
-                self.error("ending value for array bound declaration cannot be <0!", t.flat_bounds[1].pos)  # type: ignore
+                self.error("ending value for array bound declaration cannot be <0!", at.get_flat_bounds()[1].pos)  # type: ignore
 
             if begin > end:
-                self.error("invalid range for array bound declaration", t.flat_bounds[0].pos)  # type: ignore
+                self.error("invalid range for array bound declaration", at.get_flat_bounds()[0].pos)  # type: ignore
 
             size = end - begin
             arr = [BCValue(t.inner) for _ in range(size + 1)]
