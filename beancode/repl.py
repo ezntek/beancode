@@ -354,7 +354,7 @@ class Repl:
             except BCError as err:
                 err.print("(repl)", self.buf.getvalue())
                 print()
-                continue
+                return (None, ContinuationResult.ERROR)
 
             self.p.reset()
             self.p.tokens += toks
