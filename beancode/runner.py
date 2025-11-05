@@ -73,7 +73,7 @@ def run_file(filename: str | None = None):
     if not file_content:
         return
 
-    execute(file_content, filename=real_path)
+    execute(file_content, filename=real_path, notify_when_done=True)
 
 
 def trace(
@@ -125,11 +125,11 @@ def trace(
 
         tracer.config = TracerConfig.from_config(cfg)
 
-    execute(src, filename=real_path, save_interpreter=False, tracer=tracer)
+    execute(src, filename=real_path, save_interpreter=False, tracer=tracer, notify_when_done=True)
     tracer.write_out(target_file)
 
 
-def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None) -> "Interpreter | None":  # type: ignore
+def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None, notify_when_done = False) -> "Interpreter | None":  # type: ignore
     from .error import BCError
     from .lexer import Lexer
     from .parser import Parser
@@ -171,6 +171,9 @@ def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tra
             exit(1)
         else:
             return
+
+    if notify_when_done:
+        info("execution complete!")
 
     if save_interpreter:
         return i
