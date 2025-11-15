@@ -1063,9 +1063,8 @@ class Interpreter:
             return self.visit_ffi_fncall(func, stmt)
 
         intp = self.new(func.block, func=True, tracer=tracer)
-        intp.calls = self.calls
+        intp.calls = self.calls.copy()
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
-        vars = self.variables
         if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
 
@@ -1075,13 +1074,12 @@ class Interpreter:
                 stmt.pos,
             )
 
+        intp.variables = self.variables.copy()
         for argdef, argval in zip(func.args, stmt.args):
             val = self.visit_expr(argval)
-            vars[argdef.name] = Variable(val=val, const=False, export=False)
+            intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
-        intp.variables = dict(vars)
-        intp.functions = self.functions
-
+        intp.functions = self.functions.copy()
         intp.visit_block(func.block)
         intp.calls.pop()
         if intp._returned is False:
@@ -1145,9 +1143,9 @@ class Interpreter:
             return self.visit_ffi_call(proc, stmt)
 
         intp = self.new(proc.block, proc=True, tracer=tracer)
-        intp.calls = self.calls
+        intp.calls = self.calls.copy()
         intp.calls.append(CallStackEntry(proc.name, None, proc=True))
-        vars = self.variables
+        
         if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
 
@@ -1157,12 +1155,11 @@ class Interpreter:
                 stmt.pos,
             )
 
+        intp.functions = self.functions.copy()
+        intp.variables = self.variables.copy()
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
-            vars[argdef.name] = Variable(val=val, const=False, export=False)
-
-        intp.variables = dict(vars)
-        intp.functions = dict(self.functions)
+            intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.visit_block(proc.block)
         intp.calls.pop()
