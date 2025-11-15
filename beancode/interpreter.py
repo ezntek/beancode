@@ -2126,22 +2126,16 @@ class Interpreter:
         vars = stmt.vars
         tracer = Tracer(vars)
 
-        CONFIG_PATHS = [
-            f"{os.environ['HOME']}/.beancode_tracerconfig.bean",
-            "./tracerconfig.bean",
-        ]
-        for path in CONFIG_PATHS:
-            if os.path.exists(path):
-                cfg = parse_config_from_file(path)
-                tracer.config = TracerConfig.from_config(cfg)
-                break
+        tracer.config.write_to_default_location()
+        tracer.load_config()
 
         intp = self.new(stmt.block, loop=False, tracer=tracer)
         intp.variables = dict(self.variables)
         intp.functions = dict(self.functions)
         intp.visit_block(None)
 
-        tracer.write_out(stmt.file_name)
+        written_path = tracer.write_out(stmt.file_name)
+        tracer.open(written_path)
 
     def visit_stmt(self, stmt: Statement):
         match stmt:

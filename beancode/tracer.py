@@ -1,4 +1,7 @@
 import copy
+import subprocess
+
+from beancode.cfgparser import parse_config_from_file
 
 from .bean_ast import *
 
@@ -93,7 +96,39 @@ class TracerConfig:
                 res.i_will_not_cheat = data.get_boolean()
 
         return res
+    
+    def write_out(self, path: str):
+        res = StringIO()
+       
+        res.write(f"TraceEveryLine <- {str(self.trace_every_line).upper()}\n")
+        res.write(f"HideRepeatingEntries <- {str(self.hide_repeating_entries).upper()}\n")
+        res.write(f"CondenseArrays <- {str(self.condense_arrays).upper()}\n")
+        res.write(f"SyntaxHighlighting <- {str(self.syntax_highlighting).upper()}\n")
+        res.write(f"ShowOutputs <- {str(self.show_outputs).upper()}\n")
+        res.write(f"PromptOnInputs <- {str(self.prompt_on_inputs).upper()}\n")
+        res.write(f"Debug <- {str(self.debug).upper()}\n")
+        res.write(f"IWillNotCheat <- {str(self.i_will_not_cheat).upper()}\n")
 
+        s = res.getvalue()
+        with open(path, "w") as f:
+            f.write(s)
+
+    def write_to_default_location(self, force=False):
+        cfgpath = str()
+        if sys.platform != 'win32':
+            cfgpath = os.environ.get("XDG_CONFIG_HOME")
+            if not cfgpath:
+                cfgpath = os.path.join(os.environ["HOME"], ".config")
+            cfgpath = os.path.join(cfgpath, "beancode", "tracerconfig.bean")
+        else:
+            cfgpath = f"{os.environ["APPDATA"]}\\beancode\\tracerconfig.bean"
+
+        dir = os.path.dirname(cfgpath)
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        
+        if force or not os.path.exists(cfgpath):
+            self.write_out(cfgpath)
 
 class Tracer:
     vars: dict[str, list[BCValue | None]]
@@ -125,6 +160,43 @@ class Tracer:
             self.vars[var] = list()
             self.var_types[var] = "null"
             self.last_updated_vals[var] = None
+
+    def load_config(self, search_paths: list[str] | None = None):
+        if not search_paths:
+            config_paths = list()
+
+            if sys.platform != 'win32':
+                cfgpath = os.environ.get("XDG_CONFIG_HOME")
+                if not cfgpath:
+                    cfgpath = os.path.join(os.environ["HOME"], ".config")
+                cfgpath = os.path.join(cfgpath, "beancode", "tracerconfig.bean")
+
+                config_paths = [
+                    cfgpath,
+                    "./tracerconfig.bean",
+                ]
+            else:
+                config_paths = [
+                    f"{os.getenv("APPDATA")}\\beancode\\tracerconfig.bean",
+                    ".\\tracerconfig.bean"
+                ]
+        else:
+            config_paths = search_paths
+
+        for path in config_paths:
+            if os.path.exists(path):
+                cfg = parse_config_from_file(path)
+                self.config = TracerConfig.from_config(cfg)
+                break
+
+    def open(self, path: str):
+        match sys.platform:
+            case 'darwin':
+                subprocess.run(["open", path])
+            case 'linux' | 'freebsd':
+                subprocess.run(["xdg-open", path])
+            case 'win32':
+                subprocess.run(["cmd", "/c", "start", "", path])
 
     def collect_new(
         self,
@@ -491,7 +563,7 @@ body {
         res.write("</html>\n")
         return res.getvalue()
 
-    def write_out(self, file_name: str | None = None):
+    def write_out(self, file_name: str | None = None) -> str:
         """write out tracer output with console output."""
 
         real_name = "tracer_output.html" if not file_name else file_name
@@ -499,10 +571,12 @@ body {
             warn(f"provided file path does not have the .html file extension!")
             real_name += ".html"
 
+        full_path = os.path.abspath(os.path.join("./", real_name))
+
         if os.path.exists(real_name):
-            warn(f'"{real_name}" already exists on disk! overwriting...')
+            warn(f'"{full_path}" already exists on disk! overwriting...')
         else:
-            info(f'writing output to "{real_name}"...')
+            info(f'writing output to "{full_path}"...')
 
         try:
             with open(real_name, "w") as f:
@@ -511,3 +585,5 @@ body {
             error(f"cannot write the tracer's output to a directory!")
         except PermissionError:
             error(f"no permission to write tracer's output")
+
+        return full_path

@@ -73,7 +73,7 @@ def run_file(filename: str | None = None):
     if not file_content:
         return
 
-    execute(file_content, filename=real_path, notify_when_done=True)
+    execute(file_content, filename=real_path)
 
 
 def trace(
@@ -101,16 +101,11 @@ def trace(
         vars = list()
 
     tracer = Tracer(vars)
+    tracer.config.write_to_default_location()
 
     actual_path = config_path
     if config_path and config_path in ("", "default"):
-        CONFIG_PATHS = [
-            f"{os.environ['HOME']}/.beancode_tracerconfig.bean",
-            "./tracerconfig.bean",
-        ]
-        for path in CONFIG_PATHS:
-            if os.path.exists(path):
-                actual_path = path
+        tracer.load_config()
 
     if actual_path is not None:
         file_content = _read_whole_file_nicely(actual_path)
@@ -126,7 +121,8 @@ def trace(
         tracer.config = TracerConfig.from_config(cfg)
 
     execute(src, filename=real_path, save_interpreter=False, tracer=tracer, notify_when_done=True)
-    tracer.write_out(target_file)
+    output_path = tracer.write_out(target_file)
+    tracer.open(output_path)
 
 
 def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None, notify_when_done = False) -> "Interpreter | None":  # type: ignore
@@ -173,7 +169,7 @@ def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tra
             return
 
     if notify_when_done:
-        info("execution complete!")
+        info("execution of script/code complete!")
 
     if save_interpreter:
         return i
