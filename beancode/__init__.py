@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-__version__ = "0.5.1-dev"
+__version__ = "0.5.1"
 
 
 def print_version():
