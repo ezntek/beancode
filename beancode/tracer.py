@@ -119,6 +119,11 @@ class TracerConfig:
             cfgpath = os.environ.get("XDG_CONFIG_HOME")
             if not cfgpath:
                 cfgpath = os.path.join(os.environ["HOME"], ".config")
+
+            # darwin
+            if not os.path.exists(cfgpath):
+                os.mkdir(cfgpath)
+
             cfgpath = os.path.join(cfgpath, "beancode", "tracerconfig.bean")
         else:
             cfgpath = f"{os.environ["APPDATA"]}\\beancode\\tracerconfig.bean"
