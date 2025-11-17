@@ -126,7 +126,7 @@ class TracerConfig:
 
             cfgpath = os.path.join(cfgpath, "beancode", "tracerconfig.bean")
         else:
-            cfgpath = f"{os.environ["APPDATA"]}\\beancode\\tracerconfig.bean"
+            cfgpath = f"{os.environ['APPDATA']}\\beancode\\tracerconfig.bean"
 
         dir = os.path.dirname(cfgpath)
         if not os.path.exists(dir):
@@ -182,7 +182,7 @@ class Tracer:
                 ]
             else:
                 config_paths = [
-                    f"{os.getenv("APPDATA")}\\beancode\\tracerconfig.bean",
+                    f"{os.getenv('APPDATA')}\\beancode\\tracerconfig.bean",
                     ".\\tracerconfig.bean"
                 ]
         else:
