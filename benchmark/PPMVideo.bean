@@ -1,0 +1,34 @@
+// PPM video generator!
+// Run with `./main.py PPMVideo.bean | bash && ffmpeg -i frame%d.ppm -r 60 -o output.mp4` 
+
+CONSTANT Width <- 640 
+CONSTANT Height <- 480 
+
+PROCEDURE Frame(I: INTEGER)
+    OUTPUT "P3"
+    OUTPUT Width, " ", Height
+    OUTPUT "255"
+
+    DECLARE Data: STRING
+    DECLARE Pixel: STRING
+
+    Data <- ""
+
+    FOR Y <- 0 TO (Height - 1)
+        FOR X <- 0 TO (Width - 1)
+            IF MOD(DIV(X+I, 40) + DIV(Y+I, 30), 2) = 0
+              THEN
+                Pixel <- 79 + " " + 169 + " " + 232 + " "
+              ELSE
+                Pixel <- 120 + " " + 187 + " " + 232 + " "
+            ENDIF
+            OUTPUT Pixel
+        NEXT X
+    NEXT Y
+ENDPROCEDURE
+
+FOR i <- 0 TO (60-1)
+    OUTPUT "cat <<EOF > frame" + i + ".ppm"
+    CALL Frame(i)
+    OUTPUT "EOF"
+NEXT i
