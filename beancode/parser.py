@@ -537,6 +537,13 @@ class Parser:
         if not expr:
             return
 
+        if self.check("ident") and is_case_consistent(s := self.peek().data.lower()): # type: ignore
+            if s == "div":
+                raise BCError("DIV is not an infix operator!\nPlease use the DIV(a, b) library routine instead of a DIV b!", self.pos())
+            elif s == "mod":
+                raise BCError("MOD is not an infix operator!\nPlease use the MOD(a, b) library routine instead of a MOD b!", self.pos())
+
+
         while self.match("mul", "div"):
             op = self.prev()
 
@@ -921,6 +928,8 @@ class Parser:
                 self.consume_and_expect("colon", "after case of branch expression")
             else:
                 self.consume()
+                if self.check("colon"):
+                    raise BCError("a colon \":\" after OTHERWISE is A-level Pseudocode syntax!\nRemove this colon.", self.pos())
 
             stmt = self.stmt()
             self.consume_newlines()

@@ -274,7 +274,8 @@ class Lexer:
         return ch in "{}[]();:,"
 
     def is_operator_start(self, ch: str) -> bool:
-        return ch in "+-*/<>=^←"
+        # catch % for error
+        return ch in "%+-*/<>=^←"
 
     def trim_spaces(self) -> None:
         if not self.in_bounds():
@@ -342,6 +343,9 @@ class Lexer:
         if not self.is_separator(cur) and not self.is_operator_start(cur):
             return None
 
+        if cur == '%': 
+            raise BCError("% as an operator is not supported!\nPlease use the MOD(a, b) library routine instead of a % b!", self.pos(1))
+
         TABLE: dict[str, TokenKind] = {
             "{": "left_curly",
             "}": "right_curly",
@@ -363,7 +367,7 @@ class Lexer:
             "←": "assign",
         }
 
-        kind = TABLE.get(self.get_cur())
+        kind = TABLE.get(cur)
         if kind is not None:
             self.cur += 1
             return Token(kind, self.pos(1))
@@ -505,7 +509,7 @@ class Lexer:
                 )
             return Token("ident", p, data=word)
         else:
-            raise BCError("invalid identifier", p)
+            raise BCError("invalid identifier or symbol", p)
 
     def next_token(self) -> Token | None:
         self.trim_spaces()
