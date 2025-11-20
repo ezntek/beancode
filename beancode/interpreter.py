@@ -15,7 +15,6 @@ from .error import *
 from .libroutines import *
 from . import __version__, Pos, is_case_consistent
 from .tracer import *
-from .cfgparser import parse_config_from_file
 
 
 class Interpreter:
@@ -1145,7 +1144,7 @@ class Interpreter:
         intp = self.new(proc.block, proc=True, tracer=tracer)
         intp.calls = self.calls.copy()
         intp.calls.append(CallStackEntry(proc.name, None, proc=True))
-        
+
         if self.tracer is not None and tracer is None:
             intp.tracer = self.tracer
 
@@ -2044,10 +2043,16 @@ class Interpreter:
                 self.error("inner ending value for array bound declaration cannot be <0!", at.get_matrix_bounds()[3].pos)  # type: ignore
 
             if ob > oe:
-                self.error("invalid outer range for 2D array bound declaration", at.get_matrix_bounds()[0].pos)
+                self.error(
+                    "invalid outer range for 2D array bound declaration",
+                    at.get_matrix_bounds()[0].pos,
+                )
 
             if ib > ie:
-                self.error("invalid inner range for 2D array bound declaration", at.get_matrix_bounds()[2].pos)
+                self.error(
+                    "invalid inner range for 2D array bound declaration",
+                    at.get_matrix_bounds()[2].pos,
+                )
 
             # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
             in_size = ie - ib

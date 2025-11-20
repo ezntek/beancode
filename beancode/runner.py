@@ -120,12 +120,18 @@ def trace(
 
         tracer.config = TracerConfig.from_config(cfg)
 
-    execute(src, filename=real_path, save_interpreter=False, tracer=tracer, notify_when_done=True)
+    execute(
+        src,
+        filename=real_path,
+        save_interpreter=False,
+        tracer=tracer,
+        notify_when_done=True,
+    )
     output_path = tracer.write_out(target_file)
     tracer.open(output_path)
 
 
-def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None, notify_when_done = False) -> "Interpreter | None":  # type: ignore
+def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None, notify_when_done=False) -> "Interpreter | None":  # type: ignore
     from .error import BCError
     from .lexer import Lexer
     from .parser import Parser

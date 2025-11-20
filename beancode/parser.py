@@ -1367,7 +1367,18 @@ class Parser:
         if expr:
             return ExprStatement.from_expr(expr)
         else:
-            raise BCError("invalid statement or expression", cur.pos)
+            DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
+            if cur.kind == "next":
+                raise BCError("cannot end FOR loop now!\n" + DIDNT_END, cur.pos)
+            elif cur.kind[:3] == "end":
+                end = cur.kind[3:].upper()
+                if end == "CASE":
+                    end += " OF"
+                raise BCError(
+                    f"cannot end a {end} statement now!\n" + DIDNT_END, cur.pos
+                )
+            else:
+                raise BCError("invalid statement or expression", cur.pos)
 
     def scan_one_statement(self) -> Statement | None:
         s = self.stmt()

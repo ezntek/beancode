@@ -96,12 +96,14 @@ class TracerConfig:
                 res.i_will_not_cheat = data.get_boolean()
 
         return res
-    
+
     def write_out(self, path: str):
         res = StringIO()
-       
+
         res.write(f"TraceEveryLine <- {str(self.trace_every_line).upper()}\n")
-        res.write(f"HideRepeatingEntries <- {str(self.hide_repeating_entries).upper()}\n")
+        res.write(
+            f"HideRepeatingEntries <- {str(self.hide_repeating_entries).upper()}\n"
+        )
         res.write(f"CondenseArrays <- {str(self.condense_arrays).upper()}\n")
         res.write(f"SyntaxHighlighting <- {str(self.syntax_highlighting).upper()}\n")
         res.write(f"ShowOutputs <- {str(self.show_outputs).upper()}\n")
@@ -115,7 +117,7 @@ class TracerConfig:
 
     def write_to_default_location(self, force=False):
         cfgpath = str()
-        if sys.platform != 'win32':
+        if sys.platform != "win32":
             cfgpath = os.environ.get("XDG_CONFIG_HOME")
             if not cfgpath:
                 cfgpath = os.path.join(os.environ["HOME"], ".config")
@@ -131,9 +133,10 @@ class TracerConfig:
         dir = os.path.dirname(cfgpath)
         if not os.path.exists(dir):
             os.mkdir(dir)
-        
+
         if force or not os.path.exists(cfgpath):
             self.write_out(cfgpath)
+
 
 class Tracer:
     vars: dict[str, list[BCValue | None]]
@@ -170,7 +173,7 @@ class Tracer:
         if not search_paths:
             config_paths = list()
 
-            if sys.platform != 'win32':
+            if sys.platform != "win32":
                 cfgpath = os.environ.get("XDG_CONFIG_HOME")
                 if not cfgpath:
                     cfgpath = os.path.join(os.environ["HOME"], ".config")
@@ -183,7 +186,7 @@ class Tracer:
             else:
                 config_paths = [
                     f"{os.getenv('APPDATA')}\\beancode\\tracerconfig.bean",
-                    ".\\tracerconfig.bean"
+                    ".\\tracerconfig.bean",
                 ]
         else:
             config_paths = search_paths
@@ -196,11 +199,11 @@ class Tracer:
 
     def open(self, path: str):
         match sys.platform:
-            case 'darwin':
+            case "darwin":
                 subprocess.run(["open", path])
-            case 'linux' | 'freebsd':
+            case "linux" | "freebsd":
                 subprocess.run(["xdg-open", path])
-            case 'win32':
+            case "win32":
                 subprocess.run(["cmd", "/c", "start", "", path])
 
     def collect_new(
