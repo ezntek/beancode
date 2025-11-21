@@ -1,7 +1,9 @@
 import typing
 
+from typing import IO, Any, Callable
 from io import StringIO
 from dataclasses import dataclass
+from typing_extensions import Any
 
 from . import Pos
 from .error import *
@@ -265,6 +267,18 @@ class BCValue:
             case "null":
                 return "(null)"
 
+@dataclass
+class File:
+    stream: IO[Any] # im lazy
+    # read, write, append
+    mode: tuple[bool, bool, bool]
+    open = True
+
+
+@dataclass
+class FileCallbacks:
+    open: Callable[[str, str], IO[Any]]
+    close: Callable[[IO[Any]], None]
 
 @dataclass
 class Literal(Expr):
@@ -336,7 +350,6 @@ Operator = typing.Literal[
     "not",
 ]
 
-
 @dataclass
 class BinaryExpr(Expr):
     lhs: Expr
@@ -350,6 +363,7 @@ class ArrayIndex(Expr):
     idx_outer: Expr
     idx_inner: Expr | None = None
 
+Lvalue = Identifier | ArrayIndex
 
 @dataclass
 class Statement:
@@ -371,11 +385,12 @@ class FunctionCall(Expr):
 @dataclass
 class OutputStatement(Statement):
     items: list[Expr]
+    newline: bool = True
 
 
 @dataclass
 class InputStatement(Statement):
-    ident: Identifier | ArrayIndex
+    ident: Lvalue
 
 
 @dataclass
@@ -395,7 +410,7 @@ class DeclareStatement(Statement):
 
 @dataclass
 class AssignStatement(Statement):
-    ident: Identifier | ArrayIndex
+    ident: Lvalue
     value: Expr
 
 
@@ -480,14 +495,14 @@ FileMode = typing.Literal["read", "write", "append"]
 class OpenfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    mode: str
-
+    # guaranteed to be valid
+    mode: tuple[bool, bool, bool]
 
 @dataclass
 class ReadfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    target: Identifier | ArrayIndex
+    target: Lvalue
 
 
 @dataclass

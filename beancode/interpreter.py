@@ -5,7 +5,7 @@ import copy
 import math
 import subprocess
 
-from typing import Any, NoReturn, TextIO
+from typing import Any, NoReturn
 
 from .bean_help import bean_help
 from .bean_ffi import BCFunction, BCProcedure, Exports
@@ -15,6 +15,18 @@ from .error import *
 from .libroutines import *
 from . import __version__, Pos, is_case_consistent
 from .tracer import *
+
+def _get_file_mode(read: bool, write: bool, append: bool) -> str | None:
+    if read and write:
+        return "r+"
+    elif append and read:
+        return "a+"
+    elif read:
+        return "r"
+    elif write:
+        return "w"
+    elif append:
+        return "a"
 
 
 class Interpreter:
@@ -33,8 +45,8 @@ class Interpreter:
     tracer: Tracer | None = None
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
-    files: dict[str, Any]
-    virtual_files: bool
+    files: dict[str, File]
+    file_callbacks: FileCallbacks
 
     def __init__(
         self,
@@ -43,20 +55,31 @@ class Interpreter:
         proc=False,
         loop=False,
         tracer=None,
-        string_writer=False,
+        file_callbacks=None 
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
         self.tracer = tracer
-        self.virtual_files = string_writer
         self.files = dict()
+
+        if not file_callbacks:
+            _open = lambda n, m: open(n, m)
+            _close = lambda f: f.close() 
+            self.file_callbacks = FileCallbacks(_open, _close)
+        else:
+            self.file_callbacks = file_callbacks
+
         self.reset_all()
 
     @classmethod
     def new(cls, block: list[Statement], func=False, proc=False, loop=False, tracer=None) -> "Interpreter":  # type: ignore
         return cls(block, func=func, proc=proc, loop=loop, tracer=tracer)  # type: ignore
+
+    def __del__(self):
+        for file in self.files.values():
+            self.file_callbacks.close(file.stream)
 
     def reset(self):
         self.cur_stmt = 0
@@ -73,9 +96,8 @@ class Interpreter:
         self._returned = False
         self.cur_stmt = 0
 
-        if not self.virtual_files:
-            for f in self.files.values():
-                f.close()
+        for f in self.files.values():
+            self.file_callbacks.close(f.stream)
 
         self.files = dict()
 
@@ -1351,6 +1373,41 @@ class Interpreter:
         t = BCArrayType.new_flat(typ, bounds)
         return BCValue.new_array(BCArray.new_flat(t, vals))
 
+    def visit_identifier(self, expr: Identifier) -> BCValue:
+        if expr.ident in self.functions:
+            f = self.functions[expr.ident]
+            if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
+                self.error(
+                    f'undeclared variable "{expr.ident}" is a function!\nplease call it with an argument list: {expr.ident}(args...)',
+                    expr.pos,
+                )
+            else:
+                self.error(
+                    f'undeclared variable "{expr.ident}" is a function!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
+                    expr.pos,
+                )
+
+        if is_case_consistent(expr.ident):
+            if expr.ident in LIBROUTINES:
+                self.error(
+                    f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
+                    expr.pos,
+                )
+            if expr.ident in LIBROUTINES_NORETURN:
+                self.error(
+                    f'"{expr.ident}" is a library routine procedure!\nplease call it with the CALL keyword:  CALL {expr.ident}(args...)',
+                    expr.pos,
+                )
+
+        try:
+            var = self.variables[expr.ident]
+        except KeyError:
+            self.error(
+                f'cannot access undeclared variable "{expr.ident}"', expr.pos
+            )
+
+        return var.val
+
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         if isinstance(expr, Typecast):
             return self.visit_typecast(expr)
@@ -1377,39 +1434,7 @@ class Interpreter:
 
             return BCValue.new_boolean(not inner.get_boolean())
         elif isinstance(expr, Identifier):
-            if expr.ident in self.functions:
-                f = self.functions[expr.ident]
-                if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
-                    self.error(
-                        f'undeclared variable "{expr.ident}" is a function!\nplease call it with an argument list: {expr.ident}(args...)',
-                        expr.pos,
-                    )
-                else:
-                    self.error(
-                        f'undeclared variable "{expr.ident}" is a function!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
-                        expr.pos,
-                    )
-
-            if is_case_consistent(expr.ident):
-                if expr.ident in LIBROUTINES:
-                    self.error(
-                        f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
-                        expr.pos,
-                    )
-                if expr.ident in LIBROUTINES_NORETURN:
-                    self.error(
-                        f'"{expr.ident}" is a library routine procedure!\nplease call it with the CALL keyword:  CALL {expr.ident}(args...)',
-                        expr.pos,
-                    )
-
-            try:
-                var = self.variables[expr.ident]
-            except KeyError:
-                self.error(
-                    f'cannot access undeclared variable "{expr.ident}"', expr.pos
-                )
-
-            return var.val
+            return self.visit_identifier(expr)
         elif isinstance(expr, Literal):
             return expr.to_bcvalue()
         elif isinstance(expr, ArrayLiteral):
@@ -1481,7 +1506,7 @@ class Interpreter:
             print("(tracer output): " + res)
             sys.stdout.flush()
         elif not self.tracer:
-            print(res)
+            print(res, end=('\n' if stmt.newline else ''))
             sys.stdout.flush()
 
     def _guess_input_type(self, inp: str) -> BCValue:
@@ -1698,27 +1723,12 @@ class Interpreter:
         if cond.kind != "boolean":
             self.error("condition of while loop must be a boolean!", stmt.cond.pos)
 
+        saved_cur = self.cur_stmt
         if cond.get_boolean():
-            intp: Interpreter = self.new(stmt.if_block, tracer=self.tracer)
+            self.visit_block(stmt.if_block)
         else:
-            intp: Interpreter = self.new(stmt.else_block, tracer=self.tracer)
-
-        intp.variables = dict(self.variables)
-        intp.functions = dict(self.functions)
-        intp.calls = self.calls
-        intp.visit_block(None)
-        if intp._returned:
-            proc, func = self.can_return()
-
-            if not proc and not func:
-                # FIXME: is this even a possible branch?!
-                self.error(
-                    f"did not find function or procedure to return from!",
-                    stmt.pos,
-                )
-
-            self._returned = True
-            self.retval = intp.retval
+            self.visit_block(stmt.else_block)
+        self.cur_stmt = saved_cur
 
     def visit_caseof_stmt(self, stmt: CaseofStatement):
         value: BCValue = self.visit_expr(stmt.expr)
@@ -2043,16 +2053,16 @@ class Interpreter:
             ob, oe, ib, ie = bounds
 
             if ob < 0:
-                self.error("outer beginning value for array bound declaration cannot be <0!", at.get_matrix_bounds()[0].pos)  # type: ignore
+                self.error("outer beginning value for array bound declaration cannot be <0", at.get_matrix_bounds()[0].pos)  # type: ignore
 
             if oe < 0:
-                self.error("outer ending value for array bound declaration cannot be <0!", at.get_matrix_bounds()[1].pos)  # type: ignore
+                self.error("outer ending value for array bound declaration cannot be <0", at.get_matrix_bounds()[1].pos)  # type: ignore
 
             if ib < 0:
-                self.error("inner beginning value for array bound declaration cannot be <0!", at.get_matrix_bounds()[2].pos)  # type: ignore
+                self.error("inner beginning value for array bound declaration cannot be <0", at.get_matrix_bounds()[2].pos)  # type: ignore
 
             if ie < 0:
-                self.error("inner ending value for array bound declaration cannot be <0!", at.get_matrix_bounds()[3].pos)  # type: ignore
+                self.error("inner ending value for array bound declaration cannot be <0", at.get_matrix_bounds()[3].pos)  # type: ignore
 
             if ob > oe:
                 self.error(
@@ -2082,10 +2092,10 @@ class Interpreter:
             begin, end = bounds
 
             if begin < 0:
-                self.error("beginning value for array bound declaration cannot be <0!", at.get_flat_bounds()[0].pos)  # type: ignore
+                self.error("beginning value for array bound declaration cannot be <0", at.get_flat_bounds()[0].pos)  # type: ignore
 
             if end < 0:
-                self.error("ending value for array bound declaration cannot be <0!", at.get_flat_bounds()[1].pos)  # type: ignore
+                self.error("ending value for array bound declaration cannot be <0", at.get_flat_bounds()[1].pos)  # type: ignore
 
             if begin > end:
                 self.error("invalid range for array bound declaration", at.get_flat_bounds()[0].pos)  # type: ignore
@@ -2162,7 +2172,7 @@ class Interpreter:
             else:
                 exp = self.visit_expr(id)
                 if exp.kind != "string":
-                    raise BCError("File name must be a string!", pos)
+                    self.error("File name must be a string!", pos)
                 name = exp.get_string()
         else:
             name = id
@@ -2171,24 +2181,68 @@ class Interpreter:
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
         name = self._get_file_name(stmt.file_ident, stmt.pos)
 
-        if not self.virtual_files:
-            self.files[name] = open(name, stmt.mode)
-        else:
-            self.files[name] = StringIO()
+        stream: Any
+        mode = _get_file_mode(*stmt.mode)
+        if not mode:
+            self.error("Bogus Amogus file mode!\n" +
+                       "This error was not anticipated. Please report this to the developers.", stmt.pos)
+
+        try:
+            stream = self.file_callbacks.open(name, mode)
+        except PermissionError as e:
+            self.error(f"not enough permissions to open \"{name}\"\n" + 
+                       f"Do you have access to this file? [Error Code: {e.errno}]", stmt.pos)
+        except FileNotFoundError as e:
+            self.error(f"file \"{name}\" was not found\n" + 
+                       f"Error Code: {e.errno}", stmt.pos)
+        except IsADirectoryError as e:
+            self.error(f"\"{name}\" is a folder/directory\n" + 
+                       f"Error Code: {e.errno}", stmt.pos)
+        except Exception as e:
+            self.error(f"could not open file \"{name}\"\n" + 
+                       f"Python Exception: {str(e)}", stmt.pos)
+
+        self.files[name] = File(stream, stmt.mode)
+
+    def _get_file_obj(self, fileid: Any, pos: Pos) -> tuple[str, File]:
+        name = self._get_file_name(fileid, pos)
+        file = self.files.get(name)
+        if not file:
+            self.error(f"file \"{file}\" does not exist!\n" + "did you forget to open it?", pos)
+        return (name, file) 
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
-        raise NotImplementedError()
+        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+
+        target: BCValue
+        if isinstance(stmt.target, ArrayIndex):
+            target = self.visit_array_index(stmt.target)
+        else:
+            target = self.visit_identifier(stmt.target)
+
+        target.string = str(file.stream.read())
+        file.stream.seek(0)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
-        raise NotImplementedError()
+        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+
+        contents = str(self.visit_expr(stmt.src))
+        file.stream.write(contents)
+        file.stream.seek(0)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        raise NotImplementedError()
+        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+
+        contents = str(self.visit_expr(stmt.src))
+        file.stream.write(contents)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
-        name = self._get_file_name(stmt.file_ident, stmt.pos)
-        if not self.virtual_files:
-            self.files[name].close()
+        name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+
+        self.file_callbacks.close(file.stream)
+
+        file.open = False
+        self.files.pop(name)
 
     def visit_stmt(self, stmt: Statement):
         match stmt:
@@ -2243,7 +2297,7 @@ class Interpreter:
         blk = block if block is not None else self.block
         cur = 0
         while cur < len(blk):
-            stmt = self.block[cur]
+            stmt = blk[cur]
             self.cur_stmt = cur
             self.visit_stmt(stmt)
             if self._returned:

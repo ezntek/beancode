@@ -636,6 +636,10 @@ class Parser:
         if begin.kind not in ("output", "print"):
             return
 
+        newline = True
+        if begin.kind == "print":
+            newline = False
+
         self.consume()
         initial = self.expr()
         if not initial:
@@ -652,7 +656,7 @@ class Parser:
 
             exprs.append(new)
 
-        return OutputStatement(begin.pos, items=exprs)
+        return OutputStatement(begin.pos, items=exprs, newline=newline)
 
     def input_stmt(self) -> Statement | None:
         begin = self.check_and_consume("input")
@@ -1285,40 +1289,28 @@ class Parser:
                 match mode.kind:
                     case "read":
                         if read:
-                            raise BCError("duplicate file mode", mode.pos)
+                            raise BCError("duplicate file mode READ", mode.pos)
                         read = True
                     case "write":
                         if write:
-                            raise BCError("duplicate file mode", mode.pos)
+                            raise BCError("duplicate file mode WRITE", mode.pos)
                         write = True
                     case "append":
                         if append:
-                            raise BCError("duplicate file mode", mode.pos)
+                            raise BCError("duplicate file mode APPEND", mode.pos)
                         append = True
 
                 if append and write:
-                    raise BCError(f"you cannot open a file for APPEND and any other mode!\nAPPEND AND WRITE doesn't make sense.", mode.pos)
+                    raise BCError(f"you cannot open a file for APPEND and WRITE!", mode.pos)
             else:
-                raise BCError(f"unrecognized file mode {mode.kind}!\n"+"supported modes are READ, WRITE and APPEND.", self.pos())
+                raise BCError(f"unrecognized file mode!\n"+"supported modes are READ, WRITE and APPEND.", self.pos())
             
-            self.check_and_consume("comma")
+            self.check_and_consume("and")
 
         if not (read or write or append):
             raise BCError("No file modes specified!", begin.pos)
 
-        mode = str()
-        if read and write:
-            mode = "r+"
-        elif append and read:
-            mode = "a+"
-        elif read:
-            mode = "r"
-        elif write:
-            mode = "w"
-        elif append:
-            mode = "a"
- 
-        return OpenfileStatement(begin.pos, filename, mode)
+        return OpenfileStatement(begin.pos, filename, (read, write, append))
 
     def readfile_stmt(self) -> Statement | None:
         begin = self.check_and_consume("readfile")
