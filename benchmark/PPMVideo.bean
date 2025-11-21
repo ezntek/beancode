@@ -18,9 +18,11 @@ PROCEDURE Frame(I: INTEGER)
         FOR X <- 0 TO (Width - 1)
             IF MOD(DIV(X+I, 40) + DIV(Y+I, 30), 2) = 0
               THEN
-                Pixel <- 79 + " " + 169 + " " + 232 + " "
+                Pixel <- 255 + " " + 0 + " " + 0
+                //Pixel <- 79 + " " + 169 + " " + 232 + " "
               ELSE
-                Pixel <- 120 + " " + 187 + " " + 232 + " "
+                Pixel <- 0 + " " + 0 + " " + 0
+                //Pixel <- 120 + " " + 187 + " " + 232 + " "
             ENDIF
             OUTPUT Pixel
         NEXT X
