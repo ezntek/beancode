@@ -5,7 +5,7 @@ import copy
 import math
 import subprocess
 
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TextIO
 
 from .bean_help import bean_help
 from .bean_ffi import BCFunction, BCProcedure, Exports
@@ -33,6 +33,8 @@ class Interpreter:
     tracer: Tracer | None = None
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
+    files: dict[str, Any]
+    virtual_files: bool
 
     def __init__(
         self,
@@ -41,12 +43,15 @@ class Interpreter:
         proc=False,
         loop=False,
         tracer=None,
+        string_writer=False,
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
         self.tracer = tracer
+        self.virtual_files = string_writer
+        self.files = dict()
         self.reset_all()
 
     @classmethod
@@ -67,6 +72,13 @@ class Interpreter:
 
         self._returned = False
         self.cur_stmt = 0
+
+        if not self.virtual_files:
+            for f in self.files.values():
+                f.close()
+
+        self.files = dict()
+
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
@@ -2142,6 +2154,42 @@ class Interpreter:
         written_path = tracer.write_out(stmt.file_name)
         tracer.open(written_path)
 
+    def _get_file_name(self, id: Expr | str, pos: Pos):
+        name = str()
+        if isinstance(id, Expr):
+            if isinstance(id, Identifier):
+                name = id.ident
+            else:
+                exp = self.visit_expr(id)
+                if exp.kind != "string":
+                    raise BCError("File name must be a string!", pos)
+                name = exp.get_string()
+        else:
+            name = id
+        return name
+
+    def visit_openfile_stmt(self, stmt: OpenfileStatement):
+        name = self._get_file_name(stmt.file_ident, stmt.pos)
+
+        if not self.virtual_files:
+            self.files[name] = open(name, stmt.mode)
+        else:
+            self.files[name] = StringIO()
+
+    def visit_readfile_stmt(self, stmt: ReadfileStatement):
+        raise NotImplementedError()
+
+    def visit_writefile_stmt(self, stmt: WritefileStatement):
+        raise NotImplementedError()
+
+    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
+        raise NotImplementedError()
+
+    def visit_closefile_stmt(self, stmt: ClosefileStatement):
+        name = self._get_file_name(stmt.file_ident, stmt.pos)
+        if not self.virtual_files:
+            self.files[name].close()
+
     def visit_stmt(self, stmt: Statement):
         match stmt:
             case IfStatement():
@@ -2178,6 +2226,16 @@ class Interpreter:
                 self.visit_declare_stmt(stmt)
             case TraceStatement():
                 self.visit_trace_stmt(stmt)
+            case OpenfileStatement():
+                self.visit_openfile_stmt(stmt)
+            case ReadfileStatement():
+                self.visit_readfile_stmt(stmt)
+            case WritefileStatement():
+                self.visit_writefile_stmt(stmt)
+            case AppendfileStatement():
+                self.visit_appendfile_stmt(stmt)
+            case ClosefileStatement():
+                self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 self.visit_expr(stmt.inner)
 

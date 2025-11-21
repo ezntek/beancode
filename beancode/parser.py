@@ -164,7 +164,7 @@ class Parser:
                 arrlit = self.array_literal(nested=True)
                 exprs.append(arrlit)
             else:
-                expr = self.expression()
+                expr = self.expr()
                 if not expr:
                     raise BCError(
                         "invalid or no expression supplied as argument to array literal",
@@ -287,7 +287,7 @@ class Parser:
         inner: BCPrimitiveType
 
         self.consume_and_expect("left_bracket", "for array type declaration")
-        begin = self.expression()
+        begin = self.expr()
         if not begin:
             raise BCError(
                 "invalid or no expression as beginning value of array declaration",
@@ -296,7 +296,7 @@ class Parser:
 
         self.consume_and_expect("colon", "after beginning value of array declaration")
 
-        end = self.expression()
+        end = self.expr()
         if not end:
             raise BCError(
                 "invalid or no expression as ending value of array declaration",
@@ -309,7 +309,7 @@ class Parser:
         if right_bracket.kind == "right_bracket":
             pass
         elif right_bracket.kind == "comma":
-            inner_begin = self.expression()
+            inner_begin = self.expr()
             if not inner_begin:
                 raise BCError(
                     "invalid or no expression as beginning value of array declaration",
@@ -320,7 +320,7 @@ class Parser:
                 "colon", "after beginning value of array declaration"
             )
 
-            inner_end = self.expression()
+            inner_end = self.expr()
             if not inner_end:
                 raise BCError(
                     "invalid or no expression as ending value of array declaration",
@@ -379,7 +379,7 @@ class Parser:
         c = self.consume_and_expect("ident", ctx)
         return Identifier(c.pos, c.data)  # type: ignore
 
-    def array_index(self) -> Expr | None:
+    def array_index(self) -> ArrayIndex | None:
         pn = self.peek_next()
         if not pn:
             return
@@ -389,7 +389,7 @@ class Parser:
         ident = self.ident()
 
         leftb = self.consume_and_expect("left_bracket")
-        exp = self.expression()
+        exp = self.expr()
         if not exp:
             raise BCError("expected expression as array index", leftb.pos)
 
@@ -398,7 +398,7 @@ class Parser:
         if rightb.kind == "right_bracket":
             pass
         elif rightb.kind == "comma":
-            exp_inner = self.expression()
+            exp_inner = self.expr()
             if not exp_inner:
                 raise BCError("expected expression as array index", exp_inner)
 
@@ -429,7 +429,7 @@ class Parser:
 
         args = []
         while self.peek().kind != "right_paren":
-            expr = self.expression()
+            expr = self.expr()
             if not expr:
                 raise BCError(
                     "invalid or no expression as function argument", leftb.pos
@@ -458,7 +458,7 @@ class Parser:
         t: BCPrimitiveType = typ.data  # type: ignore
         self.consume()  # checked already
 
-        expr = self.expression()
+        expr = self.expr()
         if not expr:
             raise BCError("invalid or no expression supplied for type cast", expr)
 
@@ -468,7 +468,7 @@ class Parser:
 
     def grouping(self) -> Expr | None:
         begin = self.consume_and_expect("left_paren", "in grouping")
-        e = self.expression()
+        e = self.expr()
         if not e:
             raise BCError("invalid or no expression inside grouping", begin.pos)
 
@@ -509,7 +509,7 @@ class Parser:
             return Negation(begin.pos, e)
         elif p.kind == "not":
             begin = self.consume()
-            e = self.expression()
+            e = self.expr()
             if not e:
                 raise BCError("invalid or no expression for logical NOT", begin.pos)
             return Not(begin.pos, e)
@@ -626,7 +626,7 @@ class Parser:
 
         return expr
 
-    def expression(self) -> Expr | None:
+    def expr(self) -> Expr | None:
         return self.logical_comparison()
 
     def output_stmt(self) -> Statement | None:
@@ -637,7 +637,7 @@ class Parser:
             return
 
         self.consume()
-        initial = self.expression()
+        initial = self.expr()
         if not initial:
             raise BCError(
                 "found OUTPUT but an invalid or no expression that follows", begin.pos
@@ -646,7 +646,7 @@ class Parser:
         exprs.append(initial)
 
         while self.match("comma"):
-            new = self.expression()
+            new = self.expr()
             if not new:
                 break
 
@@ -676,7 +676,7 @@ class Parser:
         if self.check("newline"):
             return ReturnStatement(begin.pos)
 
-        expr = self.expression()
+        expr = self.expr()
         if not expr:
             raise BCError(
                 "invalid or no expression used as RETURN expression", begin.pos
@@ -696,7 +696,7 @@ class Parser:
         if leftb.kind == "left_paren":
             self.consume()
             while self.peek().kind != "right_paren":
-                expr = self.expression()
+                expr = self.expr()
                 if not expr:
                     raise BCError(
                         "invalid or no expression as procedure argument", leftb.pos
@@ -772,7 +772,7 @@ class Parser:
                     tok.pos,
                 )
 
-            expr = self.expression()
+            expr = self.expr()
             if not expr:
                 raise BCError(
                     "invalid or no expression after assign in declare", tok.pos
@@ -813,7 +813,7 @@ class Parser:
         ident = self.consume_and_expect("ident", "after constant declaration")
         self.consume_and_expect("assign", "after variable name in constant declaration")
 
-        expr = self.expression()
+        expr = self.expr()
         if not expr:
             raise BCError(
                 "invalid or no expression for constant declaration", self.pos()
@@ -852,7 +852,7 @@ class Parser:
 
         self.consume()  # go past the arrow
 
-        expr: Expr | None = self.expression()
+        expr: Expr | None = self.expr()
         if not expr:
             raise BCError("expected expression after `<-` in assignment", p.pos)
 
@@ -872,7 +872,7 @@ class Parser:
         if not begin:
             return
 
-        cond = self.expression()
+        cond = self.expr()
         if not cond:
             raise BCError("found invalid or no expression for if condition", self.pos())
 
@@ -906,7 +906,7 @@ class Parser:
 
         self.consume_and_expect("of", "after CASE keyword")
 
-        main_expr = self.expression()
+        main_expr = self.expr()
         if not main_expr:
             raise BCError(
                 "found invalid or no expression for case of value", self.pos()
@@ -919,7 +919,7 @@ class Parser:
         while not self.check("endcase"):
             is_otherwise = self.check("otherwise")
             if not is_otherwise:
-                expr = self.expression()
+                expr = self.expr()
                 if not expr:
                     raise BCError(
                         "invalid or no expression for case of branch", self.pos()
@@ -951,7 +951,7 @@ class Parser:
         if not begin:
             return
 
-        expr = self.expression()
+        expr = self.expr()
         if not expr:
             raise BCError(
                 "found invalid or no expression for while loop condition", self.pos()
@@ -975,20 +975,20 @@ class Parser:
 
         self.consume_and_expect("assign", "after counter in for loop")
 
-        begin = self.expression()
+        begin = self.expr()
         if not begin:
             raise BCError("invalid or no expression as begin in for loop", self.pos())
 
         self.consume_and_expect("to", "after beginning value in for loop")
 
-        end = self.expression()
+        end = self.expr()
         if not end:
             raise BCError("invalid or no expression as end in for loop", self.pos())
 
         step: Expr | None = None
         if self.check("step"):
             self.consume()
-            step = self.expression()
+            step = self.expr()
             if not step:
                 raise BCError(
                     "invalid or no expression as step in for loop", self.pos()
@@ -1026,7 +1026,7 @@ class Parser:
         stmts = self.block("until")
         until = self.consume()
 
-        expr = self.expression()
+        expr = self.expr()
         if not expr:
             raise BCError(
                 "found invalid or no expression for repeat-until loop condition",
@@ -1254,25 +1254,125 @@ class Parser:
 
         return TraceStatement(begin.pos, vars, file_name, block)
 
+
+    def _file_id(self, ctx: str) -> Expr | str:
+        s = self.check_and_consume("literal_string")
+        if not s:
+            expr = self.expr()
+            if not expr:
+                raise BCError(f"expected expression, file identifier or string literal after {ctx}!\n"+
+                              "pass the name of the file as a string literal or bare file name.", self.pos())
+            return expr 
+        else:
+            return str(s.data)
+
     def openfile_stmt(self) -> Statement | None:
-        if self.check("openfile"):
-            raise BCError("File I/O has not been implemented yet!", self.pos())
+        begin = self.check_and_consume("openfile")
+        if not begin:
+            return
+
+        filename: Expr | str = self._file_id("OPENFILE") 
+
+        self.consume_and_expect("for")
+
+        read = False
+        write = False
+        append = False
+
+        while not self.check("newline"):
+            mode = self.consume()
+            if mode.kind in ("read", "write", "append"):
+                match mode.kind:
+                    case "read":
+                        if read:
+                            raise BCError("duplicate file mode", mode.pos)
+                        read = True
+                    case "write":
+                        if write:
+                            raise BCError("duplicate file mode", mode.pos)
+                        write = True
+                    case "append":
+                        if append:
+                            raise BCError("duplicate file mode", mode.pos)
+                        append = True
+
+                if append and write:
+                    raise BCError(f"you cannot open a file for APPEND and any other mode!\nAPPEND AND WRITE doesn't make sense.", mode.pos)
+            else:
+                raise BCError(f"unrecognized file mode {mode.kind}!\n"+"supported modes are READ, WRITE and APPEND.", self.pos())
+            
+            self.check_and_consume("comma")
+
+        if not (read or write or append):
+            raise BCError("No file modes specified!", begin.pos)
+
+        mode = str()
+        if read and write:
+            mode = "r+"
+        elif append and read:
+            mode = "a+"
+        elif read:
+            mode = "r"
+        elif write:
+            mode = "w"
+        elif append:
+            mode = "a"
+ 
+        return OpenfileStatement(begin.pos, filename, mode)
 
     def readfile_stmt(self) -> Statement | None:
-        if self.check("readfile"):
-            raise BCError("File I/O has not been implemented yet!", self.pos())
+        begin = self.check_and_consume("readfile")
+        if not begin:
+            return
+
+        fileid: Expr | str = self._file_id("READFILE") 
+
+        self.consume_and_expect("comma")
+
+        val: ArrayIndex | Identifier | None = self.array_index()
+        if not val:
+            val = self.expect_ident()
+        
+        return ReadfileStatement(begin.pos, fileid, val)
 
     def writefile_stmt(self) -> Statement | None:
-        if self.check("writefile"):
-            raise BCError("File I/O has not been implemented yet!", self.pos())
+        begin = self.check_and_consume("writefile")
+        if not begin:
+            return
+
+        fileid: Expr | str = self._file_id("WRITEFILE") 
+
+        self.consume_and_expect("comma")
+
+        val = self.expr()
+        if not val:
+            raise BCError("invalid or no expression after comma in WRITEFILE statement", self.pos())
+        
+        return WritefileStatement(begin.pos, fileid, val)
 
     def appendfile_stmt(self) -> Statement | None:
-        if self.check("appendfile"):
-            raise BCError("File I/O has not been implemented yet!", self.pos())
+        begin = self.check_and_consume("appendfile")
+        if not begin:
+            return
+
+        fileid: Expr | str = self._file_id("APPENDFILE") 
+
+        self.consume_and_expect("comma")
+
+        val = self.expr()
+        if not val:
+            raise BCError("invalid or no expression after comma in APPENDFILE statement", self.pos())
+        
+        return AppendfileStatement(begin.pos, fileid, val)
 
     def closefile_stmt(self) -> Statement | None:
-        if self.check("closefile"):
-            raise BCError("File I/O has not been implemented yet!", self.pos())
+        begin = self.check_and_consume("closefile")
+        if not begin:
+            return
+
+        fileid: Expr | str = self._file_id("CLOSEFILE")
+
+        return ClosefileStatement(begin.pos, fileid)
 
     def clean_newlines(self):
         while self.cur < len(self.tokens):
@@ -1372,7 +1472,7 @@ class Parser:
             return scope
 
         cur = self.peek()
-        expr = self.expression()
+        expr = self.expr()
         if expr:
             return ExprStatement.from_expr(expr)
         else:

@@ -480,21 +480,21 @@ FileMode = typing.Literal["read", "write", "append"]
 class OpenfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    modes: list[FileMode]
+    mode: str
 
 
 @dataclass
 class ReadfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    src: Identifier | ArrayIndex
+    target: Identifier | ArrayIndex
 
 
 @dataclass
 class WritefileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    target: Identifier | ArrayIndex
+    src: Expr
 
 
 @dataclass
@@ -507,7 +507,7 @@ class ClosefileStatement(Statement):
 class AppendfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
-    target: Identifier | ArrayIndex
+    src: Expr
 
 
 @dataclass
