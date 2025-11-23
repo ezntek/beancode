@@ -460,7 +460,7 @@ class Parser:
 
         expr = self.expr()
         if not expr:
-            raise BCError("invalid or no expression supplied for type cast", expr)
+            raise BCError("invalid or no expression supplied for type cast", typ.pos)
 
         self.consume_and_expect("right_paren", "after type cast expression")
 

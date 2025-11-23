@@ -1409,98 +1409,97 @@ class Interpreter:
         return var.val
 
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
-        if isinstance(expr, Typecast):
-            return self.visit_typecast(expr)
-        elif isinstance(expr, Grouping):
-            return self.visit_expr(expr.inner)
-        elif isinstance(expr, Negation):
-            inner = self.visit_expr(expr.inner)
-            if inner.kind not in ["integer", "real"]:
-                self.error(
-                    f"cannot negate a value of type {inner.kind}", expr.inner.pos
-                )
+        match expr:
+            case Typecast():
+                return self.visit_typecast(expr)
+            case Grouping():
+                return self.visit_expr(expr.inner)
+            case Negation():
+                inner = self.visit_expr(expr.inner)
+                if inner.kind not in ["integer", "real"]:
+                    self.error(
+                        f"cannot negate a value of type {inner.kind}", expr.inner.pos
+                    )
 
-            if inner.kind == "integer":
-                return BCValue.new_integer(-inner.integer)  # type: ignore
-            elif inner.kind == "real":
-                return BCValue.new_real(-inner.real)  # type: ignore
-        elif isinstance(expr, Not):
-            inner = self.visit_expr(expr.inner)
-            if inner.kind != "boolean":
-                self.error(
-                    f"cannot perform logical NOT on value of type {inner.kind}",
-                    expr.inner.pos,
-                )
+                if inner.kind == "integer":
+                    return BCValue.new_integer(-inner.integer)  # type: ignore
+                elif inner.kind == "real":
+                    return BCValue.new_real(-inner.real)  # type: ignore
+            case Not():
+                inner = self.visit_expr(expr.inner)
+                if inner.kind != "boolean":
+                    self.error(
+                        f"cannot perform logical NOT on value of type {inner.kind}",
+                        expr.inner.pos,
+                    )
 
-            return BCValue.new_boolean(not inner.get_boolean())
-        elif isinstance(expr, Identifier):
-            return self.visit_identifier(expr)
-        elif isinstance(expr, Literal):
-            return expr.to_bcvalue()
-        elif isinstance(expr, ArrayLiteral):
-            return self.visit_array_literal(expr)
-        elif isinstance(expr, BinaryExpr):
-            return self.visit_binaryexpr(expr)
-        elif isinstance(expr, ArrayIndex):
-            return self.visit_array_index(expr)
-        elif isinstance(expr, FunctionCall):
-            return self.visit_fncall(expr)
-        else:
-            self.error(
-                "whoops something is very wrong. this is a rare error, please report it to the developers."
-            )
+                return BCValue.new_boolean(not inner.get_boolean())
+            case Identifier():
+                return self.visit_identifier(expr)
+            case Literal():
+                return expr.to_bcvalue()
+            case ArrayLiteral():
+                return self.visit_array_literal(expr)
+            case BinaryExpr():
+                return self.visit_binaryexpr(expr)
+            case ArrayIndex():
+                return self.visit_array_index(expr)
+            case FunctionCall():
+                return self.visit_fncall(expr)
+            case _: 
+                self.error(
+                    "whoops something is very wrong. this is a rare error, please report it to the developers."
+                )
 
     def _display_array(self, arr: BCArray) -> str:
         if not arr.typ.is_matrix:
-            res = "["
+            res = StringIO("[")
             flat = arr.get_flat()
             for idx, item in enumerate(flat):
                 if item.is_uninitialized():
-                    res += "(null)"
+                    res.write("(null)")
                 else:
-                    res += str(item)
+                    res.write(str(item))
 
                 if idx != len(flat) - 1:
-                    res += ", "
-            res += "]"
+                    res.write(", ")
+            res.write("]")
 
-            return res
+            return res.getvalue()
         else:
             matrix = arr.get_matrix()
-            outer_res = "["
+            outer_res = StringIO("[")
             for oidx, a in enumerate(matrix):
-                res = "["
+                res = StringIO("[")
                 for iidx, item in enumerate(a):
                     if item.is_uninitialized():
-                        res += "(null)"
+                        res.write("(null)")
                     else:
-                        res += str(item)
+                        res.write(str(item))
 
                     if iidx != len(a) - 1:
-                        res += ", "
-                res += "]"
+                        res.write(", ")
+                res.write("]")
 
-                outer_res += res
+                outer_res.write(res.getvalue())
+                res.truncate(0)
                 if oidx != len(matrix) - 1:
-                    outer_res += ", "
-            outer_res += "]"
+                    outer_res.write(", ")
+            outer_res.write("]")
 
-            return outer_res
+            return outer_res.getvalue()
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        res = ""
-        for item in stmt.items:
-            evaled = self.visit_expr(item)
-            if isinstance(evaled.kind, BCArrayType):
-                res += self._display_array(evaled.array)  # type: ignore
-            else:
-                res += str(evaled)
+        res = ''.join([
+            (self._display_array(evaled.get_array()) if isinstance(evaled.kind, BCArrayType) else str(evaled))
+                for evaled in map(self.visit_expr, stmt.items)
+        ])
 
         if self.tracer_outputs is not None:
             if not self.loop and self.tracer:
                 self.tracer.collect_new({}, stmt.pos.row, outputs=[res])
             else:
-                self.tracer_outputs.append(res)  # type: ignore
+                self.tracer_outputs.append(res.getvalue())  # type: ignore
 
         if self.tracer and self.tracer.config.show_outputs:
             print("(tracer output): " + res)
@@ -1565,17 +1564,17 @@ class Interpreter:
                 target.kind = "char"
                 target.char = inp
             case "boolean":
-                if inp.lower() not in ["true", "false", "yes", "no"]:
+                if inp.lower() not in {"true", "false", "yes", "no"}:
                     self.error(
                         f'expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got "{inp}"',
                         s.pos,
                     )
 
                 inp = inp.lower()
-                if inp in ["true", "yes"]:
+                if inp in {"true", "yes"}:
                     target.kind = "boolean"
                     target.boolean = True
-                elif inp in ["false", "no"]:
+                elif inp in {"false", "no"}:
                     target.kind = "boolean"
                     target.boolean = False
             case "integer":
@@ -2172,10 +2171,14 @@ class Interpreter:
             else:
                 exp = self.visit_expr(id)
                 if exp.kind != "string":
-                    self.error("File name must be a string!", pos)
+                    self.error("file name must be a string!", pos)
                 name = exp.get_string()
         else:
             name = id
+
+        if len(name) == 0:
+            self.error("empty string given as file name!", pos)
+
         return name
 
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
@@ -2208,7 +2211,7 @@ class Interpreter:
         name = self._get_file_name(fileid, pos)
         file = self.files.get(name)
         if not file:
-            self.error(f"file \"{file}\" does not exist!\n" + "did you forget to open it?", pos)
+            self.error(f"file does not exist!\n" + "did you forget to open it?", pos)
         return (name, file) 
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
@@ -2228,7 +2231,6 @@ class Interpreter:
 
         contents = str(self.visit_expr(stmt.src))
         file.stream.write(contents)
-        file.stream.seek(0)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
