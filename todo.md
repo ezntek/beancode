@@ -2,6 +2,7 @@
 
 ## Low-hanging fruit
 
+- [ ] `FORMAT` libroutine for printf-like formatting
 - [ ] Refactor error implementation (no more hardcoded file names with file IDs, proper context support)
 - [ ] Tracer
   - [ ] Refactoring HTML to be more modular

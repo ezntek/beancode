@@ -3,7 +3,6 @@ import typing
 from typing import IO, Any, Callable
 from io import StringIO
 from dataclasses import dataclass
-from typing_extensions import Any
 
 from . import Pos
 from .error import *

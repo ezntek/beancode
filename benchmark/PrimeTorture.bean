@@ -1,23 +1,23 @@
-include_ffi "beanstd"
-constant NUM <- 750000
+INCLUDE_FFI "beanstd"
+CONSTANT Max <- 750000
 
-function isPrime(n: integer) returns boolean
-    for i <- 2 to integer(sqrt(n))
-        if mod(n, i) = 0 then
-            return false
-        endif
-    next i
+FUNCTION IsPrime(Num: INTEGER) RETURNS BOOLEAN
+    FOR Counter <- 2 TO INTEGER(SQRT(Num))
+        IF MOD(Num, Counter) = 0 THEN
+            RETURN FALSE
+        ENDIF
+    NEXT Counter
 
-    return true
-endfunction
+    RETURN TRUE
+ENDFUNCTION
 
-procedure primeTorture(n: integer)
-    for i <- 1 to n
-        if isPrime(i) then
-            call Write(string(i) + ", ")
-        endif
-    next i
-endprocedure
+PROCEDURE PrimeTorture(Num: INTEGER)
+    FOR Counter <- 1 TO Num
+        IF IsPrime(Counter) THEN
+            PRINT Counter, ", "
+        ENDIF
+    NEXT Counter
+ENDPROCEDURE
 
-call primeTorture(NUM)
-output ""
+CALL PrimeTorture(Max)
+OUTPUT ""

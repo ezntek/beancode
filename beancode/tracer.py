@@ -553,11 +553,7 @@ class Tracer:
 
         noselect = str()
         if not self.config.i_will_not_cheat:
-            noselect = """
-body {
-  user-select: none;
-}
-            """
+            noselect = "body { user-select: none; }"
 
         res.write(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
         res.write("</head>\n")

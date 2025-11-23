@@ -1453,7 +1453,8 @@ class Interpreter:
 
     def _display_array(self, arr: BCArray) -> str:
         if not arr.typ.is_matrix:
-            res = StringIO("[")
+            res = StringIO()
+            res.write("[")
             flat = arr.get_flat()
             for idx, item in enumerate(flat):
                 if item.is_uninitialized():
@@ -1468,9 +1469,11 @@ class Interpreter:
             return res.getvalue()
         else:
             matrix = arr.get_matrix()
-            outer_res = StringIO("[")
+            outer_res = StringIO()
+            outer_res.write("[")
+            res = StringIO()
             for oidx, a in enumerate(matrix):
-                res = StringIO("[")
+                res.write("[")
                 for iidx, item in enumerate(a):
                     if item.is_uninitialized():
                         res.write("(null)")
