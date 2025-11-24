@@ -159,7 +159,7 @@ class Interpreter:
         return self.calls[-1].rtype
 
     def visit_array_type(self, t: ArrayType) -> BCArrayType:
-        if t.is_matrix:
+        if t.is_matrix():
             s_bounds = t.get_matrix_bounds()
             outer_begin = self.visit_expr(s_bounds[0])
             if outer_begin.kind != BCPrimitiveType.INTEGER:
@@ -727,7 +727,7 @@ class Interpreter:
         if isinstance(v.kind, BCArrayType):
             a: BCArray = v.val  # type: ignore
 
-            if a.typ.is_matrix:
+            if a.typ.is_matrix():
                 if ind.idx_inner is None:
                     self.error("expected 2 indices for matrix indexing", ind.pos)
 
@@ -764,7 +764,7 @@ class Interpreter:
             a = v.get_array()
 
             tup = self._get_array_index(ind)
-            if a.typ.is_matrix:
+            if a.typ.is_matrix():
                 outer, inner = tup
                 bounds = a.get_matrix_bounds()
                 if inner is None:
@@ -1444,7 +1444,7 @@ class Interpreter:
         )
 
     def _display_array(self, arr: BCArray) -> str:
-        if not arr.typ.is_matrix:
+        if arr.typ.is_flat():
             res = StringIO()
             res.write("[")
             flat = arr.get_flat()
@@ -1932,13 +1932,13 @@ class Interpreter:
                 )
 
             tup = self._get_array_index(s.ident)
-            if tup[1] is None and self.variables[key].val.val.typ.is_matrix:  # type: ignore
+            if tup[1] is None and self.variables[key].val.val.typ.is_matrix():  # type: ignore
                 self.error(f"not enough indices for matrix", s.ident.idx_outer.pos)
 
             val = self.visit_expr(s.value)
             a: BCArray = self.variables[key].val.val  # type: ignore
 
-            if a.typ.is_matrix:
+            if a.typ.is_matrix():
                 bounds = a.get_matrix_bounds()
                 if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
                     self.error(
@@ -1952,10 +1952,10 @@ class Interpreter:
                 first = tup[0] - bounds[0]  # type: ignore
                 second = tup[1] - bounds[2]  # type: ignore
 
-                if a.matrix[first][second].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.matrix[first][second].kind} in a 2D array", s.pos)  # type: ignore
+                if a.data[first][second].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.data[first][second].kind} in a 2D array", s.pos)  # type: ignore
 
-                a.matrix[first][second] = copy.deepcopy(val)  # type: ignore
+                a.data[first][second] = copy.deepcopy(val)  # type: ignore
             else:
                 bounds = a.get_flat_bounds()
                 if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
@@ -1966,10 +1966,10 @@ class Interpreter:
 
                 first = tup[0] - bounds[0]  # type: ignore
 
-                if a.flat[first].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.flat[first].kind} in an array", s.pos)  # type: ignore
+                if a.data[first].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {val.kind} to {a.data[first].kind} in an array", s.pos)  # type: ignore
 
-                a.flat[first] = copy.deepcopy(val)  # type: ignore
+                a.data[first] = copy.deepcopy(val)  # type: ignore
         elif isinstance(s.ident, Identifier):
             key = s.ident.ident
 
@@ -1997,12 +1997,12 @@ class Interpreter:
             elif isinstance(exp.kind, BCArrayType):
                 a = exp.get_array()
                 if (
-                    a.typ.is_matrix
+                    a.typ.is_matrix()
                     and a.get_matrix_bounds() != var.val.get_array().get_matrix_bounds()
                 ):
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
                 elif (
-                    not a.typ.is_matrix
+                    a.typ.is_flat()
                     and a.get_flat_bounds() != var.val.get_array().get_flat_bounds()
                 ):
                     self.error(f"mismatched array sizes in array assignment", s.pos)
@@ -2041,7 +2041,7 @@ class Interpreter:
         at: ArrayType = d.typ  # type: ignore
         inner_type = at.inner
         t = self.visit_array_type(at)
-        if t.is_matrix:
+        if t.is_matrix():
             bounds = t.get_matrix_bounds()
             ob, oe, ib, ie = bounds
 

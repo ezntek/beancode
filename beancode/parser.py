@@ -197,7 +197,7 @@ class Parser:
 
     def literal(self) -> Expr | None:
         if not self.check_many(
-            "literal_string", "literal_char", "literal_number", "true", "false", BCPrimitiveType.NULL
+            "literal_string", "literal_char", "literal_number", "true", "false", "null" 
         ):
             return
 
@@ -281,9 +281,6 @@ class Parser:
                 return Literal(lit.pos, BCValue.new_null())
 
     def _array_type(self) -> Type:
-        flat_bounds = None
-        matrix_bounds = None
-        is_matrix = False
         inner: BCPrimitiveType
 
         self.consume_and_expect("left_bracket", "for array type declaration")
@@ -304,6 +301,7 @@ class Parser:
             )
 
         flat_bounds = (begin, end)
+        matrix_bounds = None
 
         right_bracket = self.consume()
         if right_bracket.kind == "right_bracket":
@@ -337,8 +335,6 @@ class Parser:
             flat_bounds = None
 
             self.consume_and_expect("right_bracket", "after matrix length declaration")
-
-            is_matrix = True
         else:
             raise BCError(
                 "expected right bracket or comma after array bounds declaration",
@@ -354,21 +350,17 @@ class Parser:
                 arrtyp.pos,
             )
 
-        inner = BCPrimitiveType.from_string(arrtyp.data)
+        inner = BCPrimitiveType.from_string(arrtyp.data) # type: ignore
 
-        return ArrayType(
-            is_matrix=is_matrix,
-            flat_bounds=flat_bounds,
-            matrix_bounds=matrix_bounds,
-            inner=inner,
-        )
+        bounds = matrix_bounds if matrix_bounds else flat_bounds
+        return ArrayType(inner, bounds) # type: ignore
 
     def typ(self) -> Type:
         adv = self.consume_and_expect("type")
         if adv.data == "array":
             return self._array_type()
         else:
-            return BCPrimitiveType.from_string(adv.data)
+            return BCPrimitiveType.from_string(adv.data) # type: ignore
 
     def ident(self) -> Identifier:
         c = self.consume_and_expect("ident")
