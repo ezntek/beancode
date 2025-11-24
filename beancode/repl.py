@@ -81,7 +81,7 @@ class Repl:
     p: parser.Parser
     i: intp.Interpreter
     buf: StringIO
-    proc_src: dict[str, str]
+    func_src: dict[str, str]
     func_src: dict[str, str]
     debug: bool
 
@@ -90,7 +90,7 @@ class Repl:
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
         self.buf = StringIO()
-        self.proc_src = dict()
+        self.func_src = dict()
         self.func_src = dict()
         self.debug = debug
 
@@ -442,7 +442,7 @@ class Repl:
                 else:
                     src: str
                     if err.proc is not None:
-                        res = self.proc_src.get(err.proc)  # type: ignore
+                        res = self.func_src.get(err.proc)  # type: ignore
                         if res is None:
                             warn(
                                 f'could not find source code for procedure "{err.proc}"'
@@ -469,10 +469,10 @@ class Repl:
 
             if isinstance(program.stmts[0], ast.ProcedureStatement):
                 proc = program.stmts[0]
-                self.proc_src[proc.name] = self.buf.getvalue()
+                self.func_src[proc.name] = self.buf.getvalue()
             elif isinstance(program.stmts[0], ast.FunctionStatement):
                 func = program.stmts[0]
-                self.proc_src[func.name] = self.buf.getvalue()
+                self.func_src[func.name] = self.buf.getvalue()
 
             if isinstance(program.stmts[-1], ast.ExprStatement):
                 exp = program.stmts[-1].inner
@@ -492,7 +492,7 @@ class Repl:
                 src: str
                 repl_txt = "(repl)"
                 if err.proc is not None:
-                    res = self.proc_src.get(err.proc)  # type: ignore
+                    res = self.func_src.get(err.proc)  # type: ignore
                     if res is None:
                         warn(
                             f'fatal could not find source code for procedure "{err.proc}":\n    ({err.msg.strip()})'
