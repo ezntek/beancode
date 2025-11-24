@@ -32,6 +32,9 @@ class BCPrimitiveType(Enum):
             BCPrimitiveType.NULL: "null"
         }[self]
 
+    def __str__(self) -> str:
+        return self.__repr__()
+
     @classmethod
     def from_string(cls, kind: str):
         TABLE = {
