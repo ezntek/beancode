@@ -9,6 +9,7 @@ class BCError(Exception):
     eof: bool
     proc: str | None
     func: str | None
+    msg: str
 
     def __init__(self, msg: str, pos: Pos | None = None, eof=False, proc=None, func=None) -> None:  # type: ignore
         self.eof = eof

@@ -1056,12 +1056,37 @@ class Interpreter:
         s = str(kind).upper()
         return BCValue.new_string(s)
 
-    def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
-        if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
-            return self.visit_libroutine(stmt)
+    def visit_format(self, stmt: FunctionCall) -> BCValue:
+        if len(stmt.args) == 0:
+            self.error("Not enough argument supplied to FORMAT", stmt.pos)
 
-        if stmt.ident.lower() in ["typeof", "type"] and is_case_consistent(stmt.ident):
-            return self.visit_typeof(stmt)
+        fmt = self.visit_expr(stmt.args[0])
+        if fmt.kind != BCPrimitiveType.STRING:
+            self.error("first argument to FORMAT must be a STRING!", stmt.pos)
+
+        items = list()
+        for idx, itm in enumerate(stmt.args[1:]):
+            val = self.visit_expr(itm)
+            if val.is_uninitialized():
+                self.error(f"{humanize_index(idx+2)} argument in format argument list is NULL/uninitialized!", stmt.pos)
+            items.append(val.val)
+        try:
+            res = fmt.get_string() % tuple(items)
+            return BCValue.new_string(res)
+        except TypeError as e:
+            pymsg = e.args[0]
+            self.error(f"format error: {pymsg}", stmt.pos)
+
+    def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
+        if is_case_consistent(stmt.ident):
+            if stmt.ident.lower() == "format":
+                return self.visit_format(stmt)        
+
+            if stmt.ident.lower() in LIBROUTINES:
+                return self.visit_libroutine(stmt)
+
+            if stmt.ident.lower() in {"typeof", "type"}:
+                return self.visit_typeof(stmt)
 
         if stmt.ident in self.variables:
             self.error(f'"{stmt.ident}" is a variable, not a function!', stmt.pos)
@@ -1134,6 +1159,9 @@ class Interpreter:
         proc.fn(args)
 
     def visit_call(self, stmt: CallStatement, tracer: Tracer | None = None):
+        if stmt.ident.lower() == "format" and is_case_consistent(stmt.ident):
+            self.error("FORMAT is a library routine function!\nplease remove the CALL!", stmt.pos)
+
         if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
             stmt.ident
         ):

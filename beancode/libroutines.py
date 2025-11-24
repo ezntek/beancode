@@ -26,6 +26,7 @@ LIBROUTINES: Libroutines = {
     "getchar": [],
     "random": [],
     "execute": [BCPrimitiveType.STRING],
+    "format": [], # stub
 }
 
 LIBROUTINES_NORETURN: Libroutines = {
