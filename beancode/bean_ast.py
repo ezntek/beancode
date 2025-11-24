@@ -1,5 +1,6 @@
 import typing
 
+from enum import Enum
 from typing import IO, Any, Callable
 from io import StringIO
 from dataclasses import dataclass
@@ -13,8 +14,38 @@ class Expr:
     pos: Pos
 
 
-BCPrimitiveType = typing.Literal["integer", "real", "char", "string", "boolean", "null"]
+class BCPrimitiveType(Enum):
+    INTEGER = 0
+    REAL = 1
+    CHAR = 2
+    STRING = 3
+    BOOLEAN = 4
+    NULL = 5
+    
+    def __repr__(self):
+        return {
+            BCPrimitiveType.INTEGER: "integer",
+            BCPrimitiveType.REAL: "real",
+            BCPrimitiveType.CHAR: "char",
+            BCPrimitiveType.STRING: "string",
+            BCPrimitiveType.BOOLEAN: "boolean",
+            BCPrimitiveType.NULL: "null"
+        }[self]
 
+    @classmethod
+    def from_string(cls, kind: str):
+        TABLE = {
+            "integer": BCPrimitiveType.INTEGER,
+            "real": BCPrimitiveType.REAL,
+            "char": BCPrimitiveType.CHAR,
+            "string": BCPrimitiveType.STRING,
+            "boolean": BCPrimitiveType.BOOLEAN,
+            "null": BCPrimitiveType.NULL
+        } 
+        res = TABLE.get(kind.lower())
+        if not res:
+            raise BCError(f"tried to convert invalid string type {kind} to a BCPrimitiveType!")
+        return res
 
 @dataclass
 class ArrayType:
@@ -41,9 +72,9 @@ class ArrayType:
 
     def __repr__(self) -> str:
         if self.is_matrix:
-            return "ARRAY[2D] OF " + self.inner.upper()
+            return "ARRAY[2D] OF " + str(self.inner).upper()
         else:
-            return "ARRAY OF " + self.inner.upper()
+            return "ARRAY OF " + str(self.inner).upper()
 
 
 @dataclass
@@ -142,128 +173,122 @@ Type = ArrayType | BCPrimitiveType
 # runtime
 BCType = BCArrayType | BCPrimitiveType
 
+BCPayload = int | float | str | bool | BCArray | None
 
-@dataclass
 class BCValue:
+    __slots__ = ('kind', 'val')
     kind: BCType
-    integer: int | None = None
-    real: float | None = None
-    char: str | None = None
-    string: str | None = None
-    boolean: bool | None = None
-    array: BCArray | None = None
+    val: BCPayload
+
+    def __init__(self, kind: BCType, value: BCPayload = None):
+        self.kind = kind
+        self.val = value
 
     def is_uninitialized(self) -> bool:
-        # arrays are always initialized to NULLs
-        if self.array:
-            return False
-
-        return (
-            self.integer is None
-            and self.real is None
-            and self.char is None
-            and self.string is None
-            and self.boolean is None
-        )
+        return self.val is None
 
     def is_null(self) -> bool:
-        return self.kind == "null" or self.is_uninitialized()
+        return self.kind == BCPrimitiveType.NULL or self.val is None 
+
+    def __eq__(self, value: object, /) -> bool:
+        if type(self) is not type(value):
+            return False
+
+        return self.kind == value.kind and self.val == value.val # type: ignore
+    
+    def __neq__(self, value: object, /) -> bool:
+        return not (self.__eq__(value))
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
         return cls(
             kind,
-            integer=None,
-            real=None,
-            char=None,
-            string=None,
-            boolean=None,
-            array=None,
+            None
         )
 
     @classmethod
     def new_null(cls) -> "BCValue":
-        return cls("null")
+        return cls(BCPrimitiveType.NULL)
 
     @classmethod
     def new_integer(cls, i: int) -> "BCValue":
-        return cls("integer", integer=i)
+        return cls(BCPrimitiveType.INTEGER, i)
 
     @classmethod
     def new_real(cls, r: float) -> "BCValue":
-        return cls("real", real=r)
+        return cls(BCPrimitiveType.REAL, r)
 
     @classmethod
     def new_boolean(cls, b: bool) -> "BCValue":
-        return cls("boolean", boolean=b)
+        return cls(BCPrimitiveType.BOOLEAN, b)
 
     @classmethod
     def new_char(cls, c: str) -> "BCValue":
-        return cls("char", char=c[0])
+        return cls(BCPrimitiveType.CHAR, c[0])
 
     @classmethod
     def new_string(cls, s: str) -> "BCValue":
-        return cls("string", string=s)
+        return cls(BCPrimitiveType.STRING, s)
 
     @classmethod
     def new_array(cls, a: BCArray) -> "BCValue":
-        return cls(a.typ, array=a)
+        return cls(a.typ, a)
 
     def get_integer(self) -> int:
-        if self.kind != "integer":
-            raise BCError(f"tried to access INTEGER value from BCValue of {self.kind}")
+        if self.kind != BCPrimitiveType.INTEGER:
+            raise BCError(f"tried to access INTEGER value from BCValue of {str(self.kind)}")
 
-        return self.integer  # type: ignore
+        return self.val  # type: ignore
 
     def get_real(self) -> float:
-        if self.kind != "real":
-            raise BCError(f"tried to access REAL value from BCValue of {self.kind}")
+        if self.kind != BCPrimitiveType.REAL:
+            raise BCError(f"tried to access REAL value from BCValue of {str(self.kind)}")
 
-        return self.real  # type: ignore
+        return self.val  # type: ignore
 
     def get_char(self) -> str:
-        if self.kind != "char":
-            raise BCError(f"tried to access CHAR value from BCValue of {self.kind}")
+        if self.kind != BCPrimitiveType.CHAR:
+            raise BCError(f"tried to access CHAR value from BCValue of {str(self.kind)}")
 
-        return self.char  # type: ignore
+        return self.val[0]  # type: ignore
 
     def get_string(self) -> str:
-        if self.kind != "string":
-            raise BCError(f"tried to access STRING value from BCValue of {self.kind}")
+        if self.kind != BCPrimitiveType.STRING:
+            raise BCError(f"tried to access STRING value from BCValue of {str(self.kind)}")
 
-        return self.string  # type: ignore
+        return self.val  # type: ignore
 
     def get_boolean(self) -> bool:
-        if self.kind != "boolean":
-            raise BCError(f"tried to access BOOLEAN value from BCValue of {self.kind}")
+        if self.kind != BCPrimitiveType.BOOLEAN:
+            raise BCError(f"tried to access BOOLEAN value from BCValue of {str(self.kind)}")
 
-        return self.boolean  # type: ignore
+        return self.val  # type: ignore
 
     def get_array(self) -> BCArray:
         if not isinstance(self.kind, BCArrayType):
-            raise BCError(f"tried to access array value from BCValue of {self.kind}")
+            raise BCError(f"tried to access array value from BCValue of {str(self.kind)}")
 
-        return self.array  # type: ignore
+        return self.val  # type: ignore
 
     def __repr__(self) -> str:  # type: ignore
-        if isinstance(self.kind, BCArrayType):
-            return self.array.__repr__()
+        if self.kind == "array":
+            return str(self.val)
 
         if self.is_uninitialized():
             return "(null)"
 
         match self.kind:
-            case "string":
+            case BCPrimitiveType.STRING:
                 return self.get_string()
-            case "real":
+            case BCPrimitiveType.REAL:
                 return str(self.get_real())
-            case "integer":
+            case BCPrimitiveType.INTEGER:
                 return str(self.get_integer())
-            case "char":
+            case BCPrimitiveType.CHAR:
                 return str(self.get_char())
-            case "boolean":
+            case BCPrimitiveType.BOOLEAN:
                 return str(self.get_boolean()).upper()
-            case "null":
+            case BCPrimitiveType.NULL:
                 return "(null)"
 
 @dataclass
@@ -281,23 +306,7 @@ class FileCallbacks:
 
 @dataclass
 class Literal(Expr):
-    kind: BCPrimitiveType
-    integer: int | None = None
-    real: float | None = None
-    char: str | None = None
-    string: str | None = None
-    boolean: bool | None = None
-
-    def to_bcvalue(self) -> BCValue:
-        return BCValue(
-            self.kind,
-            integer=self.integer,
-            real=self.real,
-            char=self.char,
-            string=self.string,
-            boolean=self.boolean,
-            array=None,
-        )
+    val: BCValue
 
 
 @dataclass

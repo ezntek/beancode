@@ -162,30 +162,30 @@ class Interpreter:
         if t.is_matrix:
             s_bounds = t.get_matrix_bounds()
             outer_begin = self.visit_expr(s_bounds[0])
-            if outer_begin.kind != "integer":
+            if outer_begin.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {outer_begin.kind} as array bound!",
+                    f"cannot use type of {str(outer_begin.kind)} as array bound!",
                     s_bounds[0].pos,
                 )
 
             outer_end = self.visit_expr(s_bounds[1])  # type: ignore
-            if outer_end.kind != "integer":
+            if outer_end.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {outer_end.kind} as array bound!",
+                    f"cannot use type of {str(outer_end.kind)} as array bound!",
                     s_bounds[1].pos,
                 )
 
             inner_begin = self.visit_expr(s_bounds[2])  # type: ignore
-            if inner_begin.kind != "integer":
+            if inner_begin.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {inner_begin.kind} as array bound!",
+                    f"cannot use type of {str(inner_begin.kind)} as array bound!",
                     s_bounds[2].pos,
                 )
 
             inner_end = self.visit_expr(s_bounds[3])  # type: ignore
-            if inner_end.kind != "integer":
+            if inner_end.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {inner_end.kind} as array bound!",
+                    f"cannot use type of {str(inner_end.kind)} as array bound!",
                     s_bounds[3].pos,
                 )
 
@@ -198,15 +198,15 @@ class Interpreter:
         else:
             s_bounds = t.get_flat_bounds()
             begin = self.visit_expr(s_bounds[0])
-            if begin.kind != "integer":
+            if begin.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {begin.kind} as array bound!", s_bounds[0].pos
+                    f"cannot use type of {str(begin.kind)} as array bound!", s_bounds[0].pos
                 )
 
             end = self.visit_expr(s_bounds[1])  # type: ignore
-            if end.kind != "integer":
+            if end.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {end.kind} as array bound!", s_bounds[1].pos
+                    f"cannot use type of {str(end.kind)} as array bound!", s_bounds[1].pos
                 )
 
             bounds = (begin.get_integer(), end.get_integer())
@@ -262,16 +262,16 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind in ["integer", "real"]:
-                    lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
 
-                    if rhs.kind not in ["integer", "real"]:
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
                         self.error(
                             f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
 
                     return BCValue.new_boolean((lhs_num > rhs_num))
                 else:
@@ -280,15 +280,13 @@ class Interpreter:
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "boolean":
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "string":
-                        return BCValue(
-                            "boolean", boolean=(lhs.get_string() > rhs.get_string())
-                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() > rhs.get_string())
             case "less_than":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -307,16 +305,16 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind in ["integer", "real"]:
-                    lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
 
-                    if rhs.kind not in ["integer", "real"]:
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
                         self.error(
                             f"impossible to perform less_than between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
 
                     return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
@@ -325,15 +323,13 @@ class Interpreter:
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "boolean":
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "string":
-                        return BCValue(
-                            "boolean", boolean=(lhs.get_string() < rhs.get_string())
-                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() < rhs.get_string())
             case "greater_than_or_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -352,16 +348,16 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind in ["integer", "real"]:
-                    lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
 
-                    if rhs.kind not in ["integer", "real"]:
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
                         self.error(
                             f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
 
                     return BCValue.new_boolean((lhs_num >= rhs_num))
                 else:
@@ -370,15 +366,13 @@ class Interpreter:
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "boolean":
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         self.error(
                             f"illegal to compare booleans with inequality comparisons",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "string":
-                        return BCValue(
-                            "boolean", boolean=(lhs.get_string() >= rhs.get_string())
-                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() >= rhs.get_string())
             case "less_than_or_equal":
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
@@ -397,16 +391,16 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind in ["integer", "real"]:
-                    lhs_num = lhs.integer if lhs.integer is not None else lhs.real  # type: ignore
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
 
-                    if rhs.kind not in ["integer", "real"]:
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
                         self.error(
                             f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}",
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.integer if rhs.integer is not None else rhs.real  # type: ignore
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
 
                     return BCValue.new_boolean((lhs_num < rhs_num))
                 else:
@@ -415,12 +409,10 @@ class Interpreter:
                             f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
                             expr.lhs.pos,
                         )
-                    elif lhs.kind == "boolean":
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         self.error(f"illegal to compare booleans", expr.lhs.pos)
-                    elif lhs.kind == "string":
-                        return BCValue(
-                            "boolean", boolean=(lhs.get_string() <= rhs.get_string())
-                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() <= rhs.get_string())
             # add sub mul div
             case "pow":
                 lhs = self.visit_expr(expr.lhs)
@@ -437,13 +429,13 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in ["boolean", "char", "string"]:
+                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind in ["boolean", "char", "string"]:
+                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
@@ -452,14 +444,14 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind == "integer":
+                if lhs.kind == BCPrimitiveType.INTEGER:
                     lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
+                elif lhs.kind == BCPrimitiveType.REAL:
                     lhs_num = lhs.get_real()
 
-                if rhs.kind == "integer":
+                if rhs.kind == BCPrimitiveType.INTEGER:
                     rhs_num = rhs.get_integer()
-                elif rhs.kind == "real":
+                elif rhs.kind == BCPrimitiveType.REAL:
                     rhs_num = rhs.get_real()
 
                 res = lhs_num**rhs_num
@@ -483,13 +475,13 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in ["boolean", "char", "string"]:
+                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind in ["boolean", "char", "string"]:
+                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
@@ -498,14 +490,14 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind == "integer":
+                if lhs.kind == BCPrimitiveType.INTEGER:
                     lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
+                elif lhs.kind == BCPrimitiveType.REAL:
                     lhs_num = lhs.get_real()
 
-                if rhs.kind == "integer":
+                if rhs.kind == BCPrimitiveType.INTEGER:
                     rhs_num = rhs.get_integer()
-                elif rhs.kind == "real":
+                elif rhs.kind == BCPrimitiveType.REAL:
                     rhs_num = rhs.get_real()
 
                 res = lhs_num * rhs_num
@@ -529,12 +521,12 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in ["boolean", "char", "string"]:
+                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot divide between bools, chars, and strings!", expr.lhs.pos
                     )
 
-                if rhs.kind in ["boolean", "char", "string"]:
+                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error(
                         "Cannot divide between bools, chars, and strings!", expr.rhs.pos
                     )
@@ -542,14 +534,14 @@ class Interpreter:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind == "integer":
+                if lhs.kind == BCPrimitiveType.INTEGER:
                     lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
+                elif lhs.kind == BCPrimitiveType.REAL:
                     lhs_num = lhs.get_real()
 
-                if rhs.kind == "integer":
+                if rhs.kind == BCPrimitiveType.INTEGER:
                     rhs_num = rhs.get_integer()
-                elif rhs.kind == "real":
+                elif rhs.kind == BCPrimitiveType.REAL:
                     rhs_num = rhs.get_real()
 
                 if rhs_num == 0:
@@ -576,21 +568,21 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in ["char", "string"] or rhs.kind in ["char", "string"]:
+                if lhs.kind in [BCPrimitiveType.CHAR, BCPrimitiveType.STRING] or rhs.kind in [BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     # concatenate instead
                     lhs_str_or_char: str = str()
                     rhs_str_or_char: str = str()
 
-                    if lhs.kind == "string":
+                    if lhs.kind == BCPrimitiveType.STRING:
                         lhs_str_or_char = lhs.get_string()
-                    elif lhs.kind == "char":
+                    elif lhs.kind == BCPrimitiveType.CHAR:
                         lhs_str_or_char = lhs.get_char()
                     else:
                         lhs_str_or_char = str(lhs)
 
-                    if rhs.kind == "string":
+                    if rhs.kind == BCPrimitiveType.STRING:
                         rhs_str_or_char = rhs.get_string()
-                    elif rhs.kind == "char":
+                    elif rhs.kind == BCPrimitiveType.CHAR:
                         rhs_str_or_char = rhs.get_char()
                     else:
                         rhs_str_or_char = str(rhs)
@@ -598,20 +590,20 @@ class Interpreter:
                     res = str(lhs_str_or_char + rhs_str_or_char)
                     return BCValue.new_string(res)
 
-                if "boolean" in [lhs.kind, rhs.kind]:
+                if BCPrimitiveType.BOOLEAN in [lhs.kind, rhs.kind]:
                     self.error("Cannot add bools, chars, and strings!", expr.pos)
 
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind == "integer":
+                if lhs.kind == BCPrimitiveType.INTEGER:
                     lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
+                elif lhs.kind == BCPrimitiveType.REAL:
                     lhs_num = lhs.get_real()
 
-                if rhs.kind == "integer":
+                if rhs.kind == BCPrimitiveType.INTEGER:
                     rhs_num = rhs.get_integer()
-                elif rhs.kind == "real":
+                elif rhs.kind == BCPrimitiveType.REAL:
                     rhs_num = rhs.get_real()
 
                 res = lhs_num + rhs_num
@@ -635,23 +627,23 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in ["boolean", "char", "string"]:
+                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error("Cannot subtract bools, chars, and strings!")
 
-                if rhs.kind in ["boolean", "char", "string"]:
+                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     self.error("Cannot subtract bools, chars, and strings!")
 
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
-                if lhs.kind == "integer":
+                if lhs.kind == BCPrimitiveType.INTEGER:
                     lhs_num = lhs.get_integer()
-                elif lhs.kind == "real":
+                elif lhs.kind == BCPrimitiveType.REAL:
                     lhs_num = lhs.get_real()
 
-                if rhs.kind == "integer":
+                if rhs.kind == BCPrimitiveType.INTEGER:
                     rhs_num = rhs.get_integer()
-                elif rhs.kind == "real":
+                elif rhs.kind == BCPrimitiveType.REAL:
                     rhs_num = rhs.get_real()
 
                 res = lhs_num - rhs_num
@@ -664,13 +656,13 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind != "boolean":
+                if lhs.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
                         f"cannot perform logical AND on value with type {lhs.kind}",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind != "boolean":
+                if rhs.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
                         f"cannot perform logical AND on value with type {lhs.kind}",
                         expr.rhs.pos,
@@ -695,13 +687,13 @@ class Interpreter:
                 lhs = self.visit_expr(expr.lhs)
                 rhs = self.visit_expr(expr.rhs)
 
-                if lhs.kind != "boolean":
+                if lhs.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
                         f"cannot perform logical OR on value with type {lhs.kind}",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind != "boolean":
+                if rhs.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
                         f"cannot perform logical OR on value with type {lhs.kind}",
                         expr.rhs.pos,
@@ -733,13 +725,13 @@ class Interpreter:
         v = self.variables[ind.ident.ident].val
 
         if isinstance(v.kind, BCArrayType):
-            a: BCArray = v.array  # type: ignore
+            a: BCArray = v.val  # type: ignore
 
             if a.typ.is_matrix:
                 if ind.idx_inner is None:
                     self.error("expected 2 indices for matrix indexing", ind.pos)
 
-                inner_index = self.visit_expr(ind.idx_inner).integer  # type: ignore
+                inner_index = self.visit_expr(ind.idx_inner).get_integer()  # type: ignore
                 if inner_index is None:
                     self.error("found (null) for inner array index", ind.idx_inner.pos)  # type: ignore
 
@@ -749,7 +741,7 @@ class Interpreter:
                     self.error("expected only 1 index for array indexing", ind.pos)
                 return (index, None)
         else:
-            if v.kind == "string":
+            if v.kind == BCPrimitiveType.STRING:
                 self.error(
                     "cannot index a string! please use the SUBSTRING library routine instead.",
                     ind.ident.pos,
@@ -758,7 +750,7 @@ class Interpreter:
                 self.error(f"cannot index {v.kind}", ind.ident.pos)
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
-        index = self.visit_expr(ind.idx_outer).integer
+        index = self.visit_expr(ind.idx_outer).get_integer()
 
         if index is None:
             self.error("Found (null) for array index", ind.idx_outer.pos)
@@ -814,7 +806,7 @@ class Interpreter:
                 res = a.get_flat()[tup[0] - a.get_flat_bounds()[0]]
                 return res
         else:
-            if v.kind == "string":
+            if v.kind == BCPrimitiveType.STRING:
                 self.error(
                     f"cannot index a string! please use SUBSTRING({ind.ident.ident}, {index}, 1) instead.",
                     ind.ident.pos,
@@ -922,10 +914,10 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     lhs_val = (
-                        lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                        lhs.get_integer() if lhs.kind == BCPrimitiveType.INTEGER else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
+                        rhs.get_integer() if rhs.kind == BCPrimitiveType.INTEGER else rhs.get_real()
                     )
 
                     if rhs_val == 0:
@@ -936,10 +928,10 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     lhs_val = (
-                        lhs.get_integer() if lhs.kind == "integer" else lhs.get_real()
+                        lhs.get_integer() if lhs.kind == BCPrimitiveType.INTEGER else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if rhs.kind == "integer" else rhs.get_real()
+                        rhs.get_integer() if rhs.kind == BCPrimitiveType.INTEGER else rhs.get_real()
                     )
 
                     if rhs_val == 0:
@@ -962,7 +954,7 @@ class Interpreter:
                     [val, *_] = evargs
 
                     val_v = (
-                        val.get_integer() if val.kind == "integer" else val.get_real()
+                        val.get_integer() if val.kind == BCPrimitiveType.INTEGER else val.get_real()
                     )
                     if val_v < 0:
                         self.error(
@@ -1012,7 +1004,8 @@ class Interpreter:
     def visit_libroutine_noreturn(self, stmt: CallStatement):
         name = stmt.ident.lower()
         lr = LIBROUTINES_NORETURN[name.lower()]
-
+        
+        #print(stmt)
         evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
 
         match name:
@@ -1044,7 +1037,7 @@ class Interpreter:
 
         if retval.is_null() or retval.is_uninitialized():
             self.error(
-                f"FFI function {func.name} returns {func.returns.upper()} but returned a null/uninitialized value.",
+                f"FFI function {func.name} returns {str(func.returns).upper()} but returned a null/uninitialized value.",
                 stmt.pos,
             )
 
@@ -1206,20 +1199,20 @@ class Interpreter:
             s = self._display_array(arr)
         else:
             match inner.kind:
-                case "null":
+                case BCPrimitiveType.NULL:
                     s = "(null)"
-                case "boolean":
+                case BCPrimitiveType.BOOLEAN:
                     if inner.get_boolean():
                         s = "true"
                     else:
                         s = "false"
-                case "integer":
+                case BCPrimitiveType.INTEGER:
                     s = str(inner.get_integer())
-                case "real":
+                case BCPrimitiveType.REAL:
                     s = str(inner.get_real())
-                case "char":
+                case BCPrimitiveType.CHAR:
                     s = str(inner.get_char()[0])
-                case "string":
+                case BCPrimitiveType.STRING:
                     return inner
 
         return BCValue.new_string(s)
@@ -1227,19 +1220,19 @@ class Interpreter:
     def _typecast_integer(self, inner: BCValue, pos: Pos) -> BCValue:
         i = 0
         match inner.kind:
-            case "string":
+            case BCPrimitiveType.STRING:
                 s = inner.get_string()
                 try:
                     i = int(s.strip())
                 except ValueError:
                     self.error(f'impossible to convert "{s}" to an INTEGER!', pos)
-            case "integer":
+            case BCPrimitiveType.INTEGER:
                 return inner
-            case "real":
+            case BCPrimitiveType.REAL:
                 i = int(inner.get_real())
-            case "char":
+            case BCPrimitiveType.CHAR:
                 i = ord(inner.get_char()[0])
-            case "boolean":
+            case BCPrimitiveType.BOOLEAN:
                 i = 1 if inner.get_boolean() else 0
 
         return BCValue.new_integer(i)
@@ -1248,19 +1241,19 @@ class Interpreter:
         r = 0.0
 
         match inner.kind:
-            case "string":
+            case BCPrimitiveType.STRING:
                 s = inner.get_string()
                 try:
                     r = float(s.strip())
                 except ValueError:
                     self.error(f'impossible to convert "{s}" to a REAL!', pos)
-            case "integer":
+            case BCPrimitiveType.INTEGER:
                 r = float(inner.get_integer())
-            case "real":
+            case BCPrimitiveType.REAL:
                 return inner
-            case "char":
+            case BCPrimitiveType.CHAR:
                 self.error(f"impossible to convert a REAL to a CHAR!", pos)
-            case "boolean":
+            case BCPrimitiveType.BOOLEAN:
                 r = 1.0 if inner.get_boolean() else 0.0
 
         return BCValue.new_real(r)
@@ -1269,18 +1262,18 @@ class Interpreter:
         c = ""
 
         match inner.kind:
-            case "string":
+            case BCPrimitiveType.STRING:
                 self.error(
                     f"cannot convert a STRING to a CHAR! use SUBSTRING(str, begin, 1) to get a character.",
                     pos,
                 )
-            case "integer":
+            case BCPrimitiveType.INTEGER:
                 c = chr(inner.get_integer())
-            case "real":
+            case BCPrimitiveType.REAL:
                 self.error(f"impossible to convert a CHAR to a REAL!", pos)
-            case "char":
+            case BCPrimitiveType.CHAR:
                 return inner
-            case "boolean":
+            case BCPrimitiveType.BOOLEAN:
                 self.error(f"impossible to convert a BOOLEAN to a CHAR!", pos)
 
         return BCValue.new_char(c)
@@ -1289,15 +1282,15 @@ class Interpreter:
         b = False
 
         match inner.kind:
-            case "string":
+            case BCPrimitiveType.STRING:
                 b = inner.get_string() != ""
-            case "integer":
+            case BCPrimitiveType.INTEGER:
                 b = inner.get_integer() != 0
-            case "real":
+            case BCPrimitiveType.REAL:
                 b = inner.get_real() != 0.0
-            case "char":
+            case BCPrimitiveType.CHAR:
                 b = ord(inner.get_char()) != 0
-            case "boolean":
+            case BCPrimitiveType.BOOLEAN:
                 return inner
 
         return BCValue.new_boolean(b)
@@ -1305,23 +1298,23 @@ class Interpreter:
     def visit_typecast(self, tc: Typecast) -> BCValue:  # type: ignore
         inner = self.visit_expr(tc.expr)
 
-        if inner.kind == "null":
+        if inner.kind == BCPrimitiveType.NULL:
             self.error("cannot cast NULL to anything!", tc.pos)
 
-        if isinstance(inner.kind, BCArrayType) and tc.typ != "string":
+        if isinstance(inner.kind, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
             self.error(f"cannot cast an array to a {tc.typ}", tc.pos)
 
         match tc.typ:
-            case "string":
-                return self._typecast_string(inner, tc.pos)  # type: ignore
-            case "integer":
-                return self._typecast_integer(inner, tc.pos)  # type: ignore
-            case "real":
-                return self._typecast_real(inner, tc.pos)  # type: ignore
-            case "char":
-                return self._typecast_char(inner, tc.pos)  # type: ignore
-            case "boolean":
-                return self._typecast_boolean(inner, tc.pos)  # type: ignore
+            case BCPrimitiveType.STRING:
+                return self._typecast_string(inner, tc.pos)  
+            case BCPrimitiveType.INTEGER:
+                return self._typecast_integer(inner, tc.pos)  
+            case BCPrimitiveType.REAL:
+                return self._typecast_real(inner, tc.pos)  
+            case BCPrimitiveType.CHAR:
+                return self._typecast_char(inner, tc.pos)
+            case BCPrimitiveType.BOOLEAN:
+                return self._typecast_boolean(inner) 
 
     def visit_matrix_literal(self, expr: ArrayLiteral) -> BCValue:
         first_matrix_elem: Expr = expr.items[0].items[0]  # type: ignore
@@ -1416,18 +1409,18 @@ class Interpreter:
                 return self.visit_expr(expr.inner)
             case Negation():
                 inner = self.visit_expr(expr.inner)
-                if inner.kind not in ["integer", "real"]:
+                if inner.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
                     self.error(
                         f"cannot negate a value of type {inner.kind}", expr.inner.pos
                     )
 
-                if inner.kind == "integer":
-                    return BCValue.new_integer(-inner.integer)  # type: ignore
-                elif inner.kind == "real":
-                    return BCValue.new_real(-inner.real)  # type: ignore
+                if inner.kind == BCPrimitiveType.INTEGER:
+                    return BCValue.new_integer(-inner.get_integer())  # type: ignore
+                elif inner.kind == BCPrimitiveType.REAL:
+                    return BCValue.new_real(-inner.get_real())  # type: ignore
             case Not():
                 inner = self.visit_expr(expr.inner)
-                if inner.kind != "boolean":
+                if inner.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
                         f"cannot perform logical NOT on value of type {inner.kind}",
                         expr.inner.pos,
@@ -1437,7 +1430,7 @@ class Interpreter:
             case Identifier():
                 return self.visit_identifier(expr)
             case Literal():
-                return expr.to_bcvalue()
+                return expr.val
             case ArrayLiteral():
                 return self.visit_array_literal(expr)
             case BinaryExpr():
@@ -1446,10 +1439,9 @@ class Interpreter:
                 return self.visit_array_index(expr)
             case FunctionCall():
                 return self.visit_fncall(expr)
-            case _: 
-                self.error(
-                    "whoops something is very wrong. this is a rare error, please report it to the developers."
-                )
+        self.error(
+            "whoops something is very wrong. this is a rare error, please report it to the developers."
+        )
 
     def _display_array(self, arr: BCArray) -> str:
         if not arr.typ.is_matrix:
@@ -1502,7 +1494,7 @@ class Interpreter:
             if not self.loop and self.tracer:
                 self.tracer.collect_new({}, stmt.pos.row, outputs=[res])
             else:
-                self.tracer_outputs.append(res.getvalue())  # type: ignore
+                self.tracer_outputs.append(res)  # type: ignore
 
         if self.tracer and self.tracer.config.show_outputs:
             print("(tracer output): " + res)
@@ -1513,17 +1505,17 @@ class Interpreter:
 
     def _guess_input_type(self, inp: str) -> BCValue:
         if is_real(inp):
-            return BCValue(kind="real")
+            return BCValue.empty(BCPrimitiveType.REAL)
         elif is_integer(inp):
-            return BCValue(kind="integer")
+            return BCValue.empty(BCPrimitiveType.INTEGER)
 
         if inp.strip().lower() in ["true", "false", "no", "yes"]:
-            return BCValue(kind="boolean")
+            return BCValue.empty(BCPrimitiveType.BOOLEAN)
 
         if len(inp.strip()) == 1:
-            return BCValue(kind="char")
+            return BCValue.empty(BCPrimitiveType.CHAR)
         else:
-            return BCValue(kind="string")
+            return BCValue.empty(BCPrimitiveType.STRING)
 
     def visit_input_stmt(self, s: InputStatement):
         prompt = str()
@@ -1555,18 +1547,18 @@ class Interpreter:
                 self.error(f'cannot call "INPUT" on an array', s.ident.pos)
 
         match target.kind:
-            case "string":
-                target.kind = "string"
-                target.string = inp
-            case "char":
+            case BCPrimitiveType.STRING:
+                target.kind = BCPrimitiveType.STRING
+                target.val = inp
+            case BCPrimitiveType.CHAR:
                 if len(inp) > 1:
                     self.error(
                         f'expected single character but got "{inp}" for CHAR', s.pos
                     )
 
-                target.kind = "char"
-                target.char = inp
-            case "boolean":
+                target.kind = BCPrimitiveType.CHAR
+                target.val = inp[0]
+            case BCPrimitiveType.BOOLEAN:
                 if inp.lower() not in {"true", "false", "yes", "no"}:
                     self.error(
                         f'expected TRUE, FALSE, YES or NO including lowercase for BOOLEAN but got "{inp}"',
@@ -1574,30 +1566,29 @@ class Interpreter:
                     )
 
                 inp = inp.lower()
+                target.kind = BCPrimitiveType.BOOLEAN
                 if inp in {"true", "yes"}:
-                    target.kind = "boolean"
-                    target.boolean = True
+                    target.val = True
                 elif inp in {"false", "no"}:
-                    target.kind = "boolean"
-                    target.boolean = False
-            case "integer":
+                    target.val = False
+            case BCPrimitiveType.INTEGER:
                 inp = inp.lower().strip()
                 if is_integer(inp):
                     try:
                         res = int(inp)
-                        target.kind = "integer"
-                        target.integer = res
+                        target.kind = BCPrimitiveType.INTEGER
+                        target.val = res
                     except ValueError:
                         self.error("expected INTEGER for INPUT", s.ident.pos)
                 else:
                     self.error("expected INTEGER for INPUT", s.ident.pos)
-            case "real":
+            case BCPrimitiveType.REAL:
                 inp = inp.lower().strip()
                 if is_real(inp) or is_integer(inp):
                     try:
                         res = float(inp)
-                        target.kind = "real"
-                        target.real = res
+                        target.kind = BCPrimitiveType.REAL 
+                        target.val = res
                     except ValueError:
                         self.error("expected REAL for INPUT", s.ident.pos)
                 else:
@@ -1722,7 +1713,7 @@ class Interpreter:
     def visit_if_stmt(self, stmt: IfStatement):
         cond: BCValue = self.visit_expr(stmt.cond)
 
-        if cond.kind != "boolean":
+        if cond.kind != BCPrimitiveType.BOOLEAN:
             self.error("condition of while loop must be a boolean!", stmt.cond.pos)
 
         saved_cur = self.cur_stmt
@@ -1755,7 +1746,7 @@ class Interpreter:
 
         while True:
             evcond = self.visit_expr(cond)
-            if evcond.kind != "boolean":
+            if evcond.kind != BCPrimitiveType.BOOLEAN:
                 self.error("condition of while loop must be a boolean!", stmt.cond.pos)
             if not evcond.get_boolean():
                 break
@@ -1784,12 +1775,12 @@ class Interpreter:
     def visit_for_stmt(self, stmt: ForStatement):
         begin = self.visit_expr(stmt.begin)
 
-        if begin.kind != "integer":
+        if begin.kind != BCPrimitiveType.INTEGER:
             self.error("non-integer expression used for for loop begin", stmt.begin.pos)
 
         end = self.visit_expr(stmt.end)
 
-        if end.kind != "integer":
+        if end.kind != BCPrimitiveType.INTEGER:
             self.error("non-integer expression used for for loop end", stmt.end.pos)
 
         if stmt.step is None:
@@ -1848,7 +1839,7 @@ class Interpreter:
                 self.retval = intp.retval
                 return
 
-            counter.val.integer += step  # type: ignore
+            counter.val.val += step  # type: ignore
 
         if not var_existed:
             intp.variables.pop(stmt.counter.ident)
@@ -1883,7 +1874,7 @@ class Interpreter:
                 return
 
             evcond = self.visit_expr(cond)
-            if evcond.kind != "boolean":
+            if evcond.kind != BCPrimitiveType.BOOLEAN:
                 self.error(
                     "condition of repeat-until loop must be a boolean!", stmt.cond.pos
                 )
@@ -1934,18 +1925,18 @@ class Interpreter:
         if isinstance(s.ident, ArrayIndex):
             key = s.ident.ident.ident
 
-            if self.variables[key].val.array is None:
+            if not isinstance(self.variables[key].val.kind, BCArrayType):
                 self.error(
                     f"cannot index a variable of type {self.variables[key].val.kind} like an array!",
                     s.ident.pos,
                 )
 
             tup = self._get_array_index(s.ident)
-            if tup[1] is None and self.variables[key].val.array.typ.is_matrix:  # type: ignore
+            if tup[1] is None and self.variables[key].val.val.typ.is_matrix:  # type: ignore
                 self.error(f"not enough indices for matrix", s.ident.idx_outer.pos)
 
             val = self.visit_expr(s.value)
-            a: BCArray = self.variables[key].val.array  # type: ignore
+            a: BCArray = self.variables[key].val.val  # type: ignore
 
             if a.typ.is_matrix:
                 bounds = a.get_matrix_bounds()
@@ -2173,7 +2164,7 @@ class Interpreter:
                 name = id.ident
             else:
                 exp = self.visit_expr(id)
-                if exp.kind != "string":
+                if exp.kind != BCPrimitiveType.STRING:
                     self.error("file name must be a string!", pos)
                 name = exp.get_string()
         else:
@@ -2226,7 +2217,7 @@ class Interpreter:
         else:
             target = self.visit_identifier(stmt.target)
 
-        target.string = str(file.stream.read())
+        target.val = str(file.stream.read())
         file.stream.seek(0)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):

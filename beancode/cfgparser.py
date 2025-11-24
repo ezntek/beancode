@@ -1,4 +1,4 @@
-from .bean_ast import BCType, BCValue, Literal
+from .bean_ast import BCValue, Literal
 from .lexer import Lexer
 from .parser import Parser
 from .error import BCError
@@ -26,7 +26,7 @@ def parse_config_from_source(src: str) -> dict[str, BCValue]:
             ps.consume_and_expect("newline", "after configuration entry")
 
         ps.consume_newlines()
-        res[ident.ident] = lit.to_bcvalue()
+        res[ident.ident] = lit.val
 
     return res
 

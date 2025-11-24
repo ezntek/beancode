@@ -197,7 +197,7 @@ class Parser:
 
     def literal(self) -> Expr | None:
         if not self.check_many(
-            "literal_string", "literal_char", "literal_number", "true", "false", "null"
+            "literal_string", "literal_char", "literal_number", "true", "false", BCPrimitiveType.NULL
         ):
             return
 
@@ -212,7 +212,7 @@ class Parser:
                 val: str = lit.data  # type: ignore
                 if val[0] == "\\":
                     if len(val) == 1:
-                        return Literal(lit.pos, "char", char="\\")
+                        return Literal(lit.pos, BCValue.new_char("\\"))
 
                     ch = _convert_escape_code(val[1])
                     if not ch:
@@ -221,13 +221,13 @@ class Parser:
                             lit.pos,
                         )
 
-                    return Literal(lit.pos, "char", char=ch)
+                    return Literal(lit.pos, BCValue.new_char(ch))
                 else:
                     if len(val) > 1:
                         raise BCError(
                             f"more than 1 character in char literal '{val}'", lit.pos
                         )
-                    return Literal(lit.pos, "char", char=val[0])
+                    return Literal(lit.pos, BCValue.new_char(val[0]))
             case "literal_string":
                 val: str = lit.data  # type: ignore
                 res = StringIO()
@@ -253,7 +253,7 @@ class Parser:
                         res.write(val[i])
                     i += 1
 
-                return Literal(lit.pos, "string", string=res.getvalue())
+                return Literal(lit.pos, BCValue.new_string(res.getvalue()))
             case "literal_number":
                 val: str = lit.data  # type: ignore
 
@@ -263,22 +263,22 @@ class Parser:
                     except ValueError:
                         raise BCError(f'invalid number literal "{val}"', lit.pos)
 
-                    return Literal(lit.pos, "real", real=res)
+                    return Literal(lit.pos, BCValue.new_real(res))
                 elif is_integer(val):
                     try:
                         res = int(val)
                     except ValueError:
                         raise BCError(f'invalid number literal "{val}"', lit.pos)
 
-                    return Literal(lit.pos, "integer", integer=res)
+                    return Literal(lit.pos, BCValue.new_integer(res))
                 else:
                     raise BCError(f'invalid number literal "{val}"', lit.pos)
             case "true":
-                return Literal(lit.pos, "boolean", boolean=True)
+                return Literal(lit.pos, BCValue.new_boolean(True))
             case "false":
-                return Literal(lit.pos, "boolean", boolean=False)
-            case "null":
-                return Literal(lit.pos, "null")
+                return Literal(lit.pos, BCValue.new_boolean(False))
+            case BCPrimitiveType.NULL:
+                return Literal(lit.pos, BCValue.new_null())
 
     def _array_type(self) -> Type:
         flat_bounds = None
@@ -354,7 +354,7 @@ class Parser:
                 arrtyp.pos,
             )
 
-        inner = arrtyp.data  # type: ignore
+        inner = BCPrimitiveType.from_string(arrtyp.data)
 
         return ArrayType(
             is_matrix=is_matrix,
@@ -368,8 +368,7 @@ class Parser:
         if adv.data == "array":
             return self._array_type()
         else:
-            t: BCPrimitiveType = adv.data  # type: ignore
-            return t
+            return BCPrimitiveType.from_string(adv.data)
 
     def ident(self) -> Identifier:
         c = self.consume_and_expect("ident")
@@ -455,7 +454,7 @@ class Parser:
             # should be unreachable
             raise BCError("cannot typecast to an array!", typ.pos)
 
-        t: BCPrimitiveType = typ.data  # type: ignore
+        t = BCPrimitiveType.from_string(typ.data) # type: ignore
         self.consume()  # checked already
 
         expr = self.expr()
@@ -1243,8 +1242,8 @@ class Parser:
                     self.pos(),
                 )
 
-            val = lit.to_bcvalue()
-            if val.kind != "string":
+            val = lit.val
+            if val.kind != BCPrimitiveType.STRING:
                 raise BCError(
                     "expected string literal after TO keyword in TRACE statement\n"
                     + "pass the file name of the output trace table in a string.",

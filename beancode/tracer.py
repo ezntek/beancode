@@ -57,42 +57,42 @@ class TracerConfig:
 
         if "TraceEveryLine" in cfg:
             data = cfg["TraceEveryLine"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.trace_every_line = data.get_boolean()
 
         if "HideRepeatingEntries" in cfg:
             data = cfg["HideRepeatingEntries"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.hide_repeating_entries = data.get_boolean()
 
         if "CondenseArrays" in cfg:
             data = cfg["CondenseArrays"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.condense_arrays = data.get_boolean()
 
         if "SyntaxHighlighting" in cfg:
             data = cfg["SyntaxHighlighting"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.syntax_highlighting = data.get_boolean()
 
         if "ShowOutputs" in cfg:
             data = cfg["ShowOutputs"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.show_outputs = data.get_boolean()
 
         if "PromptOnInputs" in cfg:
             data = cfg["PromptOnInputs"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.prompt_on_inputs = data.get_boolean()
 
         if "Debug" in cfg:
             data = cfg["Debug"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.debug = data.get_boolean()
 
         if "IWillNotCheat" in cfg:
             data = cfg["IWillNotCheat"]
-            if data.kind == "boolean":
+            if data.kind == BCPrimitiveType.BOOLEAN:
                 res.i_will_not_cheat = data.get_boolean()
 
         return res
@@ -166,7 +166,7 @@ class Tracer:
 
         for var in wanted_vars:
             self.vars[var] = list()
-            self.var_types[var] = "null"
+            self.var_types[var] = BCPrimitiveType.NULL
             self.last_updated_vals[var] = None
 
     def load_config(self, search_paths: list[str] | None = None):
@@ -315,10 +315,10 @@ class Tracer:
             return f"<td><pre>{str(var)}</pre></td>"
 
         match var.kind:
-            case "boolean":
-                klass = "tru" if var.boolean == True else "fls"
+            case BCPrimitiveType.BOOLEAN:
+                klass = "tru" if var.val == True else "fls"
                 return f"<td><pre class={klass}>{str(var)}</pre></td>"
-            case "integer" | "real":
+            case BCPrimitiveType.INTEGER | BCPrimitiveType.REAL:
                 return f"<td><pre class=int>{str(var)}</pre></td>"
             case _:
                 return f"<td><pre>{str(var)}</pre></td>"

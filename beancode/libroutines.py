@@ -5,46 +5,46 @@ import random
 
 from typing import NoReturn
 
-from beancode.bean_ast import Type, BCValue
+from beancode.bean_ast import BCPrimitiveType, BCValue
 
-Libroutine = list[tuple[Type, ...] | Type]
+Libroutine = list[tuple[BCPrimitiveType, ...] | BCPrimitiveType]
 Libroutines = dict[str, Libroutine]
 
 LIBROUTINES: Libroutines = {
-    "ucase": [("string", "char")],
-    "lcase": [("string", "char")],
-    "div": [("integer", "real"), ("integer", "real")],
-    "mod": [("integer", "real"), ("integer", "real")],
-    "substring": ["string", "integer", "integer"],
-    "round": ["real", "integer"],
-    "sqrt": [("integer", "real")],
-    "length": ["string"],
-    "sin": ["real"],
-    "cos": ["real"],
-    "tan": ["real"],
-    "help": ["string"],
+    "ucase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
+    "lcase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
+    "div": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL), (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
+    "mod": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL), (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
+    "substring": [BCPrimitiveType.STRING, BCPrimitiveType.INTEGER, BCPrimitiveType.INTEGER],
+    "round": [BCPrimitiveType.REAL, BCPrimitiveType.INTEGER],
+    "sqrt": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
+    "length": [BCPrimitiveType.STRING],
+    "sin": [BCPrimitiveType.REAL],
+    "cos": [BCPrimitiveType.REAL],
+    "tan": [BCPrimitiveType.REAL],
+    "help": [BCPrimitiveType.STRING],
     "getchar": [],
     "random": [],
-    "execute": ["string"],
+    "execute": [BCPrimitiveType.STRING],
 }
 
 LIBROUTINES_NORETURN: Libroutines = {
-    "putchar": ["char"],
-    "exit": ["integer"],
-    "sleep": ["real"],
+    "putchar": [BCPrimitiveType.CHAR],
+    "exit": [BCPrimitiveType.INTEGER],
+    "sleep": [BCPrimitiveType.REAL],
     "flush": [],
 }
 
 
 def bean_ucase(txt: BCValue) -> BCValue:
-    if txt.kind == "string":
+    if txt.kind == BCPrimitiveType.STRING:
         return BCValue.new_string(txt.get_string().upper())
     else:
         return BCValue.new_char(txt.get_char().upper()[0])
 
 
 def bean_lcase(txt: BCValue) -> BCValue:
-    if txt.kind == "string":
+    if txt.kind == BCPrimitiveType.STRING:
         return BCValue.new_string(txt.get_string().lower())
     else:
         return BCValue.new_char(txt.get_char().lower()[0])
@@ -97,10 +97,10 @@ def bean_mod(lhs: int | float, rhs: int | float) -> BCValue:
 
 
 def bean_sqrt(val: BCValue) -> BCValue:  # type: ignore
-    if val.kind == "integer":
+    if val.kind == BCPrimitiveType.INTEGER:
         num = val.get_integer()
         return BCValue.new_real(math.sqrt(num))
-    elif val.kind == "real":
+    elif val.kind == BCPrimitiveType.REAL:
         num = val.get_real()
         return BCValue.new_real(math.sqrt(num))
 

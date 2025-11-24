@@ -104,7 +104,7 @@ class Repl:
             typ = str(a.typ)
         else:
             rep = repr(val)
-            typ = val.kind
+            typ = str(val.kind)
 
         if isinstance(val.kind, ast.BCArrayType):
             print(f"'{typ}' {rep}")
