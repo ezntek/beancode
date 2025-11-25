@@ -298,7 +298,7 @@ class Tracer:
             if (
                 not self.config.condense_arrays
                 and isinstance(typ, BCArrayType)
-                and not typ.is_matrix
+                and typ.is_flat()
             ):
                 has_array = True
                 break
@@ -338,8 +338,8 @@ class Tracer:
         # first pass
         for name, typ in self.var_types.items():
             if not self.config.condense_arrays and isinstance(typ, BCArrayType):
-                if not typ.is_matrix:
-                    width = typ.flat_bounds[1] - typ.flat_bounds[0] + 1  # type: ignore
+                if typ.is_flat():
+                    width = typ.get_flat_bounds()[1] - typ.get_flat_bounds()[0] + 1  # type: ignore
                     res.write(f"<th colspan={width}>{name}</th>")
             else:
                 res.write(f"<th{rs}>{name}</th>")
@@ -354,8 +354,8 @@ class Tracer:
         if has_array:
             res.write("</tr><tr>")
             for name, typ in self.var_types.items():
-                if isinstance(typ, BCArrayType) and not typ.is_matrix:
-                    bounds: tuple[int, int] = typ.flat_bounds  # type: ignore
+                if isinstance(typ, BCArrayType) and typ.is_flat():
+                    bounds: tuple[int, int] = typ.get_flat_bounds()  # type: ignore
                     for num in range(bounds[0], bounds[1] + 1):  # never None
                         res.write(f"<th>[{num}]</th>")
 
@@ -391,7 +391,7 @@ class Tracer:
                 else:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
                     arr: BCArray = var.get_array()
-                    if not arr.typ.is_matrix:
+                    if arr.typ.is_flat():
                         prev_arr: list[BCValue] | None = None
                         if row_num != 0:
                             prev_var = rows[row_num - 1][1][col]
@@ -474,7 +474,7 @@ class Tracer:
                     if var is None:
                         continue
 
-                    if isinstance(var.kind, BCArrayType) and not var.kind.is_matrix:
+                    if isinstance(var.kind, BCArrayType) and var.kind.is_flat():
                         prev_arr: list[BCValue] | None = None
                         if row_num != 0:
                             prev_var = rows[row_num - 1][1][col]
@@ -535,7 +535,7 @@ class Tracer:
         res.write("</table>\n")
         return res.getvalue()
 
-    def gen_html(self, filename: str | None = None) -> str:
+    def gen_html(self, file_name: str | None = None) -> str:
         res = StringIO()
         res.write("<!DOCTYPE html>\n")
         res.write("<!-- Generated HTML by beancode's trace table generator -->\n")
@@ -545,8 +545,8 @@ class Tracer:
         res.write('<meta name=color-scheme content="dark light">\n')
 
         title_s = ""
-        if filename is not None:
-            title_s = " for " + filename
+        if file_name is not None:
+            title_s = " for " + file_name
         title = f"Generated Trace Table{title_s}"
 
         res.write(f"<title>{title}</title>\n")
@@ -560,7 +560,7 @@ class Tracer:
 
         res.write(f"<body><center>\n")
 
-        res.write(f"<h1>{title}</h1>\n")
+        res.write(f"<h1>Generated Trace Table</h1>\n")
         res.write(self._gen_html_table() + "\n")
 
         res.write("</center></body>\n")
@@ -584,7 +584,7 @@ class Tracer:
 
         try:
             with open(real_name, "w") as f:
-                f.write(self.gen_html())
+                f.write(self.gen_html(file_name))
         except IsADirectoryError:
             error(f"cannot write the tracer's output to a directory!")
         except PermissionError:

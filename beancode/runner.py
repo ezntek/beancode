@@ -162,7 +162,7 @@ def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tra
     if tracer is None:
         i = Interpreter(program.stmts)
     else:
-        i = Interpreter(program.stmts, tracer=tracer)
+        i = Interpreter(program.stmts, tracer=tracer, tracer_open=True)
 
     i.toplevel = True
     try:

@@ -8,7 +8,6 @@
   - [ ] Dark/light mode CSS, theming?
   - [ ] Common class names for bcweb (beancode-web)
   - [ ] JSON output?
-  - [ ] Proper debugger? (callbacks)
 
 ## High Priority
 

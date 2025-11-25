@@ -94,13 +94,22 @@ class BCArrayType:
     def __init__(self, inner: BCPrimitiveType, bounds: tuple[int, int] | tuple[int, int, int, int]):
         self.inner = inner
         self.bounds = bounds
+    
+    def __eq__(self, value: object, /) -> bool:
+        if type(self) is not type(value):
+            return False
+
+        return self.inner == value.inner and self.bounds == value.bounds # type: ignore
+    
+    def __neq__(self, value: object, /) -> bool:
+        return not (self.__eq__(value))
 
     def is_flat(self) -> bool:
         return len(self.bounds) == 2
     
     def is_matrix(self) -> bool:
         return len(self.bounds) == 4
-
+    
     @classmethod
     def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> "BCArrayType":
         return cls(inner, bounds)

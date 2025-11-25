@@ -45,6 +45,7 @@ class Interpreter:
     tracer: Tracer | None = None
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
+    tracer_open = False # open generated html or not by default
     files: dict[str, File]
     file_callbacks: FileCallbacks
 
@@ -55,13 +56,15 @@ class Interpreter:
         proc=False,
         loop=False,
         tracer=None,
-        file_callbacks=None 
+        tracer_open=False,
+        file_callbacks=None,
     ) -> None:
         self.block = block
         self.func = func
         self.proc = proc
         self.loop = loop
         self.tracer = tracer
+        self.tracer_open = tracer_open
         self.files = dict()
 
         if not file_callbacks:
@@ -2186,7 +2189,8 @@ class Interpreter:
         intp.visit_block(None)
 
         written_path = tracer.write_out(stmt.file_name)
-        tracer.open(written_path)
+        if self.tracer_open:
+            tracer.open(written_path)
 
     def _get_file_name(self, id: Expr | str, pos: Pos):
         name = str()
