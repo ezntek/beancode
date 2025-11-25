@@ -130,8 +130,8 @@ def main():
     except EOFError:
         warn("Caught EOF")
         exit(1)
-    #except RecursionError:
-    #    warn("Python recursion depth exceeded! Did you forget your base case?")
+    except RecursionError:
+        warn("Python recursion depth exceeded! Did you forget your base case?")
     except Exception as e:
         error(
             f'Python exception caught ({type(e)}: "{e}")! Please report this to the developers.'

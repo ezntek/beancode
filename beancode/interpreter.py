@@ -1769,58 +1769,42 @@ class Interpreter:
         if stmt.otherwise is not None:
             self.visit_stmt(stmt.otherwise)
 
-    def _clear_and_update_scope(self, saved_vars: dict, saved_funcs: dict):
-        self.variables.clear()
-        self.functions.clear()
-        self.variables.update(saved_vars)
-        self.functions.update(saved_funcs)
-
     def visit_while_stmt(self, stmt: WhileStatement):
         cond: Expr = stmt.cond  # type: ignore
 
         block: list[Statement] = stmt.block  # type: ignore
 
-        saved_cur = self.cur_stmt
-        saved_vars = self.variables.copy()
-        saved_funcs = self.functions.copy()
+        intp = self.new(block, loop=True, tracer=self.tracer)
+        intp.variables = dict(self.variables)  # scope
+        intp.functions = dict(self.functions)
+
         while True:
-            self._clear_and_update_scope(saved_vars, saved_funcs)
             evcond = self.visit_expr(cond)
             if evcond.kind != BCPrimitiveType.BOOLEAN:
                 self.error("condition of while loop must be a boolean!", stmt.cond.pos)
             if not evcond.get_boolean():
                 break
 
-            self.visit_block(block)
+            intp.visit_block(block)
 
             # trace all I/O that happened
-            self.trace(stmt.end_pos.row, loop_trace=True)
+            intp.trace(stmt.end_pos.row, loop_trace=True)
 
-        # if we had to break, we already cleared it
-        self.cur_stmt = saved_cur
+            # FIXME: barbaric aah
+            # reset all declares
+            intp.variables = self.variables.copy()
+            if intp._returned:
+                proc, func = self.can_return()
 
-    def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
-        cond: Expr = stmt.cond  # type: ignore
+                if not proc and not func:
+                    self.error(
+                        f"did not find function or procedure to return from!",
+                        stmt.pos,
+                    )
 
-        saved_cur = self.cur_stmt
-        saved_vars = self.variables.copy()
-        saved_funcs = self.functions.copy()
-        
-        while True:
-            self.visit_block(stmt.block)
-
-            self.trace(stmt.end_pos.row, loop_trace=True)
-
-            self._clear_and_update_scope(saved_vars, saved_funcs)
-            evcond = self.visit_expr(cond)
-            if evcond.kind != BCPrimitiveType.BOOLEAN:
-                self.error(
-                    "condition of repeat-until loop must be a boolean!", stmt.cond.pos
-                )
-            if evcond.get_boolean():
-                break
-        
-        self.cur_stmt = saved_cur
+                self._returned = True
+                self.retval = intp.retval
+                return
 
     def visit_for_stmt(self, stmt: ForStatement):
         begin = self.visit_expr(stmt.begin)
@@ -1843,17 +1827,17 @@ class Interpreter:
             if step == 0:
                 self.error("step for for loop cannot be 0!", stmt.step.pos)
 
-        var_existed = stmt.counter.ident in self.variables
-        var_prev_value = None
-        if var_existed:
-            var_prev_value = self.variables[stmt.counter.ident]
+        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
+        intp.calls = self.calls
+        intp.variables = self.variables.copy()
+        intp.functions = self.functions.copy()
 
-        saved_cur = self.cur_stmt
-        saved_vars = self.variables.copy()
-        saved_funcs = self.functions.copy()
+        var_existed = stmt.counter.ident in intp.variables
+        if var_existed:
+            var_prev_value = intp.variables[stmt.counter.ident]
 
         counter = Variable(copy.copy(begin), const=False)
-        self.variables[stmt.counter.ident] = counter
+        intp.variables[stmt.counter.ident] = counter
 
         if step > 0:
             cond = (
@@ -1867,21 +1851,69 @@ class Interpreter:
             )
 
         while cond():
-            self.visit_block(stmt.block)
-            self.trace(stmt.end_pos.row, loop_trace=True)
+            intp.visit_block(None)
+            intp.trace(stmt.end_pos.row, loop_trace=True)
 
             #  FIXME: barbaric
             # clear declared variables
-            c = self.variables[stmt.counter.ident]
-            self._clear_and_update_scope(saved_vars, saved_funcs)
-            self.variables[stmt.counter.ident] = c
+            c = intp.variables[stmt.counter.ident]
+            intp.variables = self.variables.copy()
+            intp.variables[stmt.counter.ident] = c
+
+            if intp._returned:
+                proc, func = self.can_return()
+
+                if not proc and not func:
+                    self.error(
+                        f"did not find function or procedure to return from!",
+                        stmt.pos,
+                    )
+
+                self._returned = True
+                self.retval = intp.retval
+                return
 
             counter.val.val += step  # type: ignore
 
-        self.cur_stmt = saved_cur
-        self._clear_and_update_scope(saved_vars, saved_funcs)
-        if var_existed:
-            self.variables[stmt.counter.ident] = var_prev_value # type: ignore
+        if not var_existed:
+            intp.variables.pop(stmt.counter.ident)
+        else:
+            intp.variables[stmt.counter.ident] = var_prev_value  # type: ignore
+
+    def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
+        cond: Expr = stmt.cond  # type: ignore
+        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
+        intp.calls = self.calls
+        intp.variables = dict(self.variables)
+        intp.functions = dict(self.functions)
+
+        while True:
+            intp.visit_block(None)
+
+            intp.trace(stmt.end_pos.row, loop_trace=True)
+
+            # FIXME: barbaric
+            intp.variables = self.variables.copy()
+            if intp._returned:
+                proc, func = self.can_return()
+
+                if not proc and not func:
+                    self.error(
+                        f"did not find function or procedure to return from!",
+                        stmt.pos,
+                    )
+
+                self._returned = True
+                self.retval = intp.retval
+                return
+
+            evcond = self.visit_expr(cond)
+            if evcond.kind != BCPrimitiveType.BOOLEAN:
+                self.error(
+                    "condition of repeat-until loop must be a boolean!", stmt.cond.pos
+                )
+            if evcond.get_boolean():
+                break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         intp = self.new(stmt.block, loop=False, tracer=self.tracer)
