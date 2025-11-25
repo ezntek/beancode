@@ -66,8 +66,11 @@ class Interpreter:
 
         if not file_callbacks:
             _open = lambda n, m: open(n, m)
-            _close = lambda f: f.close() 
-            self.file_callbacks = FileCallbacks(_open, _close)
+            _close = lambda f: f.close()
+            # dummy callbacks because we don't need to know when the file has changed
+            _write = lambda *_: None
+            _append = lambda *_: None
+            self.file_callbacks = FileCallbacks(_open, _close, _write, _append)
         else:
             self.file_callbacks = file_callbacks
 
@@ -2239,6 +2242,9 @@ class Interpreter:
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
+        if not file.mode[0]:
+            self.error("file not open for reading!", stmt.pos)
+
         target: BCValue
         if isinstance(stmt.target, ArrayIndex):
             target = self.visit_array_index(stmt.target)
@@ -2251,21 +2257,27 @@ class Interpreter:
     def visit_writefile_stmt(self, stmt: WritefileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
+        if not file.mode[1]:
+            self.error("file not open for writing!", stmt.pos)
+
         contents = str(self.visit_expr(stmt.src))
         file.stream.write(contents)
+        self.file_callbacks.write(contents)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
+        if not file.mode[2]:
+            self.error("file not open for appending!", stmt.pos)
+
         contents = str(self.visit_expr(stmt.src))
         file.stream.write(contents)
+        self.file_callbacks.append(contents)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
         self.file_callbacks.close(file.stream)
-
-        file.open = False
         self.files.pop(name)
 
     def visit_stmt(self, stmt: Statement):

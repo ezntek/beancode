@@ -319,13 +319,15 @@ class File:
     stream: IO[Any] # im lazy
     # read, write, append
     mode: tuple[bool, bool, bool]
-    open = True
 
 
 @dataclass
 class FileCallbacks:
     open: Callable[[str, str], IO[Any]]
     close: Callable[[IO[Any]], None]
+    # only for when the file has changed
+    write: Callable[[str], None]
+    append: Callable[[str], None]
 
 @dataclass
 class Literal(Expr):
