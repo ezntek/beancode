@@ -1,8 +1,13 @@
-INCLUDE_FFI "beanstd"
-CONSTANT Max <- 750000
+CONSTANT Max <- 20000
 
 FUNCTION IsPrime(Num: INTEGER) RETURNS BOOLEAN
-    FOR Counter <- 2 TO INTEGER(SQRT(Num))
+    /* Manually calculating the bound is faster if you don't use the AST optimizer!
+    */
+    DECLARE Bound: INTEGER
+    Bound <- INTEGER(SQRT(Num)) 
+
+    FOR Counter <- 2 TO Bound 
+    //FOR Counter <- 2 TO INTEGER(SQRT(Num))
         IF MOD(Num, Counter) = 0 THEN
             RETURN FALSE
         ENDIF

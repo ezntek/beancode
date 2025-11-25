@@ -1,3 +1,4 @@
+*.out
 .venv
 *.txt
 !grammar.txt
