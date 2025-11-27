@@ -110,7 +110,7 @@ def real_main():
     if optimize:
         try:
             opt = Optimizer(program.stmts)
-            opt.visit_block(None)
+            program.stmts = opt.visit_block(None)
         except BCError as err:
             err.print(args.file, file_content)
             exit(1)
