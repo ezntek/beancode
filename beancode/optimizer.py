@@ -3,11 +3,13 @@ from .bean_ast import *
 class Optimizer:
     constants: dict[str, BCValue]
     block: list[Statement]
+    unwanted_items: list[int]
     cur_stmt: int
 
     def __init__(self, block: list[Statement]):
         self.block = block
         self.constants = dict()
+        self.unwanted_items = list()
         self.cur_stmt = 0
    
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
@@ -252,6 +254,7 @@ class Optimizer:
         if not opt:
             return
         self.constants[stmt.ident.ident] = opt
+        self.unwanted_items.append(self.cur_stmt)
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
         pass
@@ -329,7 +332,7 @@ class Optimizer:
         if program is not None:
             self.visit_block(program.stmts)
 
-    def visit_block(self, block: list[Statement] | None):
+    def visit_block(self, block: list[Statement] | None) -> list[Statement]:
         blk = block if block is not None else self.block
         cur = 0
         while cur < len(blk):
@@ -337,3 +340,5 @@ class Optimizer:
             self.cur_stmt = cur
             self.visit_stmt(stmt)
             cur += 1
+
+        return [itm for i, itm in enumerate(blk) if i not in self.unwanted_items] 
