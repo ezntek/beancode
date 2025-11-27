@@ -11,12 +11,11 @@
 
 ## High Priority
 
-- [ ] Interpreter class refactor
-  - [ ] Proper variable scoping in loops (no more dirty hacky clears)
-  - [ ] Reduce/eliminate recursion for block evaluation
-  - [ ] Reduce member count
+- [ ] Library routine refactor
+  - [ ] Proper FFI interface
+  - [ ] Variadic arguments
+  - [ ] Array passing support
 - [x] BCValue shrink (Proper tagged union)
-- [ ] Static/Semantic Analyzer
 - [ ] AST Optimizer
   - [ ] static expression evaluation (includes library routines)
   - [ ] block optimizations
@@ -31,12 +30,13 @@
 - [ ] AST
   - [ ] Formatter
   - [ ] Decompiler
-  - [ ] Python Compiler? (Turning an AST into an exec call)
 - [ ] Multiple Error Reporting
 - [ ] Refactor error implementation (no more hardcoded file names with file IDs, proper context support)
 
 ## Low Priority
 
+- [ ] Python Compiler? (Turning an AST into an exec call)
+- [ ] Static/Semantic Analyzer
 - [ ] File IO with raw bytes
 - [ ] Proper byte strings and buffers
 - [ ] JS/Lua/C transpiler

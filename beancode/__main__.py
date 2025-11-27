@@ -54,7 +54,6 @@ def real_main():
     group.add_argument("file", nargs="?", type=str)
     args = parser.parse_args()
 
-    optimize = False
     if args.no_run:
         args.debug = True
 
@@ -62,15 +61,12 @@ def real_main():
     if args.tracer_open:
         tracer_open = args.tracer_open
 
-    if args.optimize:
-        optimize = args.optimize
-
     if args.command is not None:
         file_content = args.command
     elif args.stdin:
         file_content = sys.stdin.read()
     elif args.file is None:
-        Repl(args.debug, args.no_run, optimize).repl()
+        Repl(args.debug, args.no_run).repl()
         return
     else:
         if not os.path.exists(args.file):
@@ -107,7 +103,7 @@ def real_main():
         err.print(args.file, file_content)
         exit(1)
 
-    if optimize:
+    if args.optimize:
         try:
             opt = Optimizer(program.stmts)
             program.stmts = opt.visit_block(None)

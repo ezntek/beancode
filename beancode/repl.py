@@ -87,9 +87,8 @@ class Repl:
     func_src: dict[str, str]
     debug: bool
     no_run: bool
-    optimize: bool
 
-    def __init__(self, debug=False, no_run=False, optimize=False):
+    def __init__(self, debug=False, no_run=False):
         self.lx = lexer.Lexer(str())
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
@@ -98,7 +97,6 @@ class Repl:
         self.func_src = dict()
         self.debug = debug
         self.no_run = no_run
-        self.optimize = optimize
 
     def print_var(self, var: intp.Variable):
         val = var.val
@@ -497,14 +495,6 @@ class Repl:
 
             if self.no_run:
                 continue
-
-            if self.optimize:
-                try:
-                    opt = Optimizer(program.stmts)
-                    opt.visit_block(None)
-                except BCError as err:
-                    self.handle_error(err)
-                    exit(1)
 
             self.i.block = program.stmts
             self.i.toplevel = True

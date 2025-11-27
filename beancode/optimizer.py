@@ -1,16 +1,30 @@
 from .bean_ast import *
 
+@dataclass
+class OptimizerConfig:
+    inline_constants = True
+    fold_constant_expressions = True
+    simplify_math = True
+    inline_library_routines = True # TODO: implement
+    inline_functions = True # TODO: implement
+
 class Optimizer:
+    # TODO: use
+    config: OptimizerConfig
     constants: dict[str, BCValue]
     block: list[Statement]
     unwanted_items: list[int]
     cur_stmt: int
 
-    def __init__(self, block: list[Statement]):
+    def __init__(self, block: list[Statement], config: OptimizerConfig | None = None):
         self.block = block
         self.constants = dict()
         self.unwanted_items = list()
         self.cur_stmt = 0
+        if config:
+            self.config = config
+        else:
+            self.config = OptimizerConfig()
    
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
