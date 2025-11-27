@@ -25,7 +25,7 @@ def real_main():
         "-d", "--debug", action="store_true", help="show debugging information"
     )
     parser.add_argument(
-        "--no-run", action="store_true", help="only print the program's AST"
+        "-N", "--no-run", action="store_true", help="only print the program's AST"
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"beancode version {__version__}"
@@ -70,7 +70,7 @@ def real_main():
     elif args.stdin:
         file_content = sys.stdin.read()
     elif args.file is None:
-        Repl(args.debug).repl()
+        Repl(args.debug, args.no_run, optimize).repl()
         return
     else:
         if not os.path.exists(args.file):

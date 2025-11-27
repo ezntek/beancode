@@ -4,6 +4,8 @@ import os
 from typing import Any
 from io import StringIO
 
+from beancode.optimizer import Optimizer
+
 from . import bean_ast as ast
 from . import lexer
 from . import parser
@@ -84,8 +86,10 @@ class Repl:
     func_src: dict[str, str]
     func_src: dict[str, str]
     debug: bool
+    no_run: bool
+    optimize: bool
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, no_run=False, optimize=False):
         self.lx = lexer.Lexer(str())
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
@@ -93,6 +97,8 @@ class Repl:
         self.func_src = dict()
         self.func_src = dict()
         self.debug = debug
+        self.no_run = no_run
+        self.optimize = optimize
 
     def print_var(self, var: intp.Variable):
         val = var.val
@@ -372,6 +378,32 @@ class Repl:
 
             return (prog, ContinuationResult.SUCCESS)
 
+    def handle_error(self, err: BCError):
+        src: str
+        repl_txt = "(repl)"
+        if err.proc is not None:
+            res = self.func_src.get(err.proc)  # type: ignore
+            if res is None:
+                warn(
+                    f'could not find source code for procedure "{err.proc}":\n    ({err.msg.strip()})'
+                )
+                return
+            src = res  # type: ignore
+            repl_txt = f'(repl "{err.proc}")'
+        elif err.func is not None:
+            res = self.func_src.get(err.func)  # type: ignore
+            if res is None:
+                warn(
+                    f'could not find source code for function "{err.func}":\n    ({err.msg.strip()})'
+                )
+                return
+            src = res  # type: ignore
+            repl_txt = f"(repl {err.func})"
+        else:
+            src = self.buf.getvalue()
+        err.print(repl_txt, src)
+        print()
+
     def repl(self):
         setup_readline()
         print(BANNER, end=str())
@@ -440,28 +472,7 @@ class Repl:
                         case ContinuationResult.ERROR:
                             continue
                 else:
-                    src: str
-                    if err.proc is not None:
-                        res = self.func_src.get(err.proc)  # type: ignore
-                        if res is None:
-                            warn(
-                                f'could not find source code for procedure "{err.proc}"'
-                            )
-                            continue
-                        src = res  # type: ignore
-                    elif err.func is not None:
-                        res = self.func_src.get(err.func)  # type: ignore
-                        if res is None:
-                            warn(
-                                f'could not find source code for function "{err.func}"'
-                            )
-                            continue
-                        src = res  # type: ignore
-                    else:
-                        src = self.buf.getvalue()
-
-                    err.print("(repl)", src)
-                    print()
+                    self.handle_error(err)
                     continue
 
             if len(program.stmts) < 1:
@@ -484,35 +495,23 @@ class Repl:
                     print(stmt, file=sys.stderr)
                 print("===========\033[0m", file=sys.stderr)
 
+            if self.no_run:
+                continue
+
+            if self.optimize:
+                try:
+                    opt = Optimizer(program.stmts)
+                    opt.visit_block(None)
+                except BCError as err:
+                    self.handle_error(err)
+                    exit(1)
+
             self.i.block = program.stmts
             self.i.toplevel = True
             try:
                 self.i.visit_block(None)
             except BCError as err:
-                src: str
-                repl_txt = "(repl)"
-                if err.proc is not None:
-                    res = self.func_src.get(err.proc)  # type: ignore
-                    if res is None:
-                        warn(
-                            f'fatal could not find source code for procedure "{err.proc}":\n    ({err.msg.strip()})'
-                        )
-                        continue
-                    src = res  # type: ignore
-                    repl_txt = f'(repl "{err.proc}")'
-                elif err.func is not None:
-                    res = self.func_src.get(err.func)  # type: ignore
-                    if res is None:
-                        warn(
-                            f'could not find source code for function "{err.func}":\n    ({err.msg.strip()})'
-                        )
-                        continue
-                    src = res  # type: ignore
-                    repl_txt = f"(repl {err.func})"
-                else:
-                    src = self.buf.getvalue()
-                err.print(repl_txt, src)
-                print()
+                self.handle_error(err)
                 continue
             except KeyboardInterrupt:
                 warn("caught keyboard interrupt during REPL code execution")
