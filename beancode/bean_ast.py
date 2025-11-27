@@ -196,7 +196,7 @@ class BCArray:
     def get_matrix(self) -> list[list["BCValue"]]:
         if not self.typ.is_matrix():
             raise BCError("tried to access 1D array from a 2D array")
-        return self.matrix  # type: ignore
+        return self.data  # type: ignore
 
     def get_flat_bounds(self) -> tuple[int, int]:
         if not self.typ.is_flat():
@@ -204,7 +204,7 @@ class BCArray:
         return self.typ.bounds  # type: ignore
 
     def get_matrix_bounds(self) -> tuple[int, int, int, int]:
-        if not self.typ.is_flat():
+        if not self.typ.is_matrix():
             raise BCError("tried to access 2D array from a 1D array")
         return self.typ.bounds  # type: ignore
 

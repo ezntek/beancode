@@ -1573,7 +1573,7 @@ class Interpreter:
         res = "".join(
             [
                 (
-                    self._display_array(evaled.get_array())
+                    self._display_array(evaled.val) # type: ignore
                     if isinstance(evaled.kind, BCArrayType)
                     else str(evaled)
                 )
@@ -1600,7 +1600,7 @@ class Interpreter:
         elif is_integer(inp):
             return BCValue.empty(BCPrimitiveType.INTEGER)
 
-        if inp.strip().lower() in ["true", "false", "no", "yes"]:
+        if inp.strip().lower() in {"true", "false", "no", "yes"}:
             return BCValue.empty(BCPrimitiveType.BOOLEAN)
 
         if len(inp.strip()) == 1:
@@ -2046,7 +2046,7 @@ class Interpreter:
                 if a.data[first][second].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {val.kind} to {a.data[first][second].kind} in a 2D array", s.pos)  # type: ignore
 
-                a.data[first][second] = copy.deepcopy(val)  # type: ignore
+                a.data[first][second] = BCValue(val.kind, val.val)  # type: ignore
             else:
                 bounds = a.get_flat_bounds()
                 if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
@@ -2060,7 +2060,7 @@ class Interpreter:
                 if a.data[first].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {val.kind} to {a.data[first].kind} in an array", s.pos)  # type: ignore
 
-                a.data[first] = copy.deepcopy(val)  # type: ignore
+                a.data[first] = BCValue(val.kind, val.val) # type: ignore
         elif isinstance(s.ident, Identifier):
             key = s.ident.ident
 
@@ -2085,19 +2085,23 @@ class Interpreter:
 
             if var.val.kind != exp.kind:
                 self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
-            elif isinstance(exp.kind, BCArrayType):
+            
+            if isinstance(exp.kind, BCArrayType):
                 a = exp.get_array()
                 if (
                     a.typ.is_matrix()
-                    and a.get_matrix_bounds() != var.val.get_array().get_matrix_bounds()
+                    and a.typ.bounds != var.val.get_array().typ.bounds
                 ):
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
                 elif (
                     a.typ.is_flat()
-                    and a.get_flat_bounds() != var.val.get_array().get_flat_bounds()
+                    and a.typ.bounds != var.val.get_array().typ.bounds
                 ):
                     self.error(f"mismatched array sizes in array assignment", s.pos)
-            self.variables[key].val = copy.deepcopy(exp)
+
+                self.variables[key].val = copy.deepcopy(exp)
+            else:
+                self.variables[key].val = BCValue(exp.kind, exp.val) 
 
         self.trace(s.pos.row)
 
