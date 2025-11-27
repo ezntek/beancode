@@ -197,7 +197,7 @@ class Parser:
 
     def literal(self) -> Expr | None:
         if not self.check_many(
-            "literal_string", "literal_char", "literal_number", "true", "false", "null" 
+            "literal_string", "literal_char", "literal_number", "true", "false", "null"
         ):
             return
 
@@ -230,13 +230,13 @@ class Parser:
                     return Literal(lit.pos, BCValue.new_char(val[0]))
             case "literal_string":
                 val: str = lit.data  # type: ignore
-                res = StringIO()
+                res = list()
                 i = 0
 
                 while i < len(val):
                     if val[i] == "\\":
                         if i == len(val) - 1:
-                            res.write("\\")
+                            res.append("\\")
                         else:
                             i += 1
                             ch = _convert_escape_code(val[i])
@@ -248,12 +248,12 @@ class Parser:
                                     f'invalid escape sequence in literal "{val}"',
                                     pos,
                                 )
-                            res.write(ch)
+                            res.append(ch)
                     else:
-                        res.write(val[i])
+                        res.append(val[i])
                     i += 1
 
-                return Literal(lit.pos, BCValue.new_string(res.getvalue()))
+                return Literal(lit.pos, BCValue.new_string("".join(res)))
             case "literal_number":
                 val: str = lit.data  # type: ignore
 
@@ -350,17 +350,17 @@ class Parser:
                 arrtyp.pos,
             )
 
-        inner = BCPrimitiveType.from_string(arrtyp.data) # type: ignore
+        inner = BCPrimitiveType.from_string(arrtyp.data)  # type: ignore
 
         bounds = matrix_bounds if matrix_bounds else flat_bounds
-        return ArrayType(inner, bounds) # type: ignore
+        return ArrayType(inner, bounds)  # type: ignore
 
     def typ(self) -> Type:
         adv = self.consume_and_expect("type")
         if adv.data == "array":
             return self._array_type()
         else:
-            return BCPrimitiveType.from_string(adv.data) # type: ignore
+            return BCPrimitiveType.from_string(adv.data)  # type: ignore
 
     def ident(self) -> Identifier:
         c = self.consume_and_expect("ident")
@@ -446,7 +446,7 @@ class Parser:
             # should be unreachable
             raise BCError("cannot typecast to an array!", typ.pos)
 
-        t = BCPrimitiveType.from_string(typ.data) # type: ignore
+        t = BCPrimitiveType.from_string(typ.data)  # type: ignore
         self.consume()  # checked already
 
         expr = self.expr()
@@ -528,12 +528,17 @@ class Parser:
         if not expr:
             return
 
-        if self.check("ident") and is_case_consistent(s := self.peek().data.lower()): # type: ignore
+        if self.check("ident") and is_case_consistent(s := self.peek().data.lower()):  # type: ignore
             if s == "div":
-                raise BCError("DIV is not an infix operator!\nPlease use the DIV(a, b) library routine instead of a DIV b!", self.pos())
+                raise BCError(
+                    "DIV is not an infix operator!\nPlease use the DIV(a, b) library routine instead of a DIV b!",
+                    self.pos(),
+                )
             elif s == "mod":
-                raise BCError("MOD is not an infix operator!\nPlease use the MOD(a, b) library routine instead of a MOD b!", self.pos())
-
+                raise BCError(
+                    "MOD is not an infix operator!\nPlease use the MOD(a, b) library routine instead of a MOD b!",
+                    self.pos(),
+                )
 
         while self.match("mul", "div"):
             op = self.prev()
@@ -924,7 +929,10 @@ class Parser:
             else:
                 self.consume()
                 if self.check("colon"):
-                    raise BCError("a colon \":\" after OTHERWISE is A-level Pseudocode syntax!\nRemove this colon.", self.pos())
+                    raise BCError(
+                        'a colon ":" after OTHERWISE is A-level Pseudocode syntax!\nRemove this colon.',
+                        self.pos(),
+                    )
 
             stmt = self.stmt()
             self.consume_newlines()
@@ -1249,15 +1257,17 @@ class Parser:
 
         return TraceStatement(begin.pos, vars, file_name, block)
 
-
     def _file_id(self, ctx: str) -> Expr | str:
         s = self.check_and_consume("literal_string")
         if not s:
             expr = self.expr()
             if not expr:
-                raise BCError(f"expected expression, file identifier or string literal after {ctx}!\n"+
-                              "pass the name of the file as a string literal or bare file name.", self.pos())
-            return expr 
+                raise BCError(
+                    f"expected expression, file identifier or string literal after {ctx}!\n"
+                    + "pass the name of the file as a string literal or bare file name.",
+                    self.pos(),
+                )
+            return expr
         else:
             return str(s.data)
 
@@ -1266,7 +1276,7 @@ class Parser:
         if not begin:
             return
 
-        filename: Expr | str = self._file_id("OPENFILE") 
+        filename: Expr | str = self._file_id("OPENFILE")
 
         self.consume_and_expect("for")
 
@@ -1292,10 +1302,16 @@ class Parser:
                         append = True
 
                 if append and write:
-                    raise BCError(f"you cannot open a file for APPEND and WRITE!", mode.pos)
+                    raise BCError(
+                        f"you cannot open a file for APPEND and WRITE!", mode.pos
+                    )
             else:
-                raise BCError(f"unrecognized file mode!\n"+"supported modes are READ, WRITE and APPEND.", self.pos())
-            
+                raise BCError(
+                    f"unrecognized file mode!\n"
+                    + "supported modes are READ, WRITE and APPEND.",
+                    self.pos(),
+                )
+
             self.check_and_consume("and")
 
         if not (read or write or append):
@@ -1308,14 +1324,14 @@ class Parser:
         if not begin:
             return
 
-        fileid: Expr | str = self._file_id("READFILE") 
+        fileid: Expr | str = self._file_id("READFILE")
 
         self.consume_and_expect("comma")
 
         val: ArrayIndex | Identifier | None = self.array_index()
         if not val:
             val = self.expect_ident()
-        
+
         return ReadfileStatement(begin.pos, fileid, val)
 
     def writefile_stmt(self) -> Statement | None:
@@ -1323,14 +1339,17 @@ class Parser:
         if not begin:
             return
 
-        fileid: Expr | str = self._file_id("WRITEFILE") 
+        fileid: Expr | str = self._file_id("WRITEFILE")
 
         self.consume_and_expect("comma")
 
         val = self.expr()
         if not val:
-            raise BCError("invalid or no expression after comma in WRITEFILE statement", self.pos())
-        
+            raise BCError(
+                "invalid or no expression after comma in WRITEFILE statement",
+                self.pos(),
+            )
+
         return WritefileStatement(begin.pos, fileid, val)
 
     def appendfile_stmt(self) -> Statement | None:
@@ -1338,14 +1357,17 @@ class Parser:
         if not begin:
             return
 
-        fileid: Expr | str = self._file_id("APPENDFILE") 
+        fileid: Expr | str = self._file_id("APPENDFILE")
 
         self.consume_and_expect("comma")
 
         val = self.expr()
         if not val:
-            raise BCError("invalid or no expression after comma in APPENDFILE statement", self.pos())
-        
+            raise BCError(
+                "invalid or no expression after comma in APPENDFILE statement",
+                self.pos(),
+            )
+
         return AppendfileStatement(begin.pos, fileid, val)
 
     def closefile_stmt(self) -> Statement | None:

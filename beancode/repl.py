@@ -82,7 +82,7 @@ class Repl:
     lx: lexer.Lexer
     p: parser.Parser
     i: intp.Interpreter
-    buf: StringIO
+    buf: list[str]
     func_src: dict[str, str]
     func_src: dict[str, str]
     debug: bool
@@ -92,7 +92,7 @@ class Repl:
         self.lx = lexer.Lexer(str())
         self.p = parser.Parser(list())
         self.i = intp.Interpreter(list())
-        self.buf = StringIO()
+        self.buf = list()
         self.func_src = dict()
         self.func_src = dict()
         self.debug = debug
@@ -117,63 +117,63 @@ class Repl:
 
     def _args_list_to_string(self, args: list[tuple[str, Any]]) -> str:
         # Any: either an ast.BCType or ast.Type
-        sio = StringIO()
-        sio.write("(")
+        buf = list()
+        buf.append("(")
         for i, (name, typ) in enumerate(args):
-            sio.write(f"{name}: ")
-            sio.write(str(typ).upper())
+            buf.append(f"{name}: ")
+            buf.append(str(typ).upper())
 
             if i != len(args) - 1:
-                sio.write(", ")
-        sio.write(")")
-        return sio.getvalue()
+                buf.append(", ")
+        buf.append(")")
+        return "".join(buf)
 
     def print_proc(self, proc: ast.ProcedureStatement | ffi.BCProcedure):
-        sio = StringIO()
-        sio.write("PROCEDURE ")
+        buf = list()
+        buf.append("PROCEDURE ")
         ffi = False
 
         if isinstance(proc, ast.ProcedureStatement):
-            sio.write(proc.name)
+            buf.append(proc.name)
             if len(proc.args) != 0:
                 args = [(arg.name, arg.typ) for arg in proc.args]
-                sio.write(self._args_list_to_string(args))
+                buf.append(self._args_list_to_string(args))
         else:
             ffi = True
-            sio.write(proc.name)
+            buf.append(proc.name)
             if len(proc.params) != 0:
                 args = list(proc.params.items())
-                sio.write(self._args_list_to_string(args))
+                buf.append(self._args_list_to_string(args))
 
         if ffi:
-            sio.write("\033[2m <FFI>\033[0m")
+            buf.append("\033[2m <FFI>\033[0m")
 
-        print(sio.getvalue())
+        print("".join(buf))
 
     def print_func(self, func: ast.FunctionStatement | ffi.BCFunction):
-        sio = StringIO()
-        sio.write("FUNCTION ")
+        sio = list()
+        sio.append("FUNCTION ")
         ffi = False
 
         if isinstance(func, ast.FunctionStatement):
-            sio.write(func.name)
+            sio.append(func.name)
             if len(func.args) != 0:
                 args = [(arg.name, arg.typ) for arg in func.args]
-                sio.write(self._args_list_to_string(args))
+                sio.append(self._args_list_to_string(args))
         else:
             ffi = True
-            sio.write(func.name)
+            sio.append(func.name)
             if len(func.params) != 0:
                 args = list(func.params.items())
-                sio.write(self._args_list_to_string(args))
+                sio.append(self._args_list_to_string(args))
 
-        sio.write(" RETURNS ")
-        sio.write(str(func.returns).upper())
+        sio.append(" RETURNS ")
+        sio.append(str(func.returns).upper())
 
         if ffi:
-            sio.write("\033[2m <FFI>\033[0m")
+            sio.append("\033[2m <FFI>\033[0m")
 
-        print(sio.getvalue())
+        print("".join(sio))
 
     def _var(self, args: list[str]) -> DotCommandResult:
         if len(args) < 2:
@@ -333,7 +333,7 @@ class Repl:
                 print()
                 return (None, ContinuationResult.ERROR)
 
-            self.buf.write(inp + "\n")
+            self.buf.append(inp + "\n")
 
             if len(inp) == 0:
                 continue
@@ -357,7 +357,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", self.buf.getvalue())
+                err.print("(repl)", "".join(self.buf))
                 print()
                 return (None, ContinuationResult.ERROR)
 
@@ -370,7 +370,7 @@ class Repl:
                 if err.eof:
                     continue
                 else:
-                    err.print("(repl)", self.buf.getvalue())
+                    err.print("(repl)", "".join(self.buf))
                     print()
                     return (None, ContinuationResult.ERROR)
 
@@ -398,7 +398,7 @@ class Repl:
             src = res  # type: ignore
             repl_txt = f"(repl {err.func})"
         else:
-            src = self.buf.getvalue()
+            src = "".join(self.buf)
         err.print(repl_txt, src)
         print()
 
@@ -412,8 +412,7 @@ class Repl:
             self.p.reset()
             self.i.reset()
 
-            self.buf.truncate(0)
-            self.buf.seek(0)
+            self.buf.clear()
 
             try:
                 inp = input("\033[0;1m>> \033[0m")
@@ -421,7 +420,7 @@ class Repl:
                 print()
                 warn('type ".exit" or ".quit" to exit the REPL.')
                 continue
-            self.buf.write(inp + "\n")
+            self.buf.append(inp + "\n")
 
             if len(inp) == 0:
                 continue
@@ -444,7 +443,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", self.buf.getvalue())
+                err.print("(repl)", "".join(self.buf))
                 print()
                 continue
 
@@ -478,10 +477,10 @@ class Repl:
 
             if isinstance(program.stmts[0], ast.ProcedureStatement):
                 proc = program.stmts[0]
-                self.func_src[proc.name] = self.buf.getvalue()
+                self.func_src[proc.name] = "".join(self.buf)
             elif isinstance(program.stmts[0], ast.FunctionStatement):
                 func = program.stmts[0]
-                self.func_src[func.name] = self.buf.getvalue()
+                self.func_src[func.name] = "".join(self.buf)
 
             if isinstance(program.stmts[-1], ast.ExprStatement):
                 exp = program.stmts[-1].inner

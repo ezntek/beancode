@@ -343,8 +343,11 @@ class Lexer:
         if not self.is_separator(cur) and not self.is_operator_start(cur):
             return None
 
-        if cur == '%': 
-            raise BCError("% as an operator is not supported!\nPlease use the MOD(a, b) library routine instead of a % b!", self.pos(1))
+        if cur == "%":
+            raise BCError(
+                "% as an operator is not supported!\nPlease use the MOD(a, b) library routine instead of a % b!",
+                self.pos(1),
+            )
 
         TABLE: dict[str, TokenKind] = {
             "{": "left_curly",

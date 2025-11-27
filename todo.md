@@ -15,6 +15,7 @@
   - [ ] Proper FFI interface
   - [ ] Variadic arguments
   - [ ] Array passing support
+- [ ] MAKEARRAY/CLEARARRAY whatever library routine
 - [x] BCValue shrink (Proper tagged union)
 - [ ] AST Optimizer
   - [ ] static expression evaluation (includes library routines)
@@ -23,7 +24,7 @@
   - [ ] inlining library routines
   - [ ] insert native Python calls when possible 
   - [ ] AST caching to JSON
-- [x] Minor refactor sweep
+- [ ] Make string concatenation faster
 
 ## Medium Priority
 

@@ -21,7 +21,7 @@ class BCPrimitiveType(Enum):
     STRING = 3
     BOOLEAN = 4
     NULL = 5
-    
+
     def __repr__(self):
         return {
             BCPrimitiveType.INTEGER: "integer",
@@ -29,7 +29,7 @@ class BCPrimitiveType(Enum):
             BCPrimitiveType.CHAR: "char",
             BCPrimitiveType.STRING: "string",
             BCPrimitiveType.BOOLEAN: "boolean",
-            BCPrimitiveType.NULL: "null"
+            BCPrimitiveType.NULL: "null",
         }[self]
 
     def __str__(self) -> str:
@@ -43,21 +43,29 @@ class BCPrimitiveType(Enum):
             "char": BCPrimitiveType.CHAR,
             "string": BCPrimitiveType.STRING,
             "boolean": BCPrimitiveType.BOOLEAN,
-            "null": BCPrimitiveType.NULL
-        } 
+            "null": BCPrimitiveType.NULL,
+        }
         res = TABLE.get(kind.lower())
         if not res:
-            raise BCError(f"tried to convert invalid string type {kind} to a BCPrimitiveType!")
+            raise BCError(
+                f"tried to convert invalid string type {kind} to a BCPrimitiveType!"
+            )
         return res
+
 
 class ArrayType:
     """parse-time representation of the array type"""
-    __slots__ = ('inner', 'bounds')
+
+    __slots__ = ("inner", "bounds")
 
     inner: BCPrimitiveType
     bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"]
 
-    def __init__(self, inner: BCPrimitiveType, bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"]):
+    def __init__(
+        self,
+        inner: BCPrimitiveType,
+        bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"],
+    ):
         self.inner = inner
         self.bounds = bounds
 
@@ -86,30 +94,35 @@ class ArrayType:
 
 class BCArrayType:
     """runtime representation of an array type"""
-    __slots__ = ('inner', 'bounds')
+
+    __slots__ = ("inner", "bounds")
 
     inner: BCPrimitiveType
     bounds: tuple[int, int] | tuple[int, int, int, int]
 
-    def __init__(self, inner: BCPrimitiveType, bounds: tuple[int, int] | tuple[int, int, int, int]):
+    def __init__(
+        self,
+        inner: BCPrimitiveType,
+        bounds: tuple[int, int] | tuple[int, int, int, int],
+    ):
         self.inner = inner
         self.bounds = bounds
-    
+
     def __eq__(self, value: object, /) -> bool:
         if type(self) is not type(value):
             return False
 
-        return self.inner == value.inner and self.bounds == value.bounds # type: ignore
-    
+        return self.inner == value.inner and self.bounds == value.bounds  # type: ignore
+
     def __neq__(self, value: object, /) -> bool:
         return not (self.__eq__(value))
 
     def is_flat(self) -> bool:
         return len(self.bounds) == 2
-    
+
     def is_matrix(self) -> bool:
         return len(self.bounds) == 4
-    
+
     @classmethod
     def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> "BCArrayType":
         return cls(inner, bounds)
@@ -131,17 +144,17 @@ class BCArrayType:
         return self.bounds
 
     def __repr__(self) -> str:
-        s = StringIO()
-        s.write("ARRAY[")
+        s = list()
+        s.append("ARRAY[")
 
         if len(self.bounds) == 2:
-            s.write(array_bounds_to_string(self.bounds))
+            s.append(array_bounds_to_string(self.bounds))
         else:
-            s.write(matrix_bounds_to_string(self.bounds))
+            s.append(matrix_bounds_to_string(self.bounds))
 
-        s.write("] OF ")
-        s.write(str(self.inner).upper())
-        return s.getvalue()
+        s.append("] OF ")
+        s.append(str(self.inner).upper())
+        return "".join(s) 
 
 
 def array_bounds_to_string(bounds: tuple[int, int]) -> str:
@@ -153,9 +166,9 @@ def matrix_bounds_to_string(bounds: tuple[int, int, int, int]) -> str:
 
 
 class BCArray:
-    __slots__ = ('typ', 'data')
+    __slots__ = ("typ", "data")
     typ: BCArrayType
-    data: list["BCValue"] | list[list["BCValue"]] 
+    data: list["BCValue"] | list[list["BCValue"]]
 
     def __init__(self, typ: BCArrayType, data: list["BCValue"] | list[list["BCValue"]]):
         self.typ = typ
@@ -174,26 +187,26 @@ class BCArray:
 
     def is_matrix(self) -> bool:
         return self.typ.is_matrix()
-    
+
     def get_flat(self) -> list["BCValue"]:
         if not self.typ.is_flat():
             raise BCError("tried to access 1D array from a 2D array")
-        return self.data # type: ignore
+        return self.data  # type: ignore
 
     def get_matrix(self) -> list[list["BCValue"]]:
         if not self.typ.is_matrix():
             raise BCError("tried to access 1D array from a 2D array")
-        return self.matrix # type: ignore
+        return self.matrix  # type: ignore
 
     def get_flat_bounds(self) -> tuple[int, int]:
         if not self.typ.is_flat():
             raise BCError("tried to access 1D array from a 2D array")
-        return self.typ.bounds # type: ignore
+        return self.typ.bounds  # type: ignore
 
     def get_matrix_bounds(self) -> tuple[int, int, int, int]:
         if not self.typ.is_flat():
             raise BCError("tried to access 2D array from a 1D array")
-        return self.typ.bounds # type: ignore
+        return self.typ.bounds  # type: ignore
 
     def __repr__(self) -> str:
         return str(self.data)
@@ -207,8 +220,9 @@ BCType = BCArrayType | BCPrimitiveType
 
 BCPayload = int | float | str | bool | BCArray | None
 
+
 class BCValue:
-    __slots__ = ('kind', 'val')
+    __slots__ = ("kind", "val")
     kind: BCType
     val: BCPayload
 
@@ -220,23 +234,20 @@ class BCValue:
         return self.val is None
 
     def is_null(self) -> bool:
-        return self.kind == BCPrimitiveType.NULL or self.val is None 
+        return self.kind == BCPrimitiveType.NULL or self.val is None
 
     def __eq__(self, value: object, /) -> bool:
         if type(self) is not type(value):
             return False
 
-        return self.kind == value.kind and self.val == value.val # type: ignore
-    
+        return self.kind == value.kind and self.val == value.val  # type: ignore
+
     def __neq__(self, value: object, /) -> bool:
         return not (self.__eq__(value))
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
-        return cls(
-            kind,
-            None
-        )
+        return cls(kind, None)
 
     @classmethod
     def new_null(cls) -> "BCValue":
@@ -268,37 +279,49 @@ class BCValue:
 
     def get_integer(self) -> int:
         if self.kind != BCPrimitiveType.INTEGER:
-            raise BCError(f"tried to access INTEGER value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access INTEGER value from BCValue of {str(self.kind)}"
+            )
 
         return self.val  # type: ignore
 
     def get_real(self) -> float:
         if self.kind != BCPrimitiveType.REAL:
-            raise BCError(f"tried to access REAL value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access REAL value from BCValue of {str(self.kind)}"
+            )
 
         return self.val  # type: ignore
 
     def get_char(self) -> str:
         if self.kind != BCPrimitiveType.CHAR:
-            raise BCError(f"tried to access CHAR value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access CHAR value from BCValue of {str(self.kind)}"
+            )
 
         return self.val[0]  # type: ignore
 
     def get_string(self) -> str:
         if self.kind != BCPrimitiveType.STRING:
-            raise BCError(f"tried to access STRING value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access STRING value from BCValue of {str(self.kind)}"
+            )
 
         return self.val  # type: ignore
 
     def get_boolean(self) -> bool:
         if self.kind != BCPrimitiveType.BOOLEAN:
-            raise BCError(f"tried to access BOOLEAN value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access BOOLEAN value from BCValue of {str(self.kind)}"
+            )
 
         return self.val  # type: ignore
 
     def get_array(self) -> BCArray:
         if not isinstance(self.kind, BCArrayType):
-            raise BCError(f"tried to access array value from BCValue of {str(self.kind)}")
+            raise BCError(
+                f"tried to access array value from BCValue of {str(self.kind)}"
+            )
 
         return self.val  # type: ignore
 
@@ -323,9 +346,10 @@ class BCValue:
             case BCPrimitiveType.NULL:
                 return "(null)"
 
+
 @dataclass
 class File:
-    stream: IO[Any] # im lazy
+    stream: IO[Any]  # im lazy
     # read, write, append
     mode: tuple[bool, bool, bool]
 
@@ -337,6 +361,7 @@ class FileCallbacks:
     # only for when the file has changed
     write: Callable[[str], None]
     append: Callable[[str], None]
+
 
 @dataclass
 class Literal(Expr):
@@ -392,6 +417,7 @@ Operator = typing.Literal[
     "not",
 ]
 
+
 @dataclass
 class BinaryExpr(Expr):
     lhs: Expr
@@ -405,7 +431,9 @@ class ArrayIndex(Expr):
     idx_outer: Expr
     idx_inner: Expr | None = None
 
+
 Lvalue = Identifier | ArrayIndex
+
 
 @dataclass
 class Statement:
@@ -539,6 +567,7 @@ class OpenfileStatement(Statement):
     file_ident: Expr | str
     # guaranteed to be valid
     mode: tuple[bool, bool, bool]
+
 
 @dataclass
 class ReadfileStatement(Statement):

@@ -98,20 +98,16 @@ class TracerConfig:
         return res
 
     def write_out(self, path: str):
-        res = StringIO()
-
-        res.write(f"TraceEveryLine <- {str(self.trace_every_line).upper()}\n")
-        res.write(
-            f"HideRepeatingEntries <- {str(self.hide_repeating_entries).upper()}\n"
-        )
-        res.write(f"CondenseArrays <- {str(self.condense_arrays).upper()}\n")
-        res.write(f"SyntaxHighlighting <- {str(self.syntax_highlighting).upper()}\n")
-        res.write(f"ShowOutputs <- {str(self.show_outputs).upper()}\n")
-        res.write(f"PromptOnInputs <- {str(self.prompt_on_inputs).upper()}\n")
-        res.write(f"Debug <- {str(self.debug).upper()}\n")
-        res.write(f"IWillNotCheat <- {str(self.i_will_not_cheat).upper()}\n")
-
-        s = res.getvalue()
+        s = f"""
+TraceEveryLine <- {str(self.trace_every_line).upper()}
+HideRepeatingEntries <- {str(self.hide_repeating_entries).upper()}
+CondenseArrays <- {str(self.condense_arrays).upper()}
+SyntaxHighlighting <- {str(self.syntax_highlighting).upper()}
+ShowOutputs <- {str(self.show_outputs).upper()}
+PromptOnInputs <- {str(self.prompt_on_inputs).upper()}
+Debug <- {str(self.debug).upper()}
+IWillNotCheat <- {str(self.i_will_not_cheat).upper()}
+"""
         with open(path, "w") as f:
             f.write(s)
 
@@ -324,45 +320,45 @@ class Tracer:
                 return f"<td><pre>{str(var)}</pre></td>"
 
     def _gen_html_table_header(self, should_print_line_nums: bool) -> str:
-        res = StringIO()
+        res = list()
 
-        res.write("<thead>\n")
-        res.write("<tr>\n")
+        res.append("<thead>\n")
+        res.append("<tr>\n")
 
         has_array = self._has_array()
         rs = " rowspan=2" if has_array else ""
 
         if should_print_line_nums:
-            res.write(f"<th style=padding:0.2em{rs}>Line</th>\n")
+            res.append(f"<th style=padding:0.2em{rs}>Line</th>\n")
 
         # first pass
         for name, typ in self.var_types.items():
             if not self.config.condense_arrays and isinstance(typ, BCArrayType):
                 if typ.is_flat():
                     width = typ.get_flat_bounds()[1] - typ.get_flat_bounds()[0] + 1  # type: ignore
-                    res.write(f"<th colspan={width}>{name}</th>")
+                    res.append(f"<th colspan={width}>{name}</th>")
             else:
-                res.write(f"<th{rs}>{name}</th>")
+                res.append(f"<th{rs}>{name}</th>")
 
         if len(self.inputs) > 0:
-            res.write(f"<th{rs}>Inputs</th>")
+            res.append(f"<th{rs}>Inputs</th>")
 
         if len(self.outputs) > 0:
-            res.write(f"<th{rs}>Outputs</th>")
+            res.append(f"<th{rs}>Outputs</th>")
 
         # second pass
         if has_array:
-            res.write("</tr><tr>")
+            res.append("</tr><tr>")
             for name, typ in self.var_types.items():
                 if isinstance(typ, BCArrayType) and typ.is_flat():
                     bounds: tuple[int, int] = typ.get_flat_bounds()  # type: ignore
                     for num in range(bounds[0], bounds[1] + 1):  # never None
-                        res.write(f"<th>[{num}]</th>")
+                        res.append(f"<th>[{num}]</th>")
 
-        res.write("</tr>\n")
-        res.write("</thead>\n")
+        res.append("</tr>\n")
+        res.append("</thead>\n")
 
-        return res.getvalue()
+        return "".join(res)
 
     def _gen_html_table_line_num(self, row_num: int) -> str:
         if self._should_print_line_numbers():
@@ -377,7 +373,7 @@ class Tracer:
         row: tuple[BCValue | None, ...],
         printed_first: bool = True,
     ) -> str:
-        res = StringIO()
+        res = list()
 
         for col, (var_name, var) in enumerate(zip(self.vars, row)):
             if not self.config.condense_arrays and isinstance(
@@ -387,7 +383,7 @@ class Tracer:
                     # blank the region out
                     bounds = self.var_types[var_name].get_flat_bounds()  # type: ignore
                     for _ in range(bounds[0], bounds[1] + 1):
-                        res.write(f"<td></td>")
+                        res.append(f"<td></td>")
                 else:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
                     arr: BCArray = var.get_array()
@@ -403,9 +399,9 @@ class Tracer:
                                 prev_arr and prev_arr[idx] == itm
                             )
                             if repeated or not prev_arr and printed_first:
-                                res.write("<td></td>")
+                                res.append("<td></td>")
                             else:
-                                res.write(self._highlight_var(itm))
+                                res.append(self._highlight_var(itm))
             else:
                 prev: BCValue | None = None
                 if row_num != 0:
@@ -413,35 +409,35 @@ class Tracer:
 
                 repeated = self.config.hide_repeating_entries and var == prev
                 if not var or repeated and printed_first:
-                    res.write("<td></td>")
+                    res.append("<td></td>")
                 else:
-                    res.write(self._highlight_var(var))
+                    res.append(self._highlight_var(var))
 
-        return res.getvalue()
+        return "".join(res)
 
     def _gen_html_table_row_io(self, row_num: int) -> str:
-        res = StringIO()
+        res = list()
 
         if len(self.inputs) > 0:
             s = str()
             if row_num in self.inputs:
                 l = self.inputs[row_num]
                 s = "<br></br>".join(l)
-            res.write(f"<td><pre>{s}</pre></td>\n")
+            res.append(f"<td><pre>{s}</pre></td>\n")
 
         if len(self.outputs) > 0:
             s = str()
             if row_num in self.outputs:
                 l = self.outputs[row_num]
                 s = "<br></br>".join(l)
-            res.write(f"<td><pre>{s}</pre></td>\n")
+            res.append(f"<td><pre>{s}</pre></td>\n")
 
-        return res.getvalue()
+        return "".join(res)
 
     def _gen_html_table_body(self):
-        res = StringIO()
+        res = list()
 
-        res.write("<tbody>\n")
+        res.append("<tbody>\n")
 
         if len(self.vars) == 0:
             keys = set()
@@ -451,13 +447,13 @@ class Tracer:
                 keys.add(k)
 
             for k in keys:
-                res.write("<tr>")
-                res.write(self._gen_html_table_line_num(k))
-                res.write(self._gen_html_table_row_io(k))
-                res.write("</tr>\n")
+                res.append("<tr>")
+                res.append(self._gen_html_table_line_num(k))
+                res.append(self._gen_html_table_row_io(k))
+                res.append("</tr>\n")
 
-            res.write("</tbody>\n")
-            return res.getvalue()
+            res.append("</tbody>\n")
+            return "".join(res)
 
         rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(
             enumerate(zip(*self.vars.values()))
@@ -501,71 +497,71 @@ class Tracer:
                 if empty:
                     continue
 
-            res.write("<tr>")
+            res.append("<tr>")
 
-            res.write(self._gen_html_table_line_num(row_num))
-            res.write(self._gen_html_table_row(rows, row_num, row, printed_first))
-            res.write(self._gen_html_table_row_io(row_num))
+            res.append(self._gen_html_table_line_num(row_num))
+            res.append(self._gen_html_table_row(rows, row_num, row, printed_first))
+            res.append(self._gen_html_table_row_io(row_num))
 
             printed_first = True
 
-            res.write("</tr>\n")
+            res.append("</tr>\n")
 
-        res.write("</tbody>\n")
-        return res.getvalue()
+        res.append("</tbody>\n")
+        return "".join(res)
 
     def _gen_html_table(self) -> str:
-        res = StringIO()
-        res.write("<table>\n")
+        res = list()
+        res.append("<table>\n")
 
         # generate header
         should_print_line_nums = self._should_print_line_numbers()
 
         if not should_print_line_nums:
-            res.write("<caption>")
+            res.append("<caption>")
             if len(self.line_numbers) == 0:
-                res.write("No values were captured.")
+                res.append("No values were captured.")
             else:
-                res.write(f"All values are captured at line {self.line_numbers[0]}")
-            res.write("</caption>\n")
+                res.append(f"All values are captured at line {self.line_numbers[0]}")
+            res.append("</caption>\n")
 
-        res.write(self._gen_html_table_header(should_print_line_nums))
-        res.write(self._gen_html_table_body())
+        res.append(self._gen_html_table_header(should_print_line_nums))
+        res.append(self._gen_html_table_body())
 
-        res.write("</table>\n")
-        return res.getvalue()
+        res.append("</table>\n")
+        return "".join(res)
 
     def gen_html(self, file_name: str | None = None) -> str:
-        res = StringIO()
-        res.write("<!DOCTYPE html>\n")
-        res.write("<!-- Generated HTML by beancode's trace table generator -->\n")
-        res.write("<html>\n")
-        res.write(f"<head>\n")
-        res.write("<meta charset=UTF-8>\n")
-        res.write('<meta name=color-scheme content="dark light">\n')
+        res = list()
+        res.append("<!DOCTYPE html>\n")
+        res.append("<!-- Generated HTML by beancode's trace table generator -->\n")
+        res.append("<html>\n")
+        res.append(f"<head>\n")
+        res.append("<meta charset=UTF-8>\n")
+        res.append('<meta name=color-scheme content="dark light">\n')
 
         title_s = ""
         if file_name is not None:
             title_s = " for " + file_name
         title = f"Generated Trace Table{title_s}"
 
-        res.write(f"<title>{title}</title>\n")
+        res.append(f"<title>{title}</title>\n")
 
         noselect = str()
         if not self.config.i_will_not_cheat:
             noselect = "body { user-select: none; }"
 
-        res.write(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
-        res.write("</head>\n")
+        res.append(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
+        res.append("</head>\n")
 
-        res.write(f"<body><center>\n")
+        res.append(f"<body><center>\n")
 
-        res.write(f"<h1>Generated Trace Table</h1>\n")
-        res.write(self._gen_html_table() + "\n")
+        res.append(f"<h1>Generated Trace Table</h1>\n")
+        res.append(self._gen_html_table() + "\n")
 
-        res.write("</center></body>\n")
-        res.write("</html>\n")
-        return res.getvalue()
+        res.append("</center></body>\n")
+        res.append("</html>\n")
+        return "".join(res)
 
     def write_out(self, file_name: str | None = None) -> str:
         """write out tracer output with console output."""

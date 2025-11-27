@@ -1,12 +1,14 @@
 from .bean_ast import *
 
+
 @dataclass
 class OptimizerConfig:
     inline_constants = True
     fold_constant_expressions = True
     simplify_math = True
-    inline_library_routines = True # TODO: implement
-    inline_functions = True # TODO: implement
+    inline_library_routines = True  # TODO: implement
+    inline_functions = True  # TODO: implement
+
 
 class Optimizer:
     # TODO: use
@@ -25,7 +27,7 @@ class Optimizer:
             self.config = config
         else:
             self.config = OptimizerConfig()
-   
+
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
         s = ""
@@ -144,21 +146,20 @@ class Optimizer:
 
         match tc.typ:
             case BCPrimitiveType.STRING:
-                return self._typecast_string(inner, tc.pos)  
+                return self._typecast_string(inner, tc.pos)
             case BCPrimitiveType.INTEGER:
-                return self._typecast_integer(inner, tc.pos)  
+                return self._typecast_integer(inner, tc.pos)
             case BCPrimitiveType.REAL:
-                return self._typecast_real(inner, tc.pos)  
+                return self._typecast_real(inner, tc.pos)
             case BCPrimitiveType.CHAR:
                 return self._typecast_char(inner, tc.pos)
             case BCPrimitiveType.BOOLEAN:
-                return self._typecast_boolean(inner) 
-
+                return self._typecast_boolean(inner)
 
     def visit_identifier(self, id: Identifier) -> BCValue | None:
         if id.ident not in self.constants:
             return
-        
+
         return self.constants[id.ident]
 
     def visit_array_literal(self, expr: ArrayLiteral):
@@ -196,7 +197,7 @@ class Optimizer:
                 inner = self.visit_expr(expr.inner)
                 if not inner:
                     return
-                
+
                 if inner.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
                         f"cannot perform logical NOT on value of type {inner.kind}",
@@ -355,4 +356,4 @@ class Optimizer:
             self.visit_stmt(stmt)
             cur += 1
 
-        return [itm for i, itm in enumerate(blk) if i not in self.unwanted_items] 
+        return [itm for i, itm in enumerate(blk) if i not in self.unwanted_items]

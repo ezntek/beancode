@@ -10,14 +10,26 @@ from beancode.bean_ast import BCPrimitiveType, BCValue
 Libroutine = list[tuple[BCPrimitiveType, ...] | BCPrimitiveType]
 Libroutines = dict[str, Libroutine]
 
+_NUMERIC = (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)
+
 LIBROUTINES: Libroutines = {
     "ucase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
     "lcase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
-    "div": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL), (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
-    "mod": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL), (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
-    "substring": [BCPrimitiveType.STRING, BCPrimitiveType.INTEGER, BCPrimitiveType.INTEGER],
+    "div": [
+        _NUMERIC,
+        _NUMERIC
+    ],
+    "mod": [
+        _NUMERIC,
+        _NUMERIC
+    ],
+    "substring": [
+        BCPrimitiveType.STRING,
+        BCPrimitiveType.INTEGER,
+        BCPrimitiveType.INTEGER,
+    ],
     "round": [BCPrimitiveType.REAL, BCPrimitiveType.INTEGER],
-    "sqrt": [(BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)],
+    "sqrt": [_NUMERIC],
     "length": [BCPrimitiveType.STRING],
     "sin": [BCPrimitiveType.REAL],
     "cos": [BCPrimitiveType.REAL],
@@ -26,7 +38,7 @@ LIBROUTINES: Libroutines = {
     "getchar": [],
     "random": [],
     "execute": [BCPrimitiveType.STRING],
-    "format": [], # stub
+    "format": [],  # stub
 }
 
 LIBROUTINES_NORETURN: Libroutines = {

@@ -16,6 +16,7 @@ from .libroutines import *
 from . import __version__, Pos, is_case_consistent
 from .tracer import *
 
+
 def _get_file_mode(read: bool, write: bool, append: bool) -> str | None:
     if read and write:
         return "r+"
@@ -45,7 +46,7 @@ class Interpreter:
     tracer: Tracer | None = None
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
-    tracer_open = False # open generated html or not by default
+    tracer_open = False  # open generated html or not by default
     files: dict[str, File]
     file_callbacks: FileCallbacks
 
@@ -106,7 +107,6 @@ class Interpreter:
             self.file_callbacks.close(f.stream)
 
         self.files = dict()
-
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
@@ -206,13 +206,15 @@ class Interpreter:
             begin = self.visit_expr(s_bounds[0])
             if begin.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {str(begin.kind)} as array bound!", s_bounds[0].pos
+                    f"cannot use type of {str(begin.kind)} as array bound!",
+                    s_bounds[0].pos,
                 )
 
             end = self.visit_expr(s_bounds[1])  # type: ignore
             if end.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {str(end.kind)} as array bound!", s_bounds[1].pos
+                    f"cannot use type of {str(end.kind)} as array bound!",
+                    s_bounds[1].pos,
                 )
 
             bounds = (begin.get_integer(), end.get_integer())
@@ -435,13 +437,21 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if lhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if rhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot exponentiate bools, chars, and strings!",
                         expr.lhs.pos,
@@ -481,13 +491,21 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if lhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
                     )
 
-                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if rhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot multiply between bools, chars, and strings!",
                         expr.lhs.pos,
@@ -527,12 +545,20 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if lhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot divide between bools, chars, and strings!", expr.lhs.pos
                     )
 
-                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if rhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error(
                         "Cannot divide between bools, chars, and strings!", expr.rhs.pos
                     )
@@ -574,7 +600,10 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in [BCPrimitiveType.CHAR, BCPrimitiveType.STRING] or rhs.kind in [BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if lhs.kind in [
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ] or rhs.kind in [BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
                     # concatenate instead
                     lhs_str_or_char: str = str()
                     rhs_str_or_char: str = str()
@@ -633,10 +662,18 @@ class Interpreter:
                         expr.rhs.pos,
                     )
 
-                if lhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if lhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error("Cannot subtract bools, chars, and strings!")
 
-                if rhs.kind in [BCPrimitiveType.BOOLEAN, BCPrimitiveType.CHAR, BCPrimitiveType.STRING]:
+                if rhs.kind in [
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                ]:
                     self.error("Cannot subtract bools, chars, and strings!")
 
                 lhs_num: int | float = 0
@@ -920,10 +957,14 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     lhs_val = (
-                        lhs.get_integer() if lhs.kind == BCPrimitiveType.INTEGER else lhs.get_real()
+                        lhs.get_integer()
+                        if lhs.kind == BCPrimitiveType.INTEGER
+                        else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if rhs.kind == BCPrimitiveType.INTEGER else rhs.get_real()
+                        rhs.get_integer()
+                        if rhs.kind == BCPrimitiveType.INTEGER
+                        else rhs.get_real()
                     )
 
                     if rhs_val == 0:
@@ -934,10 +975,14 @@ class Interpreter:
                     [lhs, rhs, *_] = evargs
 
                     lhs_val = (
-                        lhs.get_integer() if lhs.kind == BCPrimitiveType.INTEGER else lhs.get_real()
+                        lhs.get_integer()
+                        if lhs.kind == BCPrimitiveType.INTEGER
+                        else lhs.get_real()
                     )
                     rhs_val = (
-                        rhs.get_integer() if rhs.kind == BCPrimitiveType.INTEGER else rhs.get_real()
+                        rhs.get_integer()
+                        if rhs.kind == BCPrimitiveType.INTEGER
+                        else rhs.get_real()
                     )
 
                     if rhs_val == 0:
@@ -960,7 +1005,9 @@ class Interpreter:
                     [val, *_] = evargs
 
                     val_v = (
-                        val.get_integer() if val.kind == BCPrimitiveType.INTEGER else val.get_real()
+                        val.get_integer()
+                        if val.kind == BCPrimitiveType.INTEGER
+                        else val.get_real()
                     )
                     if val_v < 0:
                         self.error(
@@ -1010,8 +1057,8 @@ class Interpreter:
     def visit_libroutine_noreturn(self, stmt: CallStatement):
         name = stmt.ident.lower()
         lr = LIBROUTINES_NORETURN[name.lower()]
-        
-        #print(stmt)
+
+        # print(stmt)
         evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
 
         match name:
@@ -1074,7 +1121,10 @@ class Interpreter:
         for idx, itm in enumerate(stmt.args[1:]):
             val = self.visit_expr(itm)
             if val.is_uninitialized():
-                self.error(f"{humanize_index(idx+2)} argument in format argument list is NULL/uninitialized!", stmt.pos)
+                self.error(
+                    f"{humanize_index(idx+2)} argument in format argument list is NULL/uninitialized!",
+                    stmt.pos,
+                )
             items.append(val.val)
         try:
             res = fmt.get_string() % tuple(items)
@@ -1086,7 +1136,7 @@ class Interpreter:
     def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
         if is_case_consistent(stmt.ident):
             if stmt.ident.lower() == "format":
-                return self.visit_format(stmt)        
+                return self.visit_format(stmt)
 
             if stmt.ident.lower() in LIBROUTINES:
                 return self.visit_libroutine(stmt)
@@ -1166,7 +1216,10 @@ class Interpreter:
 
     def visit_call(self, stmt: CallStatement, tracer: Tracer | None = None):
         if stmt.ident.lower() == "format" and is_case_consistent(stmt.ident):
-            self.error("FORMAT is a library routine function!\nplease remove the CALL!", stmt.pos)
+            self.error(
+                "FORMAT is a library routine function!\nplease remove the CALL!",
+                stmt.pos,
+            )
 
         if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
             stmt.ident
@@ -1340,15 +1393,15 @@ class Interpreter:
 
         match tc.typ:
             case BCPrimitiveType.STRING:
-                return self._typecast_string(inner, tc.pos)  
+                return self._typecast_string(inner, tc.pos)
             case BCPrimitiveType.INTEGER:
-                return self._typecast_integer(inner, tc.pos)  
+                return self._typecast_integer(inner, tc.pos)
             case BCPrimitiveType.REAL:
-                return self._typecast_real(inner, tc.pos)  
+                return self._typecast_real(inner, tc.pos)
             case BCPrimitiveType.CHAR:
                 return self._typecast_char(inner, tc.pos)
             case BCPrimitiveType.BOOLEAN:
-                return self._typecast_boolean(inner) 
+                return self._typecast_boolean(inner)
 
     def visit_matrix_literal(self, expr: ArrayLiteral) -> BCValue:
         first_matrix_elem: Expr = expr.items[0].items[0]  # type: ignore
@@ -1429,9 +1482,7 @@ class Interpreter:
         try:
             var = self.variables[expr.ident]
         except KeyError:
-            self.error(
-                f'cannot access undeclared variable "{expr.ident}"', expr.pos
-            )
+            self.error(f'cannot access undeclared variable "{expr.ident}"', expr.pos)
 
         return var.val
 
@@ -1479,50 +1530,56 @@ class Interpreter:
 
     def _display_array(self, arr: BCArray) -> str:
         if arr.typ.is_flat():
-            res = StringIO()
-            res.write("[")
+            res = list()
+            res.append("[")
             flat = arr.get_flat()
             for idx, item in enumerate(flat):
                 if item.is_uninitialized():
-                    res.write("(null)")
+                    res.append("(null)")
                 else:
-                    res.write(str(item))
+                    res.append(str(item))
 
                 if idx != len(flat) - 1:
-                    res.write(", ")
-            res.write("]")
+                    res.append(", ")
+            res.append("]")
 
-            return res.getvalue()
+            return "".join(res)
         else:
             matrix = arr.get_matrix()
-            outer_res = StringIO()
-            outer_res.write("[")
-            res = StringIO()
+            outer_res = list()
+            outer_res.append("[")
+            res = list()
             for oidx, a in enumerate(matrix):
-                res.write("[")
+                res.append("[")
                 for iidx, item in enumerate(a):
                     if item.is_uninitialized():
-                        res.write("(null)")
+                        res.append("(null)")
                     else:
-                        res.write(str(item))
+                        res.append(str(item))
 
                     if iidx != len(a) - 1:
-                        res.write(", ")
-                res.write("]")
+                        res.append(", ")
+                res.append("]")
 
-                outer_res.write(res.getvalue())
-                res.truncate(0)
+                outer_res.append("".join(res))
+                res.clear()
                 if oidx != len(matrix) - 1:
-                    outer_res.write(", ")
-            outer_res.write("]")
+                    outer_res.append(", ")
+            outer_res.append("]")
 
-            return outer_res.getvalue()
+            return "".join(outer_res)
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        res = ''.join([
-            (self._display_array(evaled.get_array()) if isinstance(evaled.kind, BCArrayType) else str(evaled))
+        res = "".join(
+            [
+                (
+                    self._display_array(evaled.get_array())
+                    if isinstance(evaled.kind, BCArrayType)
+                    else str(evaled)
+                )
                 for evaled in map(self.visit_expr, stmt.items)
-        ])
+            ]
+        )
 
         if self.tracer_outputs is not None:
             if not self.loop and self.tracer:
@@ -1534,7 +1591,7 @@ class Interpreter:
             print("(tracer output): " + res)
             sys.stdout.flush()
         elif not self.tracer:
-            print(res, end=('\n' if stmt.newline else ''))
+            print(res, end=("\n" if stmt.newline else ""))
             sys.stdout.flush()
 
     def _guess_input_type(self, inp: str) -> BCValue:
@@ -1621,7 +1678,7 @@ class Interpreter:
                 if is_real(inp) or is_integer(inp):
                     try:
                         res = float(inp)
-                        target.kind = BCPrimitiveType.REAL 
+                        target.kind = BCPrimitiveType.REAL
                         target.val = res
                     except ValueError:
                         self.error("expected REAL for INPUT", s.ident.pos)
@@ -2216,23 +2273,33 @@ class Interpreter:
         stream: Any
         mode = _get_file_mode(*stmt.mode)
         if not mode:
-            self.error("Bogus Amogus file mode!\n" +
-                       "This error was not anticipated. Please report this to the developers.", stmt.pos)
+            self.error(
+                "Bogus Amogus file mode!\n"
+                + "This error was not anticipated. Please report this to the developers.",
+                stmt.pos,
+            )
 
         try:
             stream = self.file_callbacks.open(name, mode)
         except PermissionError as e:
-            self.error(f"not enough permissions to open \"{name}\"\n" + 
-                       f"Do you have access to this file? [Error Code: {e.errno}]", stmt.pos)
+            self.error(
+                f'not enough permissions to open "{name}"\n'
+                + f"Do you have access to this file? [Error Code: {e.errno}]",
+                stmt.pos,
+            )
         except FileNotFoundError as e:
-            self.error(f"file \"{name}\" was not found\n" + 
-                       f"Error Code: {e.errno}", stmt.pos)
+            self.error(
+                f'file "{name}" was not found\n' + f"Error Code: {e.errno}", stmt.pos
+            )
         except IsADirectoryError as e:
-            self.error(f"\"{name}\" is a folder/directory\n" + 
-                       f"Error Code: {e.errno}", stmt.pos)
+            self.error(
+                f'"{name}" is a folder/directory\n' + f"Error Code: {e.errno}", stmt.pos
+            )
         except Exception as e:
-            self.error(f"could not open file \"{name}\"\n" + 
-                       f"Python Exception: {str(e)}", stmt.pos)
+            self.error(
+                f'could not open file "{name}"\n' + f"Python Exception: {str(e)}",
+                stmt.pos,
+            )
 
         self.files[name] = File(stream, stmt.mode)
 
@@ -2241,7 +2308,7 @@ class Interpreter:
         file = self.files.get(name)
         if not file:
             self.error(f"file does not exist!\n" + "did you forget to open it?", pos)
-        return (name, file) 
+        return (name, file)
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
