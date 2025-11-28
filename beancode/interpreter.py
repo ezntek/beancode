@@ -928,6 +928,9 @@ class Interpreter:
 
         try:
             match name.lower():
+                case "initarray":
+                    bean_initarray(stmt.pos, evargs)
+                    return BCValue.new_null()
                 case "format":
                     return bean_format(stmt.pos, evargs)
                 case "typeof" | "type":

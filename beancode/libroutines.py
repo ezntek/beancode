@@ -210,3 +210,24 @@ def bean_format(pos: Pos, args: list[BCValue]) -> BCValue:
     except TypeError as e:
         pymsg = e.args[0]
         raise BCError(f"format error: {pymsg}", pos)
+
+def bean_initarray(pos: Pos, args: list[BCValue]):
+    if len(args) != 2:
+        raise BCError("expected 2 arguments to INITARRAY", pos)
+
+    if not isinstance(args[0].kind, BCArrayType):
+        raise BCError("first argument supplied to INITARRAY must be an array or a 2D array!", pos)
+
+    arr = args[0].get_array()
+    val = args[1]
+    
+    if arr.typ.inner != val.kind:
+        raise BCError(f"expected value of type {str(arr.typ.inner).upper()} to INITARRAY, but found {str(args[1].kind).upper()}", pos)
+
+    if arr.is_flat():
+        for item in arr.get_flat():
+            item.val = val.val
+    elif arr.is_matrix():
+        for outer in arr.get_matrix():
+            for item in outer:
+                item.val = val.val
