@@ -17,14 +17,14 @@ def gimme_five(_: BCArgsList) -> BCValue:
 
 consts = [BCConstant("Name", BCValue.new_string("Charles"))]
 
-vars = [BCDeclare("Age", "integer", BCValue.new_integer(69))]
+vars = [BCDeclare("Age", BCPrimitiveType.INTEGER, BCValue.new_integer(69))]
 
 procs = [
     BCProcedure("SayHello", {}, say_hello),
-    BCProcedure("OneMore", {"n": "integer"}, one_more),
+    BCProcedure("OneMore", {"n": BCPrimitiveType.INTEGER}, one_more),
 ]
 
-funcs = [BCFunction("GimmeFive", {}, "integer", gimme_five)]
+funcs = [BCFunction("GimmeFive", {}, BCPrimitiveType.INTEGER, gimme_five)]
 
 EXPORTS: Exports = {
     "constants": consts,

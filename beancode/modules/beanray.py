@@ -102,8 +102,8 @@ def draw_text(args: BCArgsList):
     p.draw_text(text, x, y, size, color)
 
 
-_COLOR_T = BCArrayType.new_flat("integer", (1, 4))
-_RECT_T = BCArrayType.new_flat("integer", (1, 4))
+_COLOR_T = BCArrayType.new_flat(BCPrimitiveType.INTEGER, (1, 4))
+_RECT_T = BCArrayType.new_flat(BCPrimitiveType.INTEGER, (1, 4))
 
 
 def _color_to_bc_array(color: p.Color) -> BCValue:
@@ -143,22 +143,22 @@ constants = [
 procs = [
     BCProcedure(
         "InitWindow",
-        {"width": "integer", "height": "integer", "title": "string"},
+        {"width": BCPrimitiveType.INTEGER, "height": BCPrimitiveType.INTEGER, "title": BCPrimitiveType.STRING},
         init_window,
     ),
     BCProcedure("CloseWindow", {}, close_window),
-    BCProcedure("SetTargetFPS", {"fps": "integer"}, set_target_fps),
+    BCProcedure("SetTargetFPS", {"fps": BCPrimitiveType.INTEGER}, set_target_fps),
     BCProcedure("BeginDrawing", {}, begin_drawing),
     BCProcedure("EndDrawing", {}, end_drawing),
     BCProcedure("ClearBackground", {"color": _COLOR_T}, clear_background),
-    BCProcedure("DrawFPS", {"x": "integer", "y": "integer"}, draw_fps),
+    BCProcedure("DrawFPS", {"x": BCPrimitiveType.INTEGER, "y": BCPrimitiveType.INTEGER}, draw_fps),
     BCProcedure(
         "DrawRectangle",
         {
-            "x": "integer",
-            "y": "integer",
-            "width": "integer",
-            "height": "integer",
+            "x": BCPrimitiveType.INTEGER,
+            "y": BCPrimitiveType.INTEGER,
+            "width": BCPrimitiveType.INTEGER,
+            "height": BCPrimitiveType.INTEGER,
             "color": _COLOR_T,
         },
         draw_rectangle,
@@ -169,10 +169,10 @@ procs = [
     BCProcedure(
         "DrawText",
         {
-            "text": "string",
-            "x": "integer",
-            "y": "integer",
-            "size": "integer",
+            "text": BCPrimitiveType.STRING,
+            "x": BCPrimitiveType.INTEGER,
+            "y": BCPrimitiveType.INTEGER,
+            "size": BCPrimitiveType.INTEGER,
             "color": _COLOR_T,
         },
         draw_text,
@@ -180,7 +180,7 @@ procs = [
 ]
 
 funcs = [
-    BCFunction("WindowShouldClose", {}, "integer", window_should_close),
+    BCFunction("WindowShouldClose", {}, BCPrimitiveType.INTEGER, window_should_close),
 ]
 
 EXPORTS: Exports = {

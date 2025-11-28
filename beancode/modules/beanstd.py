@@ -43,15 +43,15 @@ def _get_env(args: BCArgsList) -> BCValue:
 consts = []
 vars = []
 procs = [
-    BCProcedure("Write", {"s": "string"}, _write),
-    BCProcedure("WriteErr", {"s": "string"}, _write_err),
+    BCProcedure("Write", {"s": BCPrimitiveType.STRING}, _write),
+    BCProcedure("WriteErr", {"s": BCPrimitiveType.STRING}, _write_err),
     BCProcedure("Flush", {}, _flush),
     BCProcedure("FlushErr", {}, _flush_err),
-    BCProcedure("WriteLn", {"s": "string"}, _writeln),
-    BCProcedure("WriteLnErr", {"s": "string"}, _writeln_err),
+    BCProcedure("WriteLn", {"s": BCPrimitiveType.STRING}, _writeln),
+    BCProcedure("WriteLnErr", {"s": BCPrimitiveType.STRING}, _writeln_err),
 ]
 funcs = [
-    BCFunction("GetEnv", {"s": "string"}, "string", _get_env),
+    BCFunction("GetEnv", {"s": BCPrimitiveType.STRING}, BCPrimitiveType.STRING, _get_env),
 ]
 
 EXPORTS: Exports = {
