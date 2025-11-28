@@ -59,6 +59,7 @@ class Interpreter:
         tracer=None,
         tracer_open=False,
         file_callbacks=None,
+        toplevel=True
     ) -> None:
         self.block = block
         self.func = func
@@ -67,6 +68,7 @@ class Interpreter:
         self.tracer = tracer
         self.tracer_open = tracer_open
         self.files = dict()
+        self.toplevel = toplevel
 
         if not file_callbacks:
             _open = lambda n, m: open(n, m)
@@ -82,9 +84,21 @@ class Interpreter:
 
     @classmethod
     def new(cls, block: list[Statement], func=False, proc=False, loop=False, tracer=None) -> "Interpreter":  # type: ignore
-        return cls(block, func=func, proc=proc, loop=loop, tracer=tracer)  # type: ignore
+        return cls(block, func=func, proc=proc, loop=loop, tracer=tracer, toplevel=False)  # type: ignore
+
+    def _make_new_interpreter(self, block: list[Statement]) -> "Interpreter":
+        intp = self.new(block, loop=False, tracer=self.tracer)
+        intp.calls = self.calls
+        intp.variables = self.variables.copy()
+        intp.functions = self.functions.copy()
+        intp.files = self.files.copy()
+        intp.file_callbacks = self.file_callbacks
+        return intp
 
     def __del__(self):
+        if not self.toplevel:
+            return
+
         for file in self.files.values():
             self.file_callbacks.close(file.stream)
 
@@ -974,6 +988,8 @@ class Interpreter:
             return self.visit_ffi_fncall(func, stmt)
 
         intp = self.new(func.block, func=True, tracer=tracer)
+        intp.file_callbacks = self.file_callbacks
+        intp.files = self.files.copy()
         intp.calls = self.calls.copy()
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
         if self.tracer is not None and tracer is None:
@@ -1063,6 +1079,8 @@ class Interpreter:
 
         intp.functions = self.functions.copy()
         intp.variables = self.variables.copy()
+        intp.file_callbacks = self.file_callbacks
+        intp.files = self.files.copy()
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
             intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
@@ -1618,9 +1636,7 @@ class Interpreter:
 
         block: list[Statement] = stmt.block  # type: ignore
 
-        intp = self.new(block, loop=True, tracer=self.tracer)
-        intp.variables = dict(self.variables)  # scope
-        intp.functions = dict(self.functions)
+        intp = self._make_new_interpreter(block)
 
         while True:
             evcond = self.visit_expr(cond)
@@ -1671,10 +1687,7 @@ class Interpreter:
             if step == 0:
                 self.error("step for for loop cannot be 0!", stmt.step.pos)
 
-        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
-        intp.calls = self.calls
-        intp.variables = self.variables.copy()
-        intp.functions = self.functions.copy()
+        intp = self._make_new_interpreter(stmt.block)
 
         var_existed = stmt.counter.ident in intp.variables
         if var_existed:
@@ -1726,10 +1739,7 @@ class Interpreter:
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond  # type: ignore
-        intp = self.new(stmt.block, loop=True, tracer=self.tracer)
-        intp.calls = self.calls
-        intp.variables = dict(self.variables)
-        intp.functions = dict(self.functions)
+        intp = self._make_new_interpreter(stmt.block)
 
         while True:
             intp.visit_block(None)
@@ -1760,9 +1770,7 @@ class Interpreter:
                 break
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
-        intp = self.new(stmt.block, loop=False, tracer=self.tracer)
-        intp.variables = dict(self.variables)
-        intp.functions = dict(self.functions)
+        intp = self._make_new_interpreter(stmt.block)
         intp.visit_block(None)
 
         for name, var in intp.variables.items():
@@ -2108,7 +2116,7 @@ class Interpreter:
         file.stream.seek(0)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
-        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+        name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
         if not file.mode[1]:
             self.error("file not open for writing!", stmt.pos)

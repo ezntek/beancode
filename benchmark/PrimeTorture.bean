@@ -1,13 +1,13 @@
 CONSTANT Max <- 20000
 
 FUNCTION IsPrime(Num: INTEGER) RETURNS BOOLEAN
-    /* Manually calculating the bound is faster if you don't use the AST optimizer!
+    /* Manually calculating the bound is faster!
     */
     DECLARE Bound: INTEGER
     Bound <- INTEGER(SQRT(Num)) 
-
-    FOR Counter <- 2 TO Bound 
+    
     //FOR Counter <- 2 TO INTEGER(SQRT(Num))
+    FOR Counter <- 2 TO Bound 
         IF MOD(Num, Counter) = 0 THEN
             RETURN FALSE
         ENDIF

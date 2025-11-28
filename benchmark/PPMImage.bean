@@ -1,11 +1,10 @@
-// PPM video generator!
-// Run with `./main.py PPMVideo.bean | bash && ffmpeg -i frame%d.ppm -r 60 -o output.mp4` 
+// PPM Image Generator
 
-CONSTANT Width <- 640 
-CONSTANT Height <- 480 
+CONSTANT Width <- 16*40 
+CONSTANT Height <- 9*40
 CONSTANT Max <- 60
 
-PROCEDURE Frame(Name: STRING, I: INTEGER)
+PROCEDURE Image(Name: STRING)
     WRITEFILE(Name), "P3\n"
     WRITEFILE(Name), Width + " " + Height + "\n"
     WRITEFILE(Name), "255\n"
@@ -17,7 +16,7 @@ PROCEDURE Frame(Name: STRING, I: INTEGER)
 
     FOR Y <- 0 TO (Height - 1)
         FOR X <- 0 TO (Width - 1)
-            IF MOD(DIV(X+I, 40) + DIV(Y+I, 30), 2) = 0
+            IF MOD(DIV(X, 30) + DIV(Y, 30), 2) = 0
               THEN
                 Pixel <- 255 + " " + 0 + " " + 0
                 //Pixel <- 79 + " " + 169 + " " + 232 + " "
@@ -30,10 +29,12 @@ PROCEDURE Frame(Name: STRING, I: INTEGER)
     NEXT Y
 ENDPROCEDURE
 
-FOR i <- 0 TO (Max-1)
-    CONSTANT Name <- "./out/frame" + i + ".ppm"
-    OPENFILE(Name) FOR WRITE
-    CALL Frame(Name, i)
-    CLOSEFILE(Name)
-    OUTPUT "Written frame " + (i+1) + " of " + Max
-NEXT i
+//DECLARE FileName: STRING
+//OUTPUT "File Name?"
+//INPUT FileName
+CONSTANT FileName <- "image.ppm"
+
+OPENFILE(FileName) FOR WRITE
+CALL Image(FileName)
+CLOSEFILE(FileName)
+OUTPUT "File Written to ", FileName

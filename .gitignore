@@ -1,3 +1,5 @@
+*.ppm
+out
 *.out
 .venv
 *.txt

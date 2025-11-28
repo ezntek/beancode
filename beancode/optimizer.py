@@ -792,6 +792,11 @@ class Optimizer:
     def visit_fncall(self, expr: FunctionCall):
         if is_case_consistent(expr.ident) and expr.ident.lower() in LIBROUTINES:
             return self.visit_libroutine(expr)
+        
+        for i, itm in enumerate(expr.args):
+            val = self.visit_expr(itm)
+            if val:
+                expr.args[i] = Literal(itm.pos, val)
 
     def visit_expr(self, expr: Expr) -> BCValue | None:
         match expr:
@@ -907,7 +912,10 @@ class Optimizer:
         _ = stmt
 
     def visit_call(self, stmt: CallStatement):
-        _ = stmt
+        for i, itm in enumerate(stmt.args):
+            val = self.visit_expr(itm)
+            if val:
+                stmt.args[i] = Literal(itm.pos, val)
 
     def visit_assign_stmt(self, stmt: AssignStatement):
         val = self.visit_expr(stmt.value)
@@ -945,12 +953,20 @@ class Optimizer:
             res = self.visit_expr(stmt.file_ident)
             if res:
                 stmt.file_ident = Literal(stmt.file_ident.pos, res)
+                
+        val = self.visit_expr(stmt.src)
+        if val:
+            stmt.src = Literal(stmt.src.pos, val)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
         if isinstance(stmt.file_ident, Expr):
             res = self.visit_expr(stmt.file_ident)
             if res:
                 stmt.file_ident = Literal(stmt.file_ident.pos, res)
+
+        val = self.visit_expr(stmt.src)
+        if val:
+            stmt.src = Literal(stmt.src.pos, val)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         if isinstance(stmt.file_ident, Expr):
