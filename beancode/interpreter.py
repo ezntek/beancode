@@ -905,7 +905,6 @@ class Interpreter:
                 case "flush":
                     sys.stdout.flush()
                     return BCValue.new_null()
-            
         except BCError as e:
             e.pos = stmt.pos
             raise e

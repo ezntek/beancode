@@ -1,5 +1,6 @@
+from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
-
+from .libroutines import *
 
 @dataclass
 class OptimizerConfig:
@@ -598,10 +599,175 @@ class Optimizer:
                 return BCValue.new_boolean(res)
 
     def visit_array_index(self, expr: ArrayIndex):
-        return
+        _ = expr
+
+    def _eval_libroutine_args(
+        self,
+        args: list[Expr],
+        lr: Libroutine,
+        name: str,
+        pos: Pos | None,
+    ) -> list[BCValue] | None:
+        if lr and len(args) < len(lr):
+            raise BCError(
+                f"expected {len(lr)} args, but got {len(args)} in call to library routine {name.upper()}",
+                pos,
+            )
+
+        evargs: list[BCValue] = []
+        if lr:
+            for idx, (arg, arg_type) in enumerate(zip(args, lr)):
+                new = self.visit_expr(arg)
+                if not new:
+                    return
+
+                mismatch = False
+                if isinstance(arg_type, tuple):
+                    if new.kind not in arg_type:
+                        mismatch = True
+                elif not arg_type:
+                    pass
+                elif arg_type != new.kind:
+                    mismatch = True
+
+                if mismatch and new.is_null():
+                    raise BCError(
+                        f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
+                        pos,
+                    )
+
+                if mismatch:
+                    err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                    if isinstance(arg_type, tuple):
+                        err_base += "either "
+
+                        for i, expected in enumerate(arg_type):
+                            if i == len(arg_type) - 1:
+                                err_base += "or "
+
+                            err_base += prefix_string_with_article(str(expected).upper())
+                            err_base += " "
+                    else:
+                        if str(new.kind)[0] in "aeiou":
+                            err_base += "a "
+                        else:
+                            err_base += "an "
+
+                        err_base += prefix_string_with_article(str(arg_type).upper())
+                        err_base += " "
+
+                    wanted = str(new.kind).upper()
+                    err_base += f"but found {wanted}"
+                    raise BCError(err_base, pos)
+
+                evargs.append(new)
+        else:
+            evargs = list()
+            for e in args:
+                evaled = self.visit_expr(e)
+                if not evaled:
+                    return
+                evargs.append(evaled)
+
+        return evargs
+
+    def visit_libroutine(self, stmt: FunctionCall) -> BCValue | None:  # type: ignore
+        name = stmt.ident.lower()
+        lr = LIBROUTINES[name.lower()]
+
+        evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
+        if not evargs:
+            return
+
+        try:
+            match name.lower():
+                case "initarray":
+                    return None # runtime only
+                case "format":
+                    return None # runtime only
+                case "typeof" | "type":
+                    return bean_typeof(stmt.pos, evargs[0])
+                case "ucase":
+                    [txt, *_] = evargs
+                    return bean_ucase(stmt.pos, txt)
+                case "lcase":
+                    [txt, *_] = evargs
+                    return bean_ucase(stmt.pos, txt)
+                case "substring":
+                    [txt, begin, length, *_] = evargs
+
+                    return bean_substring(stmt.pos, txt.get_string(), begin.get_integer(), length.get_integer())
+                case "div":
+                    [lhs, rhs, *_] = evargs
+
+                    lhs_val = (
+                        lhs.get_integer()
+                        if lhs.kind == BCPrimitiveType.INTEGER
+                        else lhs.get_real()
+                    )
+                    rhs_val = (
+                        rhs.get_integer()
+                        if rhs.kind == BCPrimitiveType.INTEGER
+                        else rhs.get_real()
+                    )
+
+                    return bean_div(stmt.pos, lhs_val, rhs_val)
+                case "mod":
+                    [lhs, rhs, *_] = evargs
+
+                    lhs_val = (
+                        lhs.get_integer()
+                        if lhs.kind == BCPrimitiveType.INTEGER
+                        else lhs.get_real()
+                    )
+                    rhs_val = (
+                        rhs.get_integer()
+                        if rhs.kind == BCPrimitiveType.INTEGER
+                        else rhs.get_real()
+                    )
+
+                    return bean_mod(stmt.pos, lhs_val, rhs_val)
+                case "length":
+                    [txt, *_] = evargs
+                    return bean_length(stmt.pos, txt.get_string())
+                case "round":
+                    [val_r, places, *_] = evargs
+                    return bean_round(stmt.pos, val_r.get_real(), places.get_integer())
+                case "sqrt":
+                    [val, *_] = evargs
+                    return bean_sqrt(stmt.pos, val)
+                case "getchar":
+                    return None # runtime only
+                case "random":
+                    return None # runtime only
+                case "sin":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.sin(val.get_real()))
+                case "cos":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.cos(val.get_real()))
+                case "tan":
+                    [val, *_] = evargs
+                    return BCValue.new_real(math.tan(val.get_real()))
+                case "help":
+                    return None # runtime only
+                case "execute":
+                    return None # runtime only
+                case "putchar":
+                    return None # runtime only
+                case "exit":
+                    return None # runtime only
+                case "sleep":
+                    return None # runtime only
+                case "flush":
+                    return None # runtime only
+        except BCError as e:
+            e.pos = stmt.pos
+            raise e
 
     def visit_fncall(self, expr: FunctionCall):
-        return
+        if is_case_consistent(expr.ident) and expr.ident.lower() in LIBROUTINES:
+            return self.visit_libroutine(expr)
 
     def visit_expr(self, expr: Expr) -> BCValue | None:
         match expr:
