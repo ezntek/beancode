@@ -39,9 +39,6 @@ LIBROUTINES: Libroutines = {
     "random": [],
     "execute": [BCPrimitiveType.STRING],
     "format": [],  # stub
-}
-
-LIBROUTINES_NORETURN: Libroutines = {
     "putchar": [BCPrimitiveType.CHAR],
     "exit": [BCPrimitiveType.INTEGER],
     "sleep": [BCPrimitiveType.REAL],

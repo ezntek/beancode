@@ -66,7 +66,7 @@ class Parser:
 
         if tok.kind != expected:
             raise BCError(
-                f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                f"expected {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
                 tok.pos,
             )
         return tok
@@ -79,14 +79,14 @@ class Parser:
 
         if not tok:
             raise BCError(
-                f"expected token {humanize_token_kind(expected)}{s}, but reached end of file{h}",
+                f"expected {humanize_token_kind(expected)}{s}, but reached end of file{h}",
                 self.pos(),
                 eof=True,
             )
 
         if tok.kind != expected:
             raise BCError(
-                f"expected token {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                f"expected {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
                 tok.pos,
             )
 
@@ -114,7 +114,7 @@ class Parser:
             if help:
                 h = "\n" + help
             raise BCError(
-                f"expected token {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}",
+                f"expected {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}",
                 cons.pos,
             )
         return cons
@@ -473,39 +473,42 @@ class Parser:
         if lit:
             return lit
 
-        if p.kind == "left_curly":
-            return self.array_literal()
-        elif p.kind == "ident":
-            pn = self.peek_next()
-            if pn is not None:
-                if pn.kind == "left_bracket":
-                    return self.array_index()
-                elif pn.kind == "left_paren":
-                    return self.function_call()
-            return self.ident()
-        elif p.kind == "type":
-            pn = self.peek_next()
-            if not pn:
-                return
+        match p.kind:
+            case "null":
+                return Literal(p.pos, BCValue.new_null())
+            case "left_curly":
+                return self.array_literal()
+            case "ident":
+                pn = self.peek_next()
+                if pn is not None:
+                    if pn.kind == "left_bracket":
+                        return self.array_index()
+                    elif pn.kind == "left_paren":
+                        return self.function_call()
+                return self.ident()
+            case "type":
+                pn = self.peek_next()
+                if not pn:
+                    return
 
-            if pn.kind == "left_paren":
-                return self.typecast()
-        elif p.kind == "left_paren":
-            return self.grouping()
-        elif p.kind == "sub":
-            begin = self.consume()
-            e = self.unary()
-            if not e:
-                raise BCError("invalid or no expression for negation", begin.pos)
-            return Negation(begin.pos, e)
-        elif p.kind == "not":
-            begin = self.consume()
-            e = self.expr()
-            if not e:
-                raise BCError("invalid or no expression for logical NOT", begin.pos)
-            return Not(begin.pos, e)
-        else:
-            return
+                if pn.kind == "left_paren":
+                    return self.typecast()
+            case "left_paren":
+                return self.grouping()
+            case "sub":
+                begin = self.consume()
+                e = self.unary()
+                if not e:
+                    raise BCError("invalid or no expression for negation", begin.pos)
+                return Negation(begin.pos, e)
+            case "not":
+                begin = self.consume()
+                e = self.expr()
+                if not e:
+                    raise BCError("invalid or no expression for logical NOT", begin.pos)
+                return Not(begin.pos, e)
+            case _:
+                return
 
     def pow(self) -> Expr | None:
         expr = self.unary()

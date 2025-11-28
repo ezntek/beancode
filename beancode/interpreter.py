@@ -1049,30 +1049,24 @@ class Interpreter:
                         pass
 
                     return BCValue.new_string(str(out))
-
+                case "putchar":
+                    [ch, *_] = evargs
+                    bean_putchar(ch.get_char())
+                    return BCValue.new_null()
+                case "exit":
+                    [code, *_] = evargs
+                    bean_exit(code.get_integer())
+                case "sleep":
+                    [duration, *_] = evargs
+                    bean_sleep(duration.get_real())
+                    return BCValue.new_null()
+                case "flush":
+                    sys.stdout.flush()
+                    return BCValue.new_null()
+            
         except BCError as e:
             e.pos = stmt.pos
             raise e
-
-    def visit_libroutine_noreturn(self, stmt: CallStatement):
-        name = stmt.ident.lower()
-        lr = LIBROUTINES_NORETURN[name.lower()]
-
-        # print(stmt)
-        evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
-
-        match name:
-            case "putchar":
-                [ch, *_] = evargs
-                bean_putchar(ch.get_char())
-            case "exit":
-                [code, *_] = evargs
-                bean_exit(code.get_integer())
-            case "sleep":
-                [duration, *_] = evargs
-                bean_sleep(duration.get_real())
-            case "flush":
-                sys.stdout.flush()
 
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):
@@ -1150,15 +1144,7 @@ class Interpreter:
         try:
             func = self.functions[stmt.ident]
         except KeyError:
-            if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
-                stmt.ident
-            ):
-                self.error(
-                    f"{stmt.ident} is a library routine procedure.\nPlease use CALL instead!",
-                    stmt.pos,
-                )
-            else:
-                self.error(f"no function named {stmt.ident} exists", stmt.pos)
+            self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
         if isinstance(func, ProcedureStatement):
             self.error("cannot call procedure without CALL!", stmt.pos)
@@ -1215,17 +1201,6 @@ class Interpreter:
         proc.fn(args)
 
     def visit_call(self, stmt: CallStatement, tracer: Tracer | None = None):
-        if stmt.ident.lower() == "format" and is_case_consistent(stmt.ident):
-            self.error(
-                "FORMAT is a library routine function!\nplease remove the CALL!",
-                stmt.pos,
-            )
-
-        if stmt.ident.lower() in LIBROUTINES_NORETURN and is_case_consistent(
-            stmt.ident
-        ):
-            return self.visit_libroutine_noreturn(stmt)
-
         if stmt.ident in self.variables:
             self.error(f'"{stmt.ident}" is a variable, not a procedure!', stmt.pos)
 
@@ -1234,7 +1209,7 @@ class Interpreter:
         except KeyError:
             if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
                 self.error(
-                    f"{stmt.ident} is a library routine function\nplease remove the CALL!",
+                    f"{stmt.ident} is a library routine\nplease remove the CALL!",
                     stmt.pos,
                 )
             else:
@@ -1467,17 +1442,11 @@ class Interpreter:
                     expr.pos,
                 )
 
-        if is_case_consistent(expr.ident):
-            if expr.ident in LIBROUTINES:
-                self.error(
-                    f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
-                    expr.pos,
-                )
-            if expr.ident in LIBROUTINES_NORETURN:
-                self.error(
-                    f'"{expr.ident}" is a library routine procedure!\nplease call it with the CALL keyword:  CALL {expr.ident}(args...)',
-                    expr.pos,
-                )
+        if is_case_consistent(expr.ident) and expr.ident in LIBROUTINES:
+            self.error(
+                f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
+                expr.pos,
+            )
 
         try:
             var = self.variables[expr.ident]
@@ -1987,7 +1956,7 @@ class Interpreter:
                 self.functions[name] = fn
 
     def visit_procedure(self, stmt: ProcedureStatement):
-        if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
+        if stmt.name in LIBROUTINES:
             self.error(
                 f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos
             )
@@ -2000,7 +1969,7 @@ class Interpreter:
         self.functions[stmt.name] = stmt
 
     def visit_function(self, stmt: FunctionStatement):
-        if stmt.name in LIBROUTINES or stmt.name in LIBROUTINES_NORETURN:
+        if stmt.name in LIBROUTINES:
             self.error(
                 f"cannot redefine library routine {stmt.name.upper()}!", stmt.pos
             )
@@ -2044,7 +2013,7 @@ class Interpreter:
                 second = tup[1] - bounds[2]  # type: ignore
 
                 if a.data[first][second].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.data[first][second].kind} in a 2D array", s.pos)  # type: ignore
+                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first][second].kind).upper()} in a 2D array", s.pos)  # type: ignore
 
                 a.data[first][second] = BCValue(val.kind, val.val)  # type: ignore
             else:
@@ -2058,7 +2027,7 @@ class Interpreter:
                 first = tup[0] - bounds[0]  # type: ignore
 
                 if a.data[first].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {val.kind} to {a.data[first].kind} in an array", s.pos)  # type: ignore
+                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
 
                 a.data[first] = BCValue(val.kind, val.val) # type: ignore
         elif isinstance(s.ident, Identifier):
@@ -2069,7 +2038,7 @@ class Interpreter:
 
             if var is None:
                 is_libroutine = (
-                    key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+                    key.lower() in LIBROUTINES
                 ) and is_case_consistent(key)
                 if key in self.functions or is_libroutine:
                     self.error(
@@ -2084,7 +2053,7 @@ class Interpreter:
                 self.error(f"cannot assign constant {key}", s.ident.pos)
 
             if var.val.kind != exp.kind:
-                self.error(f"cannot assign {exp.kind} to {var.val.kind}", s.ident.pos)
+                self.error(f"cannot assign {str(exp.kind).upper()} to {str(var.val.kind).upper()}", s.ident.pos)
             
             if isinstance(exp.kind, BCArrayType):
                 a = exp.get_array()
@@ -2121,7 +2090,7 @@ class Interpreter:
                 self.error(f"variable or constant {key} declared!", s.pos)
 
         is_libroutine = (
-            key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+            key.lower() in LIBROUTINES
         ) and is_case_consistent(key)
         if key in self.functions or is_libroutine:
             self.error(
@@ -2218,11 +2187,11 @@ class Interpreter:
                     self.error(f"variable or constant {key} declared!", s.pos)
 
             is_libroutine = (
-                key.lower() in LIBROUTINES or key.lower() in LIBROUTINES_NORETURN
+                key.lower() in LIBROUTINES
             ) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
                 self.error(
-                    f'cannot shadow existing function or procedure named "{key}" with variable of the same name',
+                    f'cannot shadow existing function or procedure named "{key}" with a variable of the same name',
                     s.pos,
                 )
 
