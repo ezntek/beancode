@@ -13,20 +13,25 @@ class OptimizerConfig:
 class Optimizer:
     # TODO: use
     config: OptimizerConfig
-    constants: dict[str, BCValue]
+    constants: list[dict[str, BCValue]]
     block: list[Statement]
-    unwanted_items: list[int]
+    unwanted_items: list[list[int]]
     cur_stmt: int
+    active_constants: set[str]
 
     def __init__(self, block: list[Statement], config: OptimizerConfig | None = None):
         self.block = block
-        self.constants = dict()
+        self.constants = list()
         self.unwanted_items = list()
+        self.active_constants = set()
         self.cur_stmt = 0
         if config:
             self.config = config
         else:
             self.config = OptimizerConfig()
+
+    def _update_active_constants(self):
+        self.active_constants = self.active_constants.union(*(d.keys() for d in self.constants))
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -157,10 +162,12 @@ class Optimizer:
                 return self._typecast_boolean(inner)
 
     def visit_identifier(self, id: Identifier) -> BCValue | None:
-        if id.ident not in self.constants:
+        if id.ident not in self.active_constants:
             return
 
-        return self.constants[id.ident]
+        for d in reversed(self.constants):
+            if id.ident in d:
+                return d[id.ident]
 
     def visit_array_literal(self, expr: ArrayLiteral):
         for i in range(len(expr.items)):
@@ -640,75 +647,126 @@ class Optimizer:
         )
 
     def visit_if_stmt(self, stmt: IfStatement):
-        # TODO: detect always true/false
-        pass
+        cond = self.visit_expr(stmt.cond)
+        if cond:
+            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.if_block = self.visit_block(stmt.if_block)
+        stmt.else_block = self.visit_block(stmt.else_block)
 
     def visit_caseof_stmt(self, stmt: CaseofStatement):
-        pass
+        for b in stmt.branches:
+            val = self.visit_expr(b.expr)
+            if val:
+                b.expr = Literal(b.expr.pos, val)
+            self.visit_stmt(b.stmt)
 
     def visit_for_stmt(self, stmt: ForStatement):
-        pass
+        begin = self.visit_expr(stmt.begin)
+        if begin:
+            stmt.begin = Literal(stmt.begin.pos, begin)
+
+        end = self.visit_expr(stmt.end)
+        if end:
+            stmt.end = Literal(stmt.end.pos, end)
+
+        if stmt.step:
+            step = self.visit_expr(stmt.step)
+            if step:
+                stmt.step = Literal(stmt.step.pos, step)
+
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_while_stmt(self, stmt: WhileStatement):
-        pass
+        cond = self.visit_expr(stmt.cond)
+        if cond:
+            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
-        pass
+        cond = self.visit_expr(stmt.cond)
+        if cond:
+            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        pass
+        for i, itm in enumerate(stmt.items):
+            val = self.visit_expr(itm)
+            if val:
+                stmt.items[i] = Literal(itm.pos, val)
 
     def visit_input_stmt(self, stmt: InputStatement):
-        pass
+        _ = stmt
 
     def visit_return_stmt(self, stmt: ReturnStatement):
-        pass
+        if stmt.expr:
+            expr = self.visit_expr(stmt.expr)
+            if expr:
+                stmt.expr = Literal(stmt.expr.pos, expr)
+            pass
 
     def visit_procedure(self, stmt: ProcedureStatement):
-        pass
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_function(self, stmt: FunctionStatement):
-        pass
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
-        pass
+        stmt.block = self.visit_block(stmt.block)
 
     def visit_include_stmt(self, stmt: IncludeStatement):
-        pass
+        _ = stmt
 
     def visit_call(self, stmt: CallStatement):
-        pass
+        _ = stmt
 
     def visit_assign_stmt(self, stmt: AssignStatement):
-        pass
+        val = self.visit_expr(stmt.value)
+        if val:
+            stmt.value = Literal(stmt.value.pos, val)
 
     def visit_constant_stmt(self, stmt: ConstantStatement):
-        opt = self.visit_expr(stmt.value)
-        if not opt:
+        val = self.visit_expr(stmt.value)
+        if not val:
             return
-        self.constants[stmt.ident.ident] = opt
-        self.unwanted_items.append(self.cur_stmt)
+        self.constants[-1][stmt.ident.ident] = val
+        self._update_active_constants()
+        self.unwanted_items[-1].append(self.cur_stmt)
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
-        pass
+        _ = stmt
 
     def visit_trace_stmt(self, stmt: TraceStatement):
-        pass
+        _ = stmt
 
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
-        pass
+        if isinstance(stmt.file_ident, Expr):
+            res = self.visit_expr(stmt.file_ident)
+            if res:
+                stmt.file_ident = Literal(stmt.file_ident.pos, res)
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
-        pass
+        if isinstance(stmt.file_ident, Expr):
+            res = self.visit_expr(stmt.file_ident)
+            if res:
+                stmt.file_ident = Literal(stmt.file_ident.pos, res)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
-        pass
+        if isinstance(stmt.file_ident, Expr):
+            res = self.visit_expr(stmt.file_ident)
+            if res:
+                stmt.file_ident = Literal(stmt.file_ident.pos, res)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        pass
+        if isinstance(stmt.file_ident, Expr):
+            res = self.visit_expr(stmt.file_ident)
+            if res:
+                stmt.file_ident = Literal(stmt.file_ident.pos, res)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
-        pass
+        if isinstance(stmt.file_ident, Expr):
+            res = self.visit_expr(stmt.file_ident)
+            if res:
+                stmt.file_ident = Literal(stmt.file_ident.pos, res)
 
     def visit_stmt(self, stmt: Statement):
         match stmt:
@@ -762,16 +820,20 @@ class Optimizer:
                     stmt.inner = Literal(stmt.pos, val)
 
     def visit_program(self, program: Program):
-        if program is not None:
-            self.visit_block(program.stmts)
+        self.visit_block(program.stmts)
 
     def visit_block(self, block: list[Statement] | None) -> list[Statement]:
         blk = block if block is not None else self.block
         cur = 0
+        self.constants.append(dict())
+        self.unwanted_items.append(list())
         while cur < len(blk):
             stmt = blk[cur]
             self.cur_stmt = cur
             self.visit_stmt(stmt)
             cur += 1
-
-        return [itm for i, itm in enumerate(blk) if i not in self.unwanted_items]
+        self.constants.pop()
+        self._update_active_constants()
+        res = [itm for i, itm in enumerate(blk) if i not in self.unwanted_items[-1]]
+        self.unwanted_items.pop()
+        return res
