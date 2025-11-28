@@ -170,7 +170,517 @@ class Optimizer:
             expr.items[i] = Literal(expr.items[i].pos, opt)
 
     def visit_binaryexpr(self, expr: BinaryExpr):
-        return
+        should_return = False
+        lhs = self.visit_expr(expr.lhs) # type: ignore
+        if not lhs:
+            should_return = True
+        else:
+            expr.lhs = Literal(expr.lhs.pos, lhs)
+
+        rhs = self.visit_expr(expr.rhs) # type: ignore
+        if not rhs:
+            should_return = True
+        else:
+            expr.rhs = Literal(expr.rhs.pos, rhs)
+
+        if should_return:
+            return
+    
+        lhs: BCValue
+        rhs: BCValue
+
+        match expr.op:
+            case "assign":
+                raise ValueError("impossible to have assign in binaryexpr")
+            case "equal":
+                if lhs.kind != rhs.kind:
+                    return BCValue.new_boolean(False)
+
+                # a BCValue(INTEGER, NULL) is not a BCValue(NULL, NULL)
+                if lhs.is_null() and rhs.is_null():
+                    return BCValue.new_boolean(True)
+
+                res = lhs == rhs
+                return BCValue.new_boolean(res)
+            case "not_equal":
+                if lhs.is_null() and rhs.is_null():
+                    return BCValue.new_boolean(True)
+
+                res = not (lhs == rhs)  # python is RIDICULOUS
+                return BCValue.new_boolean(res)
+            case "greater_than":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                        raise BCError(
+                            f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}",
+                            expr.rhs.pos,
+                        )
+
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+
+                    return BCValue.new_boolean((lhs_num > rhs_num))
+                else:
+                    if lhs.kind != rhs.kind:
+                        raise BCError(
+                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
+                        raise BCError(
+                            f"illegal to compare booleans with inequality comparisons",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() > rhs.get_string())
+            case "less_than":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                        raise BCError(
+                            f"impossible to perform less_than between {lhs.kind} and {rhs.kind}",
+                            expr.rhs.pos,
+                        )
+
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+
+                    return BCValue.new_boolean((lhs_num < rhs_num))
+                else:
+                    if lhs.kind != rhs.kind:
+                        raise BCError(
+                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
+                        raise BCError(
+                            f"illegal to compare booleans with inequality comparisons",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() < rhs.get_string())
+            case "greater_than_or_equal":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                        raise BCError(
+                            f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}",
+                            expr.rhs.pos,
+                        )
+
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+
+                    return BCValue.new_boolean((lhs_num >= rhs_num))
+                else:
+                    if lhs.kind != rhs.kind:
+                        raise BCError(
+                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
+                        raise BCError(
+                            f"illegal to compare booleans with inequality comparisons",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() >= rhs.get_string())
+            case "less_than_or_equal":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an ordered comparison!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an ordered comparison!",
+                        expr.rhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+
+                    if rhs.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
+                        raise BCError(
+                            f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}",
+                            expr.rhs.pos,
+                        )
+
+                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+
+                    return BCValue.new_boolean((lhs_num < rhs_num))
+                else:
+                    if lhs.kind != rhs.kind:
+                        raise BCError(
+                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
+                            expr.lhs.pos,
+                        )
+                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
+                        raise BCError(f"illegal to compare booleans", expr.lhs.pos)
+                    elif lhs.kind == BCPrimitiveType.STRING:
+                        return BCValue.new_boolean(lhs.get_string() <= rhs.get_string())
+            # add sub mul div
+            case "pow":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
+
+                if lhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot exponentiate bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot exponentiate bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == BCPrimitiveType.INTEGER:
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == BCPrimitiveType.REAL:
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == BCPrimitiveType.INTEGER:
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == BCPrimitiveType.REAL:
+                    rhs_num = rhs.get_real()
+
+                res = lhs_num**rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
+            case "mul":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
+
+                if lhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot multiply between bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot multiply between bools, chars, and strings!",
+                        expr.lhs.pos,
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == BCPrimitiveType.INTEGER:
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == BCPrimitiveType.REAL:
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == BCPrimitiveType.INTEGER:
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == BCPrimitiveType.REAL:
+                    rhs_num = rhs.get_real()
+
+                res = lhs_num * rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
+            case "div":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
+
+                if lhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot divide between bools, chars, and strings!", expr.lhs.pos
+                    )
+
+                if rhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError(
+                        "Cannot divide between bools, chars, and strings!", expr.rhs.pos
+                    )
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == BCPrimitiveType.INTEGER:
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == BCPrimitiveType.REAL:
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == BCPrimitiveType.INTEGER:
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == BCPrimitiveType.REAL:
+                    rhs_num = rhs.get_real()
+
+                if rhs_num == 0:
+                    raise BCError("cannot divide by zero!", expr.rhs.pos)
+
+                res = lhs_num / rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
+            case "add":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of an arithmetic expression!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of an arithmetic expression!",
+                        expr.rhs.pos,
+                    )
+
+                if lhs.kind in {
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                } or rhs.kind in {BCPrimitiveType.CHAR, BCPrimitiveType.STRING}:
+                    # concatenate instead
+                    lhs_str_or_char: str = str()
+                    rhs_str_or_char: str = str()
+
+                    if lhs.kind == BCPrimitiveType.STRING:
+                        lhs_str_or_char = lhs.get_string()
+                    elif lhs.kind == BCPrimitiveType.CHAR:
+                        lhs_str_or_char = lhs.get_char()
+                    else:
+                        lhs_str_or_char = str(lhs)
+
+                    if rhs.kind == BCPrimitiveType.STRING:
+                        rhs_str_or_char = rhs.get_string()
+                    elif rhs.kind == BCPrimitiveType.CHAR:
+                        rhs_str_or_char = rhs.get_char()
+                    else:
+                        rhs_str_or_char = str(rhs)
+
+                    res = str(lhs_str_or_char + rhs_str_or_char)
+                    return BCValue.new_string(res)
+
+                if BCPrimitiveType.BOOLEAN in [lhs.kind, rhs.kind]:
+                    raise BCError("Cannot add bools, chars, and strings!", expr.pos)
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == BCPrimitiveType.INTEGER:
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == BCPrimitiveType.REAL:
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == BCPrimitiveType.INTEGER:
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == BCPrimitiveType.REAL:
+                    rhs_num = rhs.get_real()
+
+                res = lhs_num + rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
+            case "sub":
+                if lhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the left hand side of a binary expression!",
+                        expr.lhs.pos,
+                    )
+                elif rhs.is_uninitialized():
+                    raise BCError(
+                        "cannot have NULL in the right hand side of a binary expression!",
+                        expr.rhs.pos,
+                    )
+
+                if lhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError("Cannot subtract bools, chars, and strings!")
+
+                if rhs.kind in {
+                    BCPrimitiveType.BOOLEAN,
+                    BCPrimitiveType.CHAR,
+                    BCPrimitiveType.STRING,
+                }:
+                    raise BCError("Cannot subtract bools, chars, and strings!")
+
+                lhs_num: int | float = 0
+                rhs_num: int | float = 0
+
+                if lhs.kind == BCPrimitiveType.INTEGER:
+                    lhs_num = lhs.get_integer()
+                elif lhs.kind == BCPrimitiveType.REAL:
+                    lhs_num = lhs.get_real()
+
+                if rhs.kind == BCPrimitiveType.INTEGER:
+                    rhs_num = rhs.get_integer()
+                elif rhs.kind == BCPrimitiveType.REAL:
+                    rhs_num = rhs.get_real()
+
+                res = lhs_num - rhs_num
+
+                if isinstance(res, int):
+                    return BCValue.new_integer(res)
+                elif isinstance(res, float):
+                    return BCValue.new_real(res)
+            case "and":
+                if lhs.kind != BCPrimitiveType.BOOLEAN:
+                    raise BCError(
+                        f"cannot perform logical AND on value with type {lhs.kind}",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind != BCPrimitiveType.BOOLEAN:
+                    raise BCError(
+                        f"cannot perform logical AND on value with type {lhs.kind}",
+                        expr.rhs.pos,
+                    )
+
+                lhs_b = lhs.get_boolean()
+                rhs_b = rhs.get_boolean()
+
+                if lhs_b == None:
+                    raise BCError(
+                        "left hand side in boolean operation is null", expr.lhs.pos
+                    )
+
+                if rhs_b == None:
+                    raise BCError(
+                        "right hand side in boolean operation is null", expr.rhs.pos
+                    )
+
+                res = lhs_b and rhs_b
+                return BCValue.new_boolean(res)
+            case "or":
+                if lhs.kind != BCPrimitiveType.BOOLEAN:
+                    raise BCError(
+                        f"cannot perform logical OR on value with type {lhs.kind}",
+                        expr.lhs.pos,
+                    )
+
+                if rhs.kind != BCPrimitiveType.BOOLEAN:
+                    raise BCError(
+                        f"cannot perform logical OR on value with type {lhs.kind}",
+                        expr.rhs.pos,
+                    )
+
+                lhs_b = lhs.get_boolean()
+                rhs_b = rhs.get_boolean()
+
+                if lhs_b == None:
+                    raise BCError(
+                        "left hand side in boolean operation is null", expr.lhs.pos
+                    )
+
+                if rhs_b == None:
+                    raise BCError(
+                        "right hand side in boolean operation is null", expr.rhs.pos
+                    )
+
+                res = lhs_b or rhs_b
+
+                return BCValue.new_boolean(res)
 
     def visit_array_index(self, expr: ArrayIndex):
         return
