@@ -34,6 +34,10 @@ class BCPrimitiveType(Enum):
 
     def __str__(self) -> str:
         return self.__repr__()
+    
+    def __format__(self, f) -> str:
+        _ = f
+        return self.__repr__().upper()
 
     @classmethod
     def from_string(cls, kind: str):
@@ -154,7 +158,7 @@ class BCArrayType:
 
         s.append("] OF ")
         s.append(str(self.inner).upper())
-        return "".join(s) 
+        return "".join(s)
 
 
 def array_bounds_to_string(bounds: tuple[int, int]) -> str:
@@ -244,6 +248,12 @@ class BCValue:
 
     def __neq__(self, value: object, /) -> bool:
         return not (self.__eq__(value))
+
+    def kind_is_numeric(self) -> bool:
+        return self.kind == BCPrimitiveType.INTEGER or self.kind == BCPrimitiveType.REAL
+
+    def kind_is_alpha(self) -> bool:
+        return self.kind == BCPrimitiveType.STRING or self.kind == BCPrimitiveType.CHAR
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
@@ -399,24 +409,64 @@ class ArrayLiteral(Expr):
     items: list[Expr]
 
 
-Operator = typing.Literal[
-    "assign",
-    "equal",
-    "less_than",
-    "greater_than",
-    "less_than_or_equal",
-    "greater_than_or_equal",
-    "not_equal",
-    "mul",
-    "div",
-    "add",
-    "sub",
-    "pow",
-    "and",
-    "or",
-    "not",
-]
+class Operator(Enum):
+    ASSIGN = (0,)
+    EQUAL = (1,)
+    LESS_THAN = (2,)
+    GREATER_THAN = (3,)
+    LESS_THAN_OR_EQUAL = (4,)
+    GREATER_THAN_OR_EQUAL = (5,)
+    NOT_EQUAL = (6,)
+    MUL = (7,)
+    DIV = (8,)
+    ADD = (9,)
+    SUB = (10,)
+    POW = (11,)
+    AND = (12,)
+    OR = (13,)
+    NOT = (14,)
 
+    @classmethod
+    def from_str(cls, data: str) -> "Operator":
+        return {
+            "assign": Operator.ASSIGN,
+            "equal": Operator.EQUAL,
+            "less_than": Operator.LESS_THAN,
+            "greater_than": Operator.GREATER_THAN,
+            "less_than_or_equal": Operator.LESS_THAN_OR_EQUAL,
+            "greater_than_or_equal": Operator.GREATER_THAN_OR_EQUAL,
+            "not_equal": Operator.NOT_EQUAL,
+            "mul": Operator.MUL,
+            "div": Operator.DIV,
+            "add": Operator.ADD,
+            "sub": Operator.SUB,
+            "pow": Operator.POW,
+            "and": Operator.AND,
+            "or": Operator.OR,
+            "not": Operator.NOT,
+        }[data]
+
+    def __repr__(self) -> str:
+        return {
+            Operator.ASSIGN: "assign",
+            Operator.EQUAL: "equal",
+            Operator.LESS_THAN: "less_than",
+            Operator.GREATER_THAN: "greater_than",
+            Operator.LESS_THAN_OR_EQUAL: "less_than_or_equal",
+            Operator.GREATER_THAN_OR_EQUAL: "greater_than_or_equal",
+            Operator.NOT_EQUAL: "not_equal",
+            Operator.MUL: "mul",
+            Operator.DIV: "div",
+            Operator.ADD: "add",
+            Operator.SUB: "sub",
+            Operator.POW: "pow",
+            Operator.AND: "and",
+            Operator.OR: "or",
+            Operator.NOT: "not",
+        }[self]
+        
+    def __str__(self) -> str:
+        return self.__repr__()
 
 @dataclass
 class BinaryExpr(Expr):

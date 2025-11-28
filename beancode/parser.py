@@ -516,13 +516,13 @@ class Parser:
             return
 
         if self.match("pow"):
-            op = self.prev()
+            op_tok = self.prev()
             right = self.pow()
 
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, "pow", right)
+            expr = BinaryExpr(op_tok.pos, expr, Operator.POW, right)
 
         return expr
 
@@ -544,14 +544,15 @@ class Parser:
                 )
 
         while self.match("mul", "div"):
-            op = self.prev()
+            op_tok = self.prev()
+            op = Operator.from_str(op_tok.kind)
 
             right = self.pow()
 
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
+            expr = BinaryExpr(op_tok.pos, expr, op, right)  # type: ignore
 
         return expr
 
@@ -562,13 +563,14 @@ class Parser:
             return
 
         while self.match("add", "sub"):
-            op = self.prev()
+            op_tok = self.prev()
+            op = Operator.from_str(op_tok.kind)
 
             right = self.factor()
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
+            expr = BinaryExpr(op_tok.pos, expr, op, right)  # type: ignore
 
         return expr
 
@@ -581,13 +583,14 @@ class Parser:
         while self.match(
             "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal"
         ):
-            op = self.prev()
+            op_tok = self.prev()
+            op = Operator.from_str(op_tok.kind)
 
             right = self.term()
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
+            expr = BinaryExpr(op_tok.pos, expr, op, right)  # type: ignore
 
         return expr
 
@@ -598,13 +601,14 @@ class Parser:
             return
 
         while self.match("equal", "not_equal"):
-            op = self.prev()
+            op_tok = self.prev()
+            op = Operator.from_str(op_tok.kind)
 
             right = self.comparison()
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
+            expr = BinaryExpr(op_tok.pos, expr, op, right)  # type: ignore
 
         return expr
 
@@ -614,14 +618,15 @@ class Parser:
             return
 
         while self.match("and", "or"):
-            op = self.prev()  # type: ignore
+            op_tok = self.prev()
+            op = Operator.from_str(op_tok.kind)  # type: ignore
 
             right = self.equality()
 
             if not right:
                 return
 
-            expr = BinaryExpr(op.pos, expr, op.kind, right)  # type: ignore
+            expr = BinaryExpr(op_tok.pos, expr, op, right)  # type: ignore
 
         return expr
 
