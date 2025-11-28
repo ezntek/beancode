@@ -864,54 +864,59 @@ class Interpreter:
         name: str,
         pos: Pos | None,
     ) -> list[BCValue]:
-        if len(args) < len(lr):
+        if lr and len(args) < len(lr):
             self.error(
                 f"expected {len(lr)} args, but got {len(args)} in call to library routine {name.upper()}",
                 pos,
             )
 
         evargs: list[BCValue] = []
-        for idx, (arg, arg_type) in enumerate(zip(args, lr)):
-            new = self.visit_expr(arg)
+        if lr:
+            for idx, (arg, arg_type) in enumerate(zip(args, lr)):
+                new = self.visit_expr(arg)
 
-            if new.is_null():
-                self.error(
-                    f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
-                    pos,
-                )
-
-            mismatch = False
-            if isinstance(arg_type, tuple):
-                if new.kind not in arg_type:
-                    mismatch = True
-            elif arg_type != new.kind:
-                mismatch = True
-
-            if mismatch:
-                err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                mismatch = False
                 if isinstance(arg_type, tuple):
-                    err_base += "either "
+                    if new.kind not in arg_type:
+                        mismatch = True
+                elif not arg_type:
+                    pass
+                elif arg_type != new.kind:
+                    mismatch = True
 
-                    for i, expected in enumerate(arg_type):
-                        if i == len(arg_type) - 1:
-                            err_base += "or "
+                if mismatch and new.is_null():
+                    self.error(
+                        f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
+                        pos,
+                    )
 
-                        err_base += prefix_string_with_article(str(expected).upper())
-                        err_base += " "
-                else:
-                    if str(new.kind)[0] in "aeiou":
-                        err_base += "a "
+                if mismatch:
+                    err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                    if isinstance(arg_type, tuple):
+                        err_base += "either "
+
+                        for i, expected in enumerate(arg_type):
+                            if i == len(arg_type) - 1:
+                                err_base += "or "
+
+                            err_base += prefix_string_with_article(str(expected).upper())
+                            err_base += " "
                     else:
-                        err_base += "an "
+                        if str(new.kind)[0] in "aeiou":
+                            err_base += "a "
+                        else:
+                            err_base += "an "
 
-                    err_base += prefix_string_with_article(str(arg_type).upper())
-                    err_base += " "
+                        err_base += prefix_string_with_article(str(arg_type).upper())
+                        err_base += " "
 
-                wanted = str(new.kind).upper()
-                err_base += f"but found {wanted}"
-                self.error(err_base, pos)
+                    wanted = str(new.kind).upper()
+                    err_base += f"but found {wanted}"
+                    self.error(err_base, pos)
 
-            evargs.append(new)
+                evargs.append(new)
+        else:
+            evargs = [self.visit_expr(e) for e in args]
 
         return evargs
 
@@ -923,36 +928,20 @@ class Interpreter:
 
         try:
             match name.lower():
+                case "format":
+                    return bean_format(stmt.pos, evargs)
+                case "typeof" | "type":
+                    return bean_typeof(stmt.pos, evargs[0])
                 case "ucase":
                     [txt, *_] = evargs
-                    return bean_ucase(txt)
+                    return bean_ucase(stmt.pos, txt)
                 case "lcase":
                     [txt, *_] = evargs
-                    return bean_ucase(txt)
+                    return bean_ucase(stmt.pos, txt)
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
-                    txt_v = txt.get_string()
-                    begin_v = begin.get_integer()
-                    length_v = length.get_integer()
-                    txt_len = len(txt_v)
-
-                    if txt_len == 0:
-                        self.error("cannot SUBSTRING an empty string!", stmt.pos)
-
-                    if (
-                        (begin_v > txt_len)
-                        or (length_v > txt_len)
-                        or (begin_v < 1)
-                        or (length_v < 1)
-                        or (begin_v + length_v - 1 > txt_len)
-                    ):
-                        self.error(
-                            f"invalid SUBSTRING from {begin_v} with length {length_v} on text with length {txt_len}!",
-                            stmt.pos,
-                        )
-
-                    return bean_substring(txt_v, begin_v, length_v)
+                    return bean_substring(stmt.pos, txt.get_string(), begin.get_integer(), length.get_integer())
                 case "div":
                     [lhs, rhs, *_] = evargs
 
@@ -967,10 +956,7 @@ class Interpreter:
                         else rhs.get_real()
                     )
 
-                    if rhs_val == 0:
-                        self.error("cannot divide by zero!", stmt.pos)
-
-                    return bean_div(lhs_val, rhs_val)
+                    return bean_div(stmt.pos, lhs_val, rhs_val)
                 case "mod":
                     [lhs, rhs, *_] = evargs
 
@@ -985,40 +971,21 @@ class Interpreter:
                         else rhs.get_real()
                     )
 
-                    if rhs_val == 0:
-                        self.error("cannot divide by zero!", stmt.pos)
-
-                    return bean_mod(lhs_val, rhs_val)
+                    return bean_mod(stmt.pos, lhs_val, rhs_val)
                 case "length":
                     [txt, *_] = evargs
-                    return bean_length(txt.get_string())
+                    return bean_length(stmt.pos, txt.get_string())
                 case "round":
                     [val_r, places, *_] = evargs
-
-                    places_v = places.get_integer()
-
-                    if places_v < 0:
-                        self.error("cannot round to negative places!", stmt.pos)
-
-                    return bean_round(val_r.get_real(), places_v)
+                    return bean_round(stmt.pos, val_r.get_real(), places.get_integer())
                 case "sqrt":
                     [val, *_] = evargs
 
-                    val_v = (
-                        val.get_integer()
-                        if val.kind == BCPrimitiveType.INTEGER
-                        else val.get_real()
-                    )
-                    if val_v < 0:
-                        self.error(
-                            "cannot calculate the square root of a negative!", stmt.pos
-                        )
-
-                    return bean_sqrt(val)
+                    return bean_sqrt(stmt.pos, val)
                 case "getchar":
-                    return bean_getchar()
+                    return bean_getchar(stmt.pos)
                 case "random":
-                    return bean_random()
+                    return bean_random(stmt.pos)
                 case "sin":
                     [val, *_] = evargs
                     return BCValue.new_real(math.sin(val.get_real()))
@@ -1051,14 +1018,14 @@ class Interpreter:
                     return BCValue.new_string(str(out))
                 case "putchar":
                     [ch, *_] = evargs
-                    bean_putchar(ch.get_char())
+                    bean_putchar(stmt.pos, ch.get_char())
                     return BCValue.new_null()
                 case "exit":
                     [code, *_] = evargs
-                    bean_exit(code.get_integer())
+                    bean_exit(stmt.pos, code.get_integer())
                 case "sleep":
                     [duration, *_] = evargs
-                    bean_sleep(duration.get_real())
+                    bean_sleep(stmt.pos, duration.get_real())
                     return BCValue.new_null()
                 case "flush":
                     sys.stdout.flush()
@@ -1090,53 +1057,9 @@ class Interpreter:
 
         return retval
 
-    def visit_typeof(self, stmt: FunctionCall) -> BCValue:
-        if len(stmt.args) > 1:
-            self.error(f"cannot get the type of more than one value!", stmt.pos)
-
-        if len(stmt.args) == 0:
-            self.error(f"insufficient arguments passed to TYPE/TYPEOF", stmt.pos)
-
-        s = str()
-        val = self.visit_expr(stmt.args[0])
-        kind = val.kind
-        s = str(kind).upper()
-        return BCValue.new_string(s)
-
-    def visit_format(self, stmt: FunctionCall) -> BCValue:
-        if len(stmt.args) == 0:
-            self.error("Not enough argument supplied to FORMAT", stmt.pos)
-
-        fmt = self.visit_expr(stmt.args[0])
-        if fmt.kind != BCPrimitiveType.STRING:
-            self.error("first argument to FORMAT must be a STRING!", stmt.pos)
-
-        items = list()
-        for idx, itm in enumerate(stmt.args[1:]):
-            val = self.visit_expr(itm)
-            if val.is_uninitialized():
-                self.error(
-                    f"{humanize_index(idx+2)} argument in format argument list is NULL/uninitialized!",
-                    stmt.pos,
-                )
-            items.append(val.val)
-        try:
-            res = fmt.get_string() % tuple(items)
-            return BCValue.new_string(res)
-        except TypeError as e:
-            pymsg = e.args[0]
-            self.error(f"format error: {pymsg}", stmt.pos)
-
     def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
-        if is_case_consistent(stmt.ident):
-            if stmt.ident.lower() == "format":
-                return self.visit_format(stmt)
-
-            if stmt.ident.lower() in LIBROUTINES:
-                return self.visit_libroutine(stmt)
-
-            if stmt.ident.lower() in {"typeof", "type"}:
-                return self.visit_typeof(stmt)
+        if is_case_consistent(stmt.ident) and stmt.ident.lower() in LIBROUTINES:
+            return self.visit_libroutine(stmt)
 
         if stmt.ident in self.variables:
             self.error(f'"{stmt.ident}" is a variable, not a function!', stmt.pos)

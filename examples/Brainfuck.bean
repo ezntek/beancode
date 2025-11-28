@@ -108,7 +108,7 @@ WHILE pc < srclen DO
         '-': cells[ptr] <- wrapdec(cells[ptr])
         '[': CALL loopbegin
         ']': CALL loopend
-        '.': CALL PUTCHAR(CHAR(cells[ptr]))
+        '.': PUTCHAR(CHAR(cells[ptr]))
         ',': cells[ptr] <- GETCHAR()
         // otherwise not enforced
     ENDCASE
