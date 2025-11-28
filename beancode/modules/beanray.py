@@ -143,7 +143,11 @@ constants = [
 procs = [
     BCProcedure(
         "InitWindow",
-        {"width": BCPrimitiveType.INTEGER, "height": BCPrimitiveType.INTEGER, "title": BCPrimitiveType.STRING},
+        {
+            "width": BCPrimitiveType.INTEGER,
+            "height": BCPrimitiveType.INTEGER,
+            "title": BCPrimitiveType.STRING,
+        },
         init_window,
     ),
     BCProcedure("CloseWindow", {}, close_window),
@@ -151,7 +155,11 @@ procs = [
     BCProcedure("BeginDrawing", {}, begin_drawing),
     BCProcedure("EndDrawing", {}, end_drawing),
     BCProcedure("ClearBackground", {"color": _COLOR_T}, clear_background),
-    BCProcedure("DrawFPS", {"x": BCPrimitiveType.INTEGER, "y": BCPrimitiveType.INTEGER}, draw_fps),
+    BCProcedure(
+        "DrawFPS",
+        {"x": BCPrimitiveType.INTEGER, "y": BCPrimitiveType.INTEGER},
+        draw_fps,
+    ),
     BCProcedure(
         "DrawRectangle",
         {

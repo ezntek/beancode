@@ -34,7 +34,7 @@ class BCPrimitiveType(Enum):
 
     def __str__(self) -> str:
         return self.__repr__()
-    
+
     def __format__(self, f) -> str:
         _ = f
         return self.__repr__().upper()
@@ -464,9 +464,10 @@ class Operator(Enum):
             Operator.OR: "or",
             Operator.NOT: "not",
         }[self]
-        
+
     def __str__(self) -> str:
         return self.__repr__()
+
 
 @dataclass
 class BinaryExpr(Expr):

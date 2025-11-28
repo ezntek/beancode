@@ -231,10 +231,7 @@ class Interpreter:
         rhs = self.visit_expr(expr.rhs)
 
         human_kind = ""
-        if expr.op in {
-            Operator.EQUAL,
-            Operator.NOT_EQUAL
-        }:
+        if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
             human_kind = "a comparison"
         elif expr.op in {
             Operator.LESS_THAN,
@@ -253,11 +250,17 @@ class Interpreter:
             human_kind = "an arithmetic expression"
 
         if lhs.is_uninitialized():
-            self.error(f"cannot have NULL in the left hand side of {human_kind}\n"+
-                          "is your value an uninitialized value/variable?", expr.lhs.pos)
+            self.error(
+                f"cannot have NULL in the left hand side of {human_kind}\n"
+                + "is your value an uninitialized value/variable?",
+                expr.lhs.pos,
+            )
         if rhs.is_uninitialized():
-            self.error(f"cannot have NULL in the right hand side of {human_kind}\n"+
-                          "is your value an uninitialized value/variable?", expr.lhs.pos)
+            self.error(
+                f"cannot have NULL in the right hand side of {human_kind}\n"
+                + "is your value an uninitialized value/variable?",
+                expr.lhs.pos,
+            )
 
         match expr.op:
             case Operator.ASSIGN:
@@ -267,16 +270,22 @@ class Interpreter:
                     return BCValue.new_boolean(True)
 
                 if lhs.kind != rhs.kind:
-                    self.error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!", expr.pos)
+                    self.error(
+                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
+                        expr.pos,
+                    )
 
                 res = lhs == rhs
                 return BCValue.new_boolean(res)
             case Operator.NOT_EQUAL:
                 if lhs.is_uninitialized() and rhs.is_uninitialized():
                     return BCValue.new_boolean(True)
-                
+
                 if lhs.kind != rhs.kind:
-                    self.error(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!", expr.pos)
+                    self.error(
+                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
+                        expr.pos,
+                    )
 
                 res = not (lhs == rhs)  # python is RIDICULOUS
                 return BCValue.new_boolean(res)
@@ -480,7 +489,8 @@ class Interpreter:
                     BCPrimitiveType.STRING,
                 }:
                     self.error(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!", expr.lhs.pos
+                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
+                        expr.lhs.pos,
                     )
 
                 if rhs.kind in {
@@ -489,7 +499,8 @@ class Interpreter:
                     BCPrimitiveType.STRING,
                 }:
                     self.error(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!", expr.rhs.pos
+                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
+                        expr.rhs.pos,
                     )
 
                 lhs_num: int | float = 0
@@ -537,7 +548,10 @@ class Interpreter:
                     res = str(lhs_str_or_char + rhs_str_or_char)
                     return BCValue.new_string(res)
 
-                if lhs.kind == BCPrimitiveType.BOOLEAN or rhs.kind == BCPrimitiveType.BOOLEAN:
+                if (
+                    lhs.kind == BCPrimitiveType.BOOLEAN
+                    or rhs.kind == BCPrimitiveType.BOOLEAN
+                ):
                     self.error("Cannot add BOOLEANs, CHARs and STRINGs!", expr.pos)
 
                 lhs_num: int | float = 0
@@ -771,7 +785,9 @@ class Interpreter:
                             if i == len(arg_type) - 1:
                                 err_base += "or "
 
-                            err_base += prefix_string_with_article(str(expected).upper())
+                            err_base += prefix_string_with_article(
+                                str(expected).upper()
+                            )
                             err_base += " "
                     else:
                         if str(new.kind)[0] in "aeiou":
@@ -816,7 +832,12 @@ class Interpreter:
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
-                    return bean_substring(stmt.pos, txt.get_string(), begin.get_integer(), length.get_integer())
+                    return bean_substring(
+                        stmt.pos,
+                        txt.get_string(),
+                        begin.get_integer(),
+                        length.get_integer(),
+                    )
                 case "div":
                     [lhs, rhs, *_] = evargs
 
@@ -1339,7 +1360,7 @@ class Interpreter:
         res = "".join(
             [
                 (
-                    self._display_array(evaled.val) # type: ignore
+                    self._display_array(evaled.val)  # type: ignore
                     if isinstance(evaled.kind, BCArrayType)
                     else str(evaled)
                 )
@@ -1826,7 +1847,7 @@ class Interpreter:
                 if a.data[first].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
 
-                a.data[first] = BCValue(val.kind, val.val) # type: ignore
+                a.data[first] = BCValue(val.kind, val.val)  # type: ignore
         elif isinstance(s.ident, Identifier):
             key = s.ident.ident
 
@@ -1834,9 +1855,7 @@ class Interpreter:
             var = self.variables.get(key)
 
             if var is None:
-                is_libroutine = (
-                    key.lower() in LIBROUTINES
-                ) and is_case_consistent(key)
+                is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
                 if key in self.functions or is_libroutine:
                     self.error(
                         f'cannot shadow existing function or procedure named "{key}"',
@@ -1850,24 +1869,21 @@ class Interpreter:
                 self.error(f"cannot assign constant {key}", s.ident.pos)
 
             if var.val.kind != exp.kind:
-                self.error(f"cannot assign {str(exp.kind).upper()} to {str(var.val.kind).upper()}", s.ident.pos)
-            
+                self.error(
+                    f"cannot assign {str(exp.kind).upper()} to {str(var.val.kind).upper()}",
+                    s.ident.pos,
+                )
+
             if isinstance(exp.kind, BCArrayType):
                 a = exp.get_array()
-                if (
-                    a.typ.is_matrix()
-                    and a.typ.bounds != var.val.get_array().typ.bounds
-                ):
+                if a.typ.is_matrix() and a.typ.bounds != var.val.get_array().typ.bounds:
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
-                elif (
-                    a.typ.is_flat()
-                    and a.typ.bounds != var.val.get_array().typ.bounds
-                ):
+                elif a.typ.is_flat() and a.typ.bounds != var.val.get_array().typ.bounds:
                     self.error(f"mismatched array sizes in array assignment", s.pos)
 
                 self.variables[key].val = copy.deepcopy(exp)
             else:
-                self.variables[key].val = BCValue(exp.kind, exp.val) 
+                self.variables[key].val = BCValue(exp.kind, exp.val)
 
         self.trace(s.pos.row)
 
@@ -1886,9 +1902,7 @@ class Interpreter:
             else:
                 self.error(f"variable or constant {key} declared!", s.pos)
 
-        is_libroutine = (
-            key.lower() in LIBROUTINES
-        ) and is_case_consistent(key)
+        is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
         if key in self.functions or is_libroutine:
             self.error(
                 f'cannot shadow existing function or procedure named "{key}"', s.pos
@@ -1983,9 +1997,7 @@ class Interpreter:
                 else:
                     self.error(f"variable or constant {key} declared!", s.pos)
 
-            is_libroutine = (
-                key.lower() in LIBROUTINES
-            ) and is_case_consistent(key)
+            is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
             if key in self.functions or is_libroutine:
                 self.error(
                     f'cannot shadow existing function or procedure named "{key}" with a variable of the same name',

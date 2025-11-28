@@ -2,6 +2,7 @@ from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
 
+
 @dataclass
 class OptimizerConfig:
     inline_constants = True
@@ -32,7 +33,9 @@ class Optimizer:
             self.config = OptimizerConfig()
 
     def _update_active_constants(self):
-        self.active_constants = self.active_constants.union(*(d.keys() for d in self.constants))
+        self.active_constants = self.active_constants.union(
+            *(d.keys() for d in self.constants)
+        )
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -179,13 +182,13 @@ class Optimizer:
 
     def visit_binaryexpr(self, expr: BinaryExpr):
         should_return = False
-        lhs = self.visit_expr(expr.lhs) # type: ignore
+        lhs = self.visit_expr(expr.lhs)  # type: ignore
         if not lhs:
             should_return = True
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
 
-        rhs = self.visit_expr(expr.rhs) # type: ignore
+        rhs = self.visit_expr(expr.rhs)  # type: ignore
         if not rhs:
             should_return = True
         else:
@@ -193,15 +196,12 @@ class Optimizer:
 
         if should_return:
             return
-    
+
         lhs: BCValue
         rhs: BCValue
 
         human_kind = ""
-        if expr.op in {
-            Operator.EQUAL,
-            Operator.NOT_EQUAL
-        }:
+        if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
             human_kind = "a comparison"
         elif expr.op in {
             Operator.LESS_THAN,
@@ -220,11 +220,17 @@ class Optimizer:
             human_kind = "an arithmetic expression"
 
         if lhs.is_uninitialized():
-            raise BCError(f"cannot have NULL in the left hand side of {human_kind}\n"+
-                          "is your value an uninitialized value/variable?", expr.lhs.pos)
+            raise BCError(
+                f"cannot have NULL in the left hand side of {human_kind}\n"
+                + "is your value an uninitialized value/variable?",
+                expr.lhs.pos,
+            )
         if rhs.is_uninitialized():
-            raise BCError(f"cannot have NULL in the right hand side of {human_kind}\n"+
-                          "is your value an uninitialized value/variable?", expr.lhs.pos)
+            raise BCError(
+                f"cannot have NULL in the right hand side of {human_kind}\n"
+                + "is your value an uninitialized value/variable?",
+                expr.lhs.pos,
+            )
 
         match expr.op:
             case Operator.ASSIGN:
@@ -234,16 +240,22 @@ class Optimizer:
                     return BCValue.new_boolean(True)
 
                 if lhs.kind != rhs.kind:
-                    raise BCError(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!", expr.pos)
+                    raise BCError(
+                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
+                        expr.pos,
+                    )
 
                 res = lhs == rhs
                 return BCValue.new_boolean(res)
             case Operator.NOT_EQUAL:
                 if lhs.is_uninitialized() and rhs.is_uninitialized():
                     return BCValue.new_boolean(True)
-                
+
                 if lhs.kind != rhs.kind:
-                    raise BCError(f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!", expr.pos)
+                    raise BCError(
+                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
+                        expr.pos,
+                    )
 
                 res = not (lhs == rhs)  # python is RIDICULOUS
                 return BCValue.new_boolean(res)
@@ -447,7 +459,8 @@ class Optimizer:
                     BCPrimitiveType.STRING,
                 }:
                     raise BCError(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!", expr.lhs.pos
+                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
+                        expr.lhs.pos,
                     )
 
                 if rhs.kind in {
@@ -456,7 +469,8 @@ class Optimizer:
                     BCPrimitiveType.STRING,
                 }:
                     raise BCError(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!", expr.rhs.pos
+                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
+                        expr.rhs.pos,
                     )
 
                 lhs_num: int | float = 0
@@ -504,7 +518,10 @@ class Optimizer:
                     res = str(lhs_str_or_char + rhs_str_or_char)
                     return BCValue.new_string(res)
 
-                if lhs.kind == BCPrimitiveType.BOOLEAN or rhs.kind == BCPrimitiveType.BOOLEAN:
+                if (
+                    lhs.kind == BCPrimitiveType.BOOLEAN
+                    or rhs.kind == BCPrimitiveType.BOOLEAN
+                ):
                     raise BCError("Cannot add BOOLEANs, CHARs and STRINGs!", expr.pos)
 
                 lhs_num: int | float = 0
@@ -645,7 +662,9 @@ class Optimizer:
                             if i == len(arg_type) - 1:
                                 err_base += "or "
 
-                            err_base += prefix_string_with_article(str(expected).upper())
+                            err_base += prefix_string_with_article(
+                                str(expected).upper()
+                            )
                             err_base += " "
                     else:
                         if str(new.kind)[0] in "aeiou":
@@ -682,9 +701,9 @@ class Optimizer:
         try:
             match name.lower():
                 case "initarray":
-                    return None # runtime only
+                    return None  # runtime only
                 case "format":
-                    return None # runtime only
+                    return None  # runtime only
                 case "typeof" | "type":
                     return bean_typeof(stmt.pos, evargs[0])
                 case "ucase":
@@ -696,7 +715,12 @@ class Optimizer:
                 case "substring":
                     [txt, begin, length, *_] = evargs
 
-                    return bean_substring(stmt.pos, txt.get_string(), begin.get_integer(), length.get_integer())
+                    return bean_substring(
+                        stmt.pos,
+                        txt.get_string(),
+                        begin.get_integer(),
+                        length.get_integer(),
+                    )
                 case "div":
                     [lhs, rhs, *_] = evargs
 
@@ -737,9 +761,9 @@ class Optimizer:
                     [val, *_] = evargs
                     return bean_sqrt(stmt.pos, val)
                 case "getchar":
-                    return None # runtime only
+                    return None  # runtime only
                 case "random":
-                    return None # runtime only
+                    return None  # runtime only
                 case "sin":
                     [val, *_] = evargs
                     return BCValue.new_real(math.sin(val.get_real()))
@@ -750,17 +774,17 @@ class Optimizer:
                     [val, *_] = evargs
                     return BCValue.new_real(math.tan(val.get_real()))
                 case "help":
-                    return None # runtime only
+                    return None  # runtime only
                 case "execute":
-                    return None # runtime only
+                    return None  # runtime only
                 case "putchar":
-                    return None # runtime only
+                    return None  # runtime only
                 case "exit":
-                    return None # runtime only
+                    return None  # runtime only
                 case "sleep":
-                    return None # runtime only
+                    return None  # runtime only
                 case "flush":
-                    return None # runtime only
+                    return None  # runtime only
         except BCError as e:
             e.pos = stmt.pos
             raise e

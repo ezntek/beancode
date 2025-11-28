@@ -20,14 +20,8 @@ _NUMERIC = (BCPrimitiveType.INTEGER, BCPrimitiveType.REAL)
 LIBROUTINES: Libroutines = {
     "ucase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
     "lcase": [(BCPrimitiveType.STRING, BCPrimitiveType.CHAR)],
-    "div": [
-        _NUMERIC,
-        _NUMERIC
-    ],
-    "mod": [
-        _NUMERIC,
-        _NUMERIC
-    ],
+    "div": [_NUMERIC, _NUMERIC],
+    "mod": [_NUMERIC, _NUMERIC],
     "substring": [
         BCPrimitiveType.STRING,
         BCPrimitiveType.INTEGER,
@@ -87,7 +81,6 @@ def bean_substring(pos: Pos, txt: str, begin: int, length: int) -> BCValue:
             f"invalid SUBSTRING from {begin} with length {length} on text with length {txt_len}!",
             pos,
         )
-
 
     begin = begin - 1
     s = txt[begin : begin + length]
@@ -152,18 +145,14 @@ def bean_sqrt(pos: Pos, val: BCValue) -> BCValue:  # type: ignore
         num = val.get_integer()
 
         if num < 0:
-            raise BCError(
-                "cannot calculate the square root of a negative!", pos
-            )
+            raise BCError("cannot calculate the square root of a negative!", pos)
 
         return BCValue.new_real(math.sqrt(num))
     elif val.kind == BCPrimitiveType.REAL:
         num = val.get_real()
-        
+
         if num < 0:
-            raise BCError(
-                "cannot calculate the square root of a negative!", pos
-            )
+            raise BCError("cannot calculate the square root of a negative!", pos)
 
         return BCValue.new_real(math.sqrt(num))
 
@@ -176,6 +165,7 @@ def bean_random(pos: Pos) -> BCValue:
 def bean_sleep(pos: Pos, duration: float):
     _ = pos
     time.sleep(duration)
+
 
 def bean_typeof(pos: Pos, val: BCValue) -> BCValue:
     _ = pos
@@ -211,18 +201,24 @@ def bean_format(pos: Pos, args: list[BCValue]) -> BCValue:
         pymsg = e.args[0]
         raise BCError(f"format error: {pymsg}", pos)
 
+
 def bean_initarray(pos: Pos, args: list[BCValue]):
     if len(args) != 2:
         raise BCError("expected 2 arguments to INITARRAY", pos)
 
     if not isinstance(args[0].kind, BCArrayType):
-        raise BCError("first argument supplied to INITARRAY must be an array or a 2D array!", pos)
+        raise BCError(
+            "first argument supplied to INITARRAY must be an array or a 2D array!", pos
+        )
 
     arr = args[0].get_array()
     val = args[1]
-    
+
     if arr.typ.inner != val.kind:
-        raise BCError(f"expected value of type {str(arr.typ.inner).upper()} to INITARRAY, but found {str(args[1].kind).upper()}", pos)
+        raise BCError(
+            f"expected value of type {str(arr.typ.inner).upper()} to INITARRAY, but found {str(args[1].kind).upper()}",
+            pos,
+        )
 
     if arr.is_flat():
         for item in arr.get_flat():

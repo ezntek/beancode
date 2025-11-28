@@ -51,7 +51,9 @@ procs = [
     BCProcedure("WriteLnErr", {"s": BCPrimitiveType.STRING}, _writeln_err),
 ]
 funcs = [
-    BCFunction("GetEnv", {"s": BCPrimitiveType.STRING}, BCPrimitiveType.STRING, _get_env),
+    BCFunction(
+        "GetEnv", {"s": BCPrimitiveType.STRING}, BCPrimitiveType.STRING, _get_env
+    ),
 ]
 
 EXPORTS: Exports = {
