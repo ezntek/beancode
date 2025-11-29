@@ -504,24 +504,10 @@ class Interpreter:
             case Operator.ADD:
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     # concatenate instead
-                    lhs_str_or_char: str = str()
-                    rhs_str_or_char: str = str()
+                    lhs_str_or_char: str = str(lhs)
+                    rhs_str_or_char: str = str(rhs)
 
-                    if lhs.kind == BCPrimitiveType.STRING:
-                        lhs_str_or_char = lhs.get_string()
-                    elif lhs.kind == BCPrimitiveType.CHAR:
-                        lhs_str_or_char = lhs.get_char()
-                    else:
-                        lhs_str_or_char = str(lhs)
-
-                    if rhs.kind == BCPrimitiveType.STRING:
-                        rhs_str_or_char = rhs.get_string()
-                    elif rhs.kind == BCPrimitiveType.CHAR:
-                        rhs_str_or_char = rhs.get_char()
-                    else:
-                        rhs_str_or_char = str(rhs)
-
-                    res = str(lhs_str_or_char + rhs_str_or_char)
+                    res = lhs_str_or_char + rhs_str_or_char
                     return BCValue(BCPrimitiveType.STRING, res)
 
                 if (
