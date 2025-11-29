@@ -1,6 +1,6 @@
 import typing
 
-from enum import Enum
+from enum import IntEnum
 from typing import IO, Any, Callable
 from io import StringIO
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ class Expr:
     pos: Pos
 
 
-class BCPrimitiveType(Enum):
+class BCPrimitiveType(IntEnum):
     INTEGER = 0
     REAL = 1
     CHAR = 2
@@ -396,6 +396,7 @@ class Grouping(Expr):
 @dataclass
 class Identifier(Expr):
     ident: str
+    libroutine: bool = False
 
 
 @dataclass
@@ -409,22 +410,22 @@ class ArrayLiteral(Expr):
     items: list[Expr]
 
 
-class Operator(Enum):
-    ASSIGN = (0,)
-    EQUAL = (1,)
-    LESS_THAN = (2,)
-    GREATER_THAN = (3,)
-    LESS_THAN_OR_EQUAL = (4,)
-    GREATER_THAN_OR_EQUAL = (5,)
-    NOT_EQUAL = (6,)
-    MUL = (7,)
-    DIV = (8,)
-    ADD = (9,)
-    SUB = (10,)
-    POW = (11,)
-    AND = (12,)
-    OR = (13,)
-    NOT = (14,)
+class Operator(IntEnum):
+    ASSIGN = 0
+    EQUAL = 1
+    LESS_THAN = 2
+    GREATER_THAN = 3
+    LESS_THAN_OR_EQUAL = 4
+    GREATER_THAN_OR_EQUAL = 5
+    NOT_EQUAL = 6
+    MUL = 7
+    DIV = 8
+    ADD = 9
+    SUB = 10
+    POW = 11
+    AND = 12
+    OR = 13
+    NOT = 14
 
     @classmethod
     def from_str(cls, data: str) -> "Operator":
@@ -495,12 +496,14 @@ class Statement:
 class CallStatement(Statement):
     ident: str
     args: list[Expr]
+    libroutine: bool = False
 
 
 @dataclass
 class FunctionCall(Expr):
     ident: str
     args: list[Expr]
+    libroutine: bool = False
 
 
 @dataclass

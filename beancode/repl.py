@@ -2,9 +2,6 @@ import sys
 import os
 
 from typing import Any
-from io import StringIO
-
-from beancode.optimizer import Optimizer
 
 from . import bean_ast as ast
 from . import lexer
@@ -14,12 +11,13 @@ from . import bean_ffi as ffi
 from . import __version__
 from .error import *
 
-from enum import Enum
+from enum import IntEnum
 
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
 \033[2mUsing Python {sys.version}\033[0m
-type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
-"""
+type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code."""
+
+PROMPT = "\001\033[1m\002>> \001\033[0m\002"
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .var [names]          get info regarding a declared variable/constant
@@ -65,17 +63,17 @@ def setup_readline():
         warn("could not import readline, continuing without shell history")
 
 
-class DotCommandResult(Enum):
-    NO_OP = (0,)
-    BREAK = (1,)
-    UNKNOWN_COMMAND = (2,)
-    RESET = (3,)
+class DotCommandResult(IntEnum):
+    NO_OP = 0
+    BREAK = 1
+    UNKNOWN_COMMAND = 2
+    RESET = 3
 
 
-class ContinuationResult(Enum):
-    BREAK = (0,)
-    ERROR = (1,)
-    SUCCESS = (2,)
+class ContinuationResult(IntEnum):
+    BREAK = 0
+    ERROR = 1
+    SUCCESS = 2
 
 
 class Repl:
@@ -404,7 +402,7 @@ class Repl:
 
     def repl(self):
         setup_readline()
-        print(BANNER, end=str())
+        print(BANNER, end="\n")
 
         inp = str()
         while True:
@@ -415,7 +413,7 @@ class Repl:
             self.buf.clear()
 
             try:
-                inp = input("\033[0;1m>> \033[0m")
+                inp = input(PROMPT)
             except KeyboardInterrupt:
                 print()
                 warn('type ".exit" or ".quit" to exit the REPL.')

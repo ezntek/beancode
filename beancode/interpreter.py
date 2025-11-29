@@ -698,9 +698,10 @@ class Interpreter:
         if index is None:
             self.error("Found (null) for array index", ind.idx_outer.pos)
 
+        # TODO: warn if indexing library routine
         temp = self.variables.get(ind.ident.ident)
         if temp is None:
-            self.error(f'Array "{ind.ident.ident}" not found for indexing', ind.pos)
+            self.error(f'array "{ind.ident.ident}" not found for indexing', ind.pos)
         v = temp.val
 
         if isinstance(v.kind, BCArrayType):
@@ -823,13 +824,12 @@ class Interpreter:
         return evargs
 
     def visit_libroutine(self, stmt: FunctionCall) -> BCValue:  # type: ignore
-        name = stmt.ident.lower()
-        lr = LIBROUTINES[name.lower()]
-
+        name = stmt.ident
+        lr = LIBROUTINES[name]
         evargs = self._eval_libroutine_args(stmt.args, lr, name, stmt.pos)
 
         try:
-            match name.lower():
+            match name:
                 case "initarray":
                     bean_initarray(stmt.pos, evargs)
                     return BCValue.new_null()
@@ -967,7 +967,7 @@ class Interpreter:
         return retval
 
     def visit_fncall(self, stmt: FunctionCall, tracer: Tracer | None = None) -> BCValue:
-        if is_case_consistent(stmt.ident) and stmt.ident.lower() in LIBROUTINES:
+        if stmt.libroutine:
             return self.visit_libroutine(stmt)
 
         if stmt.ident in self.variables:
@@ -1038,16 +1038,16 @@ class Interpreter:
         if stmt.ident in self.variables:
             self.error(f'"{stmt.ident}" is a variable, not a procedure!', stmt.pos)
 
+        if stmt.libroutine:
+            self.error(
+                f"{stmt.ident} is a library routine\nplease remove the CALL!",
+                stmt.pos,
+            )
+
         try:
             proc = self.functions[stmt.ident]
         except KeyError:
-            if stmt.ident.lower() in LIBROUTINES and is_case_consistent(stmt.ident):
-                self.error(
-                    f"{stmt.ident} is a library routine\nplease remove the CALL!",
-                    stmt.pos,
-                )
-            else:
-                self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
+            self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
         if isinstance(proc, FunctionStatement):
             self.error(
@@ -1265,6 +1265,12 @@ class Interpreter:
         return BCValue.new_array(BCArray.new_flat(t, vals))
 
     def visit_identifier(self, expr: Identifier) -> BCValue:
+        if expr.libroutine:
+            self.error(
+                f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
+                expr.pos,
+            )
+
         if expr.ident in self.functions:
             f = self.functions[expr.ident]
             if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
@@ -1277,12 +1283,6 @@ class Interpreter:
                     f'undeclared variable "{expr.ident}" is a function!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
                     expr.pos,
                 )
-
-        if is_case_consistent(expr.ident) and expr.ident in LIBROUTINES:
-            self.error(
-                f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
-                expr.pos,
-            )
 
         try:
             var = self.variables[expr.ident]
@@ -1859,12 +1859,14 @@ class Interpreter:
         elif isinstance(s.ident, Identifier):
             key = s.ident.ident
 
+            if s.ident.libroutine:
+                self.error(f'cannot shadow library routine named "{key}"')
+
             exp = self.visit_expr(s.value)
             var = self.variables.get(key)
 
             if var is None:
-                is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
-                if key in self.functions or is_libroutine:
+                if key in self.functions:
                     self.error(
                         f'cannot shadow existing function or procedure named "{key}"',
                         s.pos,
@@ -1910,8 +1912,12 @@ class Interpreter:
             else:
                 self.error(f"variable or constant {key} declared!", s.pos)
 
-        is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
-        if key in self.functions or is_libroutine:
+        if s.ident.libroutine:
+            self.error(
+                f'cannot shadow library routine named "{key}"!', s.pos
+            )
+
+        if key in self.functions:
             self.error(
                 f'cannot shadow existing function or procedure named "{key}"', s.pos
             )
@@ -2005,8 +2011,10 @@ class Interpreter:
                 else:
                     self.error(f"variable or constant {key} declared!", s.pos)
 
-            is_libroutine = (key.lower() in LIBROUTINES) and is_case_consistent(key)
-            if key in self.functions or is_libroutine:
+            if ident.libroutine:
+                self.error(f'cannot shadow existing library routine "{key}" with a variable of the same name', s.pos)
+
+            if key in self.functions:
                 self.error(
                     f'cannot shadow existing function or procedure named "{key}" with a variable of the same name',
                     s.pos,

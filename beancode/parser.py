@@ -1,5 +1,7 @@
 import copy
 
+from beancode.libroutines import LIBROUTINES
+
 from . import *
 from .lexer import *
 from .bean_ast import *
@@ -362,9 +364,12 @@ class Parser:
         else:
             return BCPrimitiveType.from_string(adv.data)  # type: ignore
 
-    def ident(self) -> Identifier:
+    def ident(self, function=False) -> Identifier:
         c = self.consume_and_expect("ident")
-        return Identifier(c.pos, c.data)  # type: ignore
+        libroutine = False
+        if not function and is_case_consistent(c.data) and c.data in LIBROUTINES: # type: ignore
+            libroutine = True 
+        return Identifier(c.pos, c.data, libroutine=libroutine)  # type: ignore
 
     def expect_ident(self, ctx=str()) -> Identifier:
         c = self.consume_and_expect("ident", ctx)
@@ -437,8 +442,14 @@ class Parser:
             elif comma.kind == "comma":
                 self.consume()
 
+        dat = str(ident.data)
+        libroutine = False
+        if is_case_consistent(dat) and dat.lower() in LIBROUTINES:
+            dat = dat.lower()
+            libroutine = True
+
         self.consume_and_expect("right_paren", "after argument list in function call")
-        return FunctionCall(leftb.pos, ident=str(ident.data), args=args)
+        return FunctionCall(leftb.pos, ident=dat, args=args, libroutine=libroutine)
 
     def typecast(self) -> Typecast | None:
         typ = self.consume_and_expect("type", "for typecast")
@@ -725,7 +736,11 @@ class Parser:
 
         self.consume_newlines()
 
-        return CallStatement(begin.pos, ident=ident.ident, args=args)
+        libroutine = False
+        if is_case_consistent(ident.ident) and ident.ident.lower() in LIBROUTINES:
+            libroutine = True
+
+        return CallStatement(begin.pos, ident=ident.ident, args=args, libroutine=libroutine)
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
