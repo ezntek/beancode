@@ -1,3 +1,5 @@
+import gc
+
 from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
@@ -142,7 +144,7 @@ class Optimizer:
         return BCValue.new_boolean(b)
 
     def visit_typecast(self, tc: Typecast) -> BCValue | None:
-        inner = self.visit_expr(tc.expr)
+        inner = self.fold_expr(tc.expr)
 
         if not inner:
             return
@@ -175,20 +177,20 @@ class Optimizer:
 
     def visit_array_literal(self, expr: ArrayLiteral):
         for i in range(len(expr.items)):
-            opt = self.visit_expr(expr.items[i])
+            opt = self.fold_expr(expr.items[i])
             if not opt:
                 continue
             expr.items[i] = Literal(expr.items[i].pos, opt)
 
     def visit_binaryexpr(self, expr: BinaryExpr):
         should_return = False
-        lhs = self.visit_expr(expr.lhs)  # type: ignore
+        lhs = self.fold_expr(expr.lhs)  # type: ignore
         if not lhs:
             should_return = True
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
 
-        rhs = self.visit_expr(expr.rhs)  # type: ignore
+        rhs = self.fold_expr(expr.rhs)  # type: ignore
         if not rhs:
             should_return = True
         else:
@@ -634,7 +636,7 @@ class Optimizer:
         evargs: list[BCValue] = []
         if lr:
             for idx, (arg, arg_type) in enumerate(zip(args, lr)):
-                new = self.visit_expr(arg)
+                new = self.fold_expr(arg)
                 if not new:
                     return
 
@@ -683,7 +685,7 @@ class Optimizer:
         else:
             evargs = list()
             for e in args:
-                evaled = self.visit_expr(e)
+                evaled = self.fold_expr(e)
                 if not evaled:
                     return
                 evargs.append(evaled)
@@ -794,18 +796,18 @@ class Optimizer:
             return self.visit_libroutine(expr)
         
         for i, itm in enumerate(expr.args):
-            val = self.visit_expr(itm)
+            val = self.fold_expr(itm)
             if val:
                 expr.args[i] = Literal(itm.pos, val)
 
-    def visit_expr(self, expr: Expr) -> BCValue | None:
+    def fold_expr(self, expr: Expr) -> BCValue | None:
         match expr:
             case Typecast():
                 return self.visit_typecast(expr)
             case Grouping():
-                return self.visit_expr(expr.inner)
+                return self.fold_expr(expr.inner)
             case Negation():
-                inner = self.visit_expr(expr.inner)
+                inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
 
@@ -814,7 +816,7 @@ class Optimizer:
                 elif inner.kind == BCPrimitiveType.REAL:
                     return BCValue.new_real(-inner.get_real())  # type: ignore
             case Not():
-                inner = self.visit_expr(expr.inner)
+                inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
 
@@ -841,63 +843,98 @@ class Optimizer:
             "whoops something is very wrong. this is a rare error, please report it to the developers."
         )
 
+    def fold_expr_if_possible(self, expr: Expr) -> Expr:
+        res = self.fold_expr(expr)
+        if res:
+            return Literal(expr.pos, res)
+        else:
+            return expr
+
+    def visit_expr(self, expr: Expr) -> Expr:
+        default = self.fold_expr_if_possible(expr)
+        if isinstance(default, Literal):
+            return default # always favor static folding
+
+        match expr:
+            case Typecast():
+                expr.expr = self.visit_expr(expr.expr)
+            case Grouping():
+                expr.inner = self.visit_expr(expr.inner)
+            case Negation():
+                expr.inner = self.visit_expr(expr.inner)
+            case Not():
+                expr.inner = self.visit_expr(expr.inner)
+            case Identifier():
+                pass # nothing inside to optimize
+            case Literal():
+                pass # unreachable
+            case ArrayLiteral():
+                for i, itm in enumerate(expr.items):
+                    expr.items[i] = self.visit_expr(itm)
+            case BinaryExpr():
+                expr.lhs = self.visit_expr(expr.lhs)
+                expr.rhs = self.visit_expr(expr.rhs)
+            case ArrayIndex():
+                expr.idx_outer = self.visit_expr(expr.idx_outer)
+                if expr.idx_inner:
+                    expr.idx_inner = self.visit_expr(expr.idx_inner)
+            case FunctionCall():
+                if not expr.libroutine:
+                    return default 
+
+                if expr.ident in {"div", "mod"}:
+                    if len(expr.args) != 2:
+                        return default 
+
+                    lhs = self.visit_expr(expr.args[0])
+                    rhs = self.visit_expr(expr.args[1])
+                    op = Operator.FLOOR_DIV if expr.ident == "div" else Operator.MOD
+                    return BinaryExpr(expr.pos, lhs, op, rhs)
+                elif expr.ident == "sqrt":
+                    if len(expr.args) != 1:
+                        return default
+
+                    arg = self.visit_expr(expr.args[0])
+                    return Sqrt(expr.pos, arg)
+
+        return default 
+
     def visit_if_stmt(self, stmt: IfStatement):
-        cond = self.visit_expr(stmt.cond)
-        if cond:
-            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.cond = self.visit_expr(stmt.cond)
         stmt.if_block = self.visit_block(stmt.if_block)
         stmt.else_block = self.visit_block(stmt.else_block)
 
     def visit_caseof_stmt(self, stmt: CaseofStatement):
         for b in stmt.branches:
-            val = self.visit_expr(b.expr)
-            if val:
-                b.expr = Literal(b.expr.pos, val)
+            b.expr = self.visit_expr(b.expr)
             self.visit_stmt(b.stmt)
 
     def visit_for_stmt(self, stmt: ForStatement):
-        begin = self.visit_expr(stmt.begin)
-        if begin:
-            stmt.begin = Literal(stmt.begin.pos, begin)
-
-        end = self.visit_expr(stmt.end)
-        if end:
-            stmt.end = Literal(stmt.end.pos, end)
-
+        stmt.begin = self.visit_expr(stmt.begin)
+        stmt.end = self.visit_expr(stmt.end)
         if stmt.step:
-            step = self.visit_expr(stmt.step)
-            if step:
-                stmt.step = Literal(stmt.step.pos, step)
+            stmt.step = self.visit_expr(stmt.step)
 
         stmt.block = self.visit_block(stmt.block)
 
     def visit_while_stmt(self, stmt: WhileStatement):
-        cond = self.visit_expr(stmt.cond)
-        if cond:
-            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.cond = self.visit_expr(stmt.cond)
         stmt.block = self.visit_block(stmt.block)
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
-        cond = self.visit_expr(stmt.cond)
-        if cond:
-            stmt.cond = Literal(stmt.cond.pos, cond)
+        stmt.cond = self.visit_expr(stmt.cond)
         stmt.block = self.visit_block(stmt.block)
 
     def visit_output_stmt(self, stmt: OutputStatement):
         for i, itm in enumerate(stmt.items):
-            val = self.visit_expr(itm)
-            if val:
-                stmt.items[i] = Literal(itm.pos, val)
+            stmt.items[i] = self.visit_expr(itm)
 
     def visit_input_stmt(self, stmt: InputStatement):
         _ = stmt
 
     def visit_return_stmt(self, stmt: ReturnStatement):
         if stmt.expr:
-            expr = self.visit_expr(stmt.expr)
-            if expr:
-                stmt.expr = Literal(stmt.expr.pos, expr)
-            pass
+            stmt.expr = self.visit_expr(stmt.expr)
 
     def visit_procedure(self, stmt: ProcedureStatement):
         stmt.block = self.visit_block(stmt.block)
@@ -913,18 +950,16 @@ class Optimizer:
 
     def visit_call(self, stmt: CallStatement):
         for i, itm in enumerate(stmt.args):
-            val = self.visit_expr(itm)
-            if val:
-                stmt.args[i] = Literal(itm.pos, val)
+            stmt.args[i] = self.visit_expr(itm)
 
     def visit_assign_stmt(self, stmt: AssignStatement):
-        val = self.visit_expr(stmt.value)
-        if val:
-            stmt.value = Literal(stmt.value.pos, val)
+        stmt.value = self.visit_expr(stmt.value)
 
     def visit_constant_stmt(self, stmt: ConstantStatement):
-        val = self.visit_expr(stmt.value)
+        val = self.fold_expr(stmt.value)
         if not val:
+            # try optimizing the expr instead
+            stmt.value = self.visit_expr(stmt.value)
             return
         self.constants[-1][stmt.ident.ident] = val
         self._update_active_constants()
@@ -938,41 +973,27 @@ class Optimizer:
 
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
         if isinstance(stmt.file_ident, Expr):
-            res = self.visit_expr(stmt.file_ident)
-            if res:
-                stmt.file_ident = Literal(stmt.file_ident.pos, res)
+            stmt.file_ident = self.visit_expr(stmt.file_ident)
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
         if isinstance(stmt.file_ident, Expr):
-            res = self.visit_expr(stmt.file_ident)
-            if res:
-                stmt.file_ident = Literal(stmt.file_ident.pos, res)
+            stmt.file_ident = self.visit_expr(stmt.file_ident)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
         if isinstance(stmt.file_ident, Expr):
-            res = self.visit_expr(stmt.file_ident)
-            if res:
-                stmt.file_ident = Literal(stmt.file_ident.pos, res)
-                
-        val = self.visit_expr(stmt.src)
-        if val:
-            stmt.src = Literal(stmt.src.pos, val)
+            stmt.file_ident = self.visit_expr(stmt.file_ident)
+        
+        stmt.src = self.visit_expr(stmt.src)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):
         if isinstance(stmt.file_ident, Expr):
-            res = self.visit_expr(stmt.file_ident)
-            if res:
-                stmt.file_ident = Literal(stmt.file_ident.pos, res)
+            stmt.file_ident = self.visit_expr(stmt.file_ident)
 
-        val = self.visit_expr(stmt.src)
-        if val:
-            stmt.src = Literal(stmt.src.pos, val)
+        stmt.src = self.visit_expr(stmt.src)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         if isinstance(stmt.file_ident, Expr):
-            res = self.visit_expr(stmt.file_ident)
-            if res:
-                stmt.file_ident = Literal(stmt.file_ident.pos, res)
+            stmt.file_ident = self.visit_expr(stmt.file_ident)
 
     def visit_stmt(self, stmt: Statement):
         match stmt:
@@ -1021,9 +1042,7 @@ class Optimizer:
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
-                val = self.visit_expr(stmt.inner)
-                if val:
-                    stmt.inner = Literal(stmt.pos, val)
+                stmt.inner = self.visit_expr(stmt.inner)
 
     def visit_program(self, program: Program):
         self.visit_block(program.stmts)
@@ -1042,4 +1061,5 @@ class Optimizer:
         self._update_active_constants()
         res = [itm for i, itm in enumerate(blk) if i not in self.unwanted_items[-1]]
         self.unwanted_items.pop()
+        gc.collect()
         return res

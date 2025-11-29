@@ -394,6 +394,12 @@ class Not(Expr):
 class Grouping(Expr):
     inner: Expr
 
+# !!! INTERNAL USE ONLY !!!
+# This is for the purposes of optimization. Library routine calls
+# are typed by default, and they are SLOW!
+@dataclass
+class Sqrt(Expr):
+    inner: Expr
 
 @dataclass
 class Identifier(Expr):
@@ -429,6 +435,12 @@ class Operator(IntEnum):
     OR = 13
     NOT = 14
 
+    # !!! INTERNAL USE ONLY !!!
+    # This is for the purposes of optimization. Library routine calls
+    # are typed by default, and they are SLOW!
+    FLOOR_DIV = 15
+    MOD = 16
+
     @classmethod
     def from_str(cls, data: str) -> "Operator":
         return {
@@ -447,6 +459,8 @@ class Operator(IntEnum):
             "and": Operator.AND,
             "or": Operator.OR,
             "not": Operator.NOT,
+            "floor_div": Operator.FLOOR_DIV,
+            "mod": Operator.MOD,
         }[data]
 
     def __repr__(self) -> str:
@@ -466,6 +480,8 @@ class Operator(IntEnum):
             Operator.AND: "and",
             Operator.OR: "or",
             Operator.NOT: "not",
+            Operator.FLOOR_DIV: "floor_div",
+            Operator.MOD: "mod",
         }[self]
 
     def __str__(self) -> str:
