@@ -452,10 +452,7 @@ class Interpreter:
 
                 res = lhs_num**rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue.new_integer(res) if type(res) is int else BCValue.new_real(res)
             case Operator.MUL:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -492,10 +489,7 @@ class Interpreter:
 
                 res = lhs_num * rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue.new_integer(res) if type(res) is int else BCValue.new_real(res)
             case Operator.DIV:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -535,10 +529,7 @@ class Interpreter:
 
                 res = lhs_num / rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue.new_integer(res) if type(res) is int else BCValue.new_real(res)
             case Operator.ADD:
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     # concatenate instead
@@ -583,10 +574,7 @@ class Interpreter:
 
                 res = lhs_num + rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue.new_integer(res) if type(res) is int else BCValue.new_real(res)
             case Operator.SUB:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -617,10 +605,7 @@ class Interpreter:
 
                 res = lhs_num - rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue.new_integer(res) if type(res) is int else BCValue.new_real(res)
             case Operator.AND:
                 if lhs.kind != BCPrimitiveType.BOOLEAN:
                     self.error(
@@ -667,7 +652,7 @@ class Interpreter:
 
         v = self.variables[ind.ident.ident].val
 
-        if isinstance(v.kind, BCArrayType):
+        if v.is_array:
             a: BCArray = v.val  # type: ignore
 
             if a.typ.is_matrix():
@@ -704,7 +689,7 @@ class Interpreter:
             self.error(f'array "{ind.ident.ident}" not found for indexing', ind.pos)
         v = temp.val
 
-        if isinstance(v.kind, BCArrayType):
+        if v.is_array:
             a = v.get_array()
 
             tup = self._get_array_index(ind)
@@ -1092,7 +1077,7 @@ class Interpreter:
         _ = pos  # shut up the type checker
         s = ""
 
-        if isinstance(inner.kind, BCArrayType):
+        if inner.is_array:
             arr = inner.get_array()
             s = self._display_array(arr)
         else:
@@ -1199,7 +1184,7 @@ class Interpreter:
         if inner.kind == BCPrimitiveType.NULL:
             self.error("cannot cast NULL to anything!", tc.pos)
 
-        if isinstance(inner.kind, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
+        if inner.is_array and tc.typ != BCPrimitiveType.STRING:
             self.error(f"cannot cast an array to a {tc.typ}", tc.pos)
 
         match tc.typ:
@@ -1271,22 +1256,21 @@ class Interpreter:
                 expr.pos,
             )
 
-        if expr.ident in self.functions:
-            f = self.functions[expr.ident]
-            if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
-                self.error(
-                    f'undeclared variable "{expr.ident}" is a function!\nplease call it with an argument list: {expr.ident}(args...)',
-                    expr.pos,
-                )
-            else:
-                self.error(
-                    f'undeclared variable "{expr.ident}" is a function!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
-                    expr.pos,
-                )
-
         try:
             var = self.variables[expr.ident]
         except KeyError:
+            if expr.ident in self.functions:
+                f = self.functions[expr.ident]
+                if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
+                    self.error(
+                        f'undeclared variable "{expr.ident}" is a function!\nplease call it with an argument list: {expr.ident}(args...)',
+                        expr.pos,
+                    )
+                else:
+                    self.error(
+                        f'undeclared variable "{expr.ident}" is a procedure!\nplease call it with the CALL keyword: CALL {expr.ident}(args...)',
+                        expr.pos,
+                    )
             self.error(f'cannot access undeclared variable "{expr.ident}"', expr.pos)
 
         return var.val
@@ -1379,7 +1363,7 @@ class Interpreter:
             [
                 (
                     self._display_array(evaled.val)  # type: ignore
-                    if isinstance(evaled.kind, BCArrayType)
+                    if evaled.is_array
                     else str(evaled)
                 )
                 for evaled in map(self.visit_expr, stmt.items)
@@ -1439,7 +1423,7 @@ class Interpreter:
             if data.const:
                 self.error(f'cannot call "INPUT" into constant {id}', s.ident.pos)
 
-            if isinstance(data.val.kind, BCArrayType):
+            if data.val.is_array:
                 self.error(f'cannot call "INPUT" on an array', s.ident.pos)
 
         match target.kind:
@@ -1808,58 +1792,10 @@ class Interpreter:
         self.functions[stmt.name] = stmt
 
     def visit_assign_stmt(self, s: AssignStatement):
-        if isinstance(s.ident, ArrayIndex):
-            key = s.ident.ident.ident
+        if s.is_ident: # isinstance(s.ident, Identifier)
+            key: str = s.ident.ident # type: ignore
 
-            if not isinstance(self.variables[key].val.kind, BCArrayType):
-                self.error(
-                    f"cannot index a variable of type {self.variables[key].val.kind} like an array!",
-                    s.ident.pos,
-                )
-
-            tup = self._get_array_index(s.ident)
-            if tup[1] is None and self.variables[key].val.val.typ.is_matrix():  # type: ignore
-                self.error(f"not enough indices for matrix", s.ident.idx_outer.pos)
-
-            val = self.visit_expr(s.value)
-            a: BCArray = self.variables[key].val.val  # type: ignore
-
-            if a.typ.is_matrix():
-                bounds = a.get_matrix_bounds()
-                if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
-                    self.error(
-                        f"tried to access out of bounds array index {tup[0]}",
-                        s.ident.idx_outer.pos,
-                    )
-
-                if tup[1] not in range(bounds[2], bounds[3] + 1):  # type: ignore
-                    self.error(f"tried to access out of bounds array index {tup[1]}", s.ident.idx_inner.pos)  # type: ignore
-
-                first = tup[0] - bounds[0]  # type: ignore
-                second = tup[1] - bounds[2]  # type: ignore
-
-                if a.data[first][second].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first][second].kind).upper()} in a 2D array", s.pos)  # type: ignore
-
-                a.data[first][second] = BCValue(val.kind, val.val)  # type: ignore
-            else:
-                bounds = a.get_flat_bounds()
-                if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
-                    self.error(
-                        f"tried to access out of bounds array index {tup[0]}",
-                        s.ident.idx_outer.pos,
-                    )
-
-                first = tup[0] - bounds[0]  # type: ignore
-
-                if a.data[first].kind != val.kind:  # type: ignore
-                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
-
-                a.data[first] = BCValue(val.kind, val.val)  # type: ignore
-        elif isinstance(s.ident, Identifier):
-            key = s.ident.ident
-
-            if s.ident.libroutine:
+            if s.ident.libroutine: # type: ignore
                 self.error(f'cannot shadow library routine named "{key}"')
 
             exp = self.visit_expr(s.value)
@@ -1884,7 +1820,7 @@ class Interpreter:
                     s.ident.pos,
                 )
 
-            if isinstance(exp.kind, BCArrayType):
+            if exp.is_array:
                 a = exp.get_array()
                 if a.typ.is_matrix() and a.typ.bounds != var.val.get_array().typ.bounds:
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
@@ -1894,6 +1830,55 @@ class Interpreter:
                 self.variables[key].val = copy.deepcopy(exp)
             else:
                 self.variables[key].val = BCValue(exp.kind, exp.val)
+        else: # elif isinstance(s.ident, ArrayIndex)
+            key: str = s.ident.ident.ident # type: ignore
+            arridx: ArrayIndex = s.ident # type: ignore
+
+            if not self.variables[key].val.is_array:
+                self.error(
+                    f"cannot index a variable of type {self.variables[key].val.kind} like an array!",
+                    s.ident.pos,
+                )
+
+            tup = self._get_array_index(arridx)
+            if tup[1] is None and self.variables[key].val.val.typ.is_matrix():  # type: ignore
+                self.error(f"not enough indices for matrix", arridx.idx_outer.pos)
+
+            val = self.visit_expr(s.value)
+            a: BCArray = self.variables[key].val.val  # type: ignore
+
+            if a.typ.is_matrix():
+                bounds = a.get_matrix_bounds()
+                if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
+                    self.error(
+                        f"tried to access out of bounds array index {tup[0]}",
+                        arridx.idx_outer.pos,
+                    )
+
+                if tup[1] not in range(bounds[2], bounds[3] + 1):  # type: ignore
+                    self.error(f"tried to access out of bounds array index {tup[1]}", arridx.idx_inner.pos)  # type: ignore
+
+                first = tup[0] - bounds[0]  # type: ignore
+                second = tup[1] - bounds[2]  # type: ignore
+
+                if a.data[first][second].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first][second].kind).upper()} in a 2D array", s.pos)  # type: ignore
+
+                a.data[first][second] = BCValue(val.kind, val.val)  # type: ignore
+            else:
+                bounds = a.get_flat_bounds()
+                if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
+                    self.error(
+                        f"tried to access out of bounds array index {tup[0]}",
+                        arridx.idx_outer.pos,
+                    )
+
+                first = tup[0] - bounds[0]  # type: ignore
+
+                if a.data[first].kind != val.kind:  # type: ignore
+                    self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
+
+                a.data[first] = BCValue(val.kind, val.val)  # type: ignore
 
         self.trace(s.pos.row)
 

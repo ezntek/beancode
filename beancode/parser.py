@@ -881,7 +881,11 @@ class Parser:
 
         self.check_newline("assignment")
 
-        return AssignStatement(ident.pos, ident, expr)  # type: ignore
+        is_ident = False
+        if isinstance(ident, Identifier):
+            is_ident = True
+
+        return AssignStatement(ident.pos, ident, expr, is_ident=is_ident)  # type: ignore
 
     # multiline statements go here
     def block(self, delim: TokenKind) -> list[Statement]:

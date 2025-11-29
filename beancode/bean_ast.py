@@ -226,13 +226,15 @@ BCPayload = int | float | str | bool | BCArray | None
 
 
 class BCValue:
-    __slots__ = ("kind", "val")
+    __slots__ = ("kind", "val", "is_array")
     kind: BCType
     val: BCPayload
+    is_array: bool
 
-    def __init__(self, kind: BCType, value: BCPayload = None):
+    def __init__(self, kind: BCType, value: BCPayload = None, is_array=False):
         self.kind = kind
         self.val = value
+        self.is_array = is_array
 
     def is_uninitialized(self) -> bool:
         return self.val is None
@@ -285,7 +287,7 @@ class BCValue:
 
     @classmethod
     def new_array(cls, a: BCArray) -> "BCValue":
-        return cls(a.typ, a)
+        return cls(a.typ, a, is_array=True)
 
     def get_integer(self) -> int:
         if self.kind != BCPrimitiveType.INTEGER:
@@ -328,7 +330,7 @@ class BCValue:
         return self.val  # type: ignore
 
     def get_array(self) -> BCArray:
-        if not isinstance(self.kind, BCArrayType):
+        if not self.is_array:
             raise BCError(
                 f"tried to access array value from BCValue of {str(self.kind)}"
             )
@@ -336,7 +338,7 @@ class BCValue:
         return self.val  # type: ignore
 
     def __repr__(self) -> str:  # type: ignore
-        if self.kind == "array":
+        if self.is_array:
             return str(self.val)
 
         if self.is_uninitialized():
@@ -536,6 +538,7 @@ class DeclareStatement(Statement):
 class AssignStatement(Statement):
     ident: Lvalue
     value: Expr
+    is_ident: bool = True # for optimization
 
 
 @dataclass
