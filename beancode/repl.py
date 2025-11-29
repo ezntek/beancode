@@ -64,16 +64,16 @@ def setup_readline():
 
 
 class DotCommandResult(IntEnum):
-    NO_OP = 0
-    BREAK = 1
-    UNKNOWN_COMMAND = 2
-    RESET = 3
+    NO_OP = 1
+    BREAK = 2
+    UNKNOWN_COMMAND = 3
+    RESET = 4
 
 
 class ContinuationResult(IntEnum):
-    BREAK = 0
-    ERROR = 1
-    SUCCESS = 2
+    BREAK = 1
+    ERROR = 2
+    SUCCESS = 3
 
 
 class Repl:

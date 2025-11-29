@@ -274,7 +274,7 @@ class Interpreter:
                 self.error(
                     f"cannot have NULL in the right hand side of {human_kind}\n"
                     + "is your value an uninitialized value/variable?",
-                    expr.lhs.pos,
+                    expr.rhs.pos,
                 )
 
         match expr.op:
@@ -1846,7 +1846,7 @@ class Interpreter:
 
                 self.variables[key].val = copy.deepcopy(exp)
             else:
-                self.variables[key].val = BCValue(exp.kind, exp.val)
+                self.variables[key].val = BCValue(exp.kind, exp.val, exp.is_array)
         else: # elif isinstance(s.ident, ArrayIndex)
             key: str = s.ident.ident.ident # type: ignore
             arridx: ArrayIndex = s.ident # type: ignore
@@ -1881,7 +1881,7 @@ class Interpreter:
                 if a.data[first][second].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first][second].kind).upper()} in a 2D array", s.pos)  # type: ignore
 
-                a.data[first][second] = BCValue(val.kind, val.val)  # type: ignore
+                a.data[first][second] = BCValue(val.kind, val.val, val.is_array)  # type: ignore
             else:
                 bounds = a.get_flat_bounds()
                 if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
@@ -1895,7 +1895,7 @@ class Interpreter:
                 if a.data[first].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
 
-                a.data[first] = BCValue(val.kind, val.val)  # type: ignore
+                a.data[first] = BCValue(val.kind, val.val, val.is_array)  # type: ignore
 
         self.trace(s.pos.row)
 

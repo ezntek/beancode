@@ -15,12 +15,12 @@ class Expr:
 
 
 class BCPrimitiveType(IntEnum):
-    INTEGER = 0
-    REAL = 1
-    CHAR = 2
-    STRING = 3
-    BOOLEAN = 4
-    NULL = 5
+    INTEGER = 1
+    REAL = 2
+    CHAR = 3
+    STRING = 4
+    BOOLEAN = 5
+    NULL = 6
 
     def __repr__(self):
         return {
@@ -50,7 +50,7 @@ class BCPrimitiveType(IntEnum):
             "null": BCPrimitiveType.NULL,
         }
         res = TABLE.get(kind.lower())
-        if not res:
+        if res is None:
             raise BCError(
                 f"tried to convert invalid string type {kind} to a BCPrimitiveType!"
             )
@@ -419,27 +419,27 @@ class ArrayLiteral(Expr):
 
 
 class Operator(IntEnum):
-    ASSIGN = 0
-    EQUAL = 1
-    LESS_THAN = 2
-    GREATER_THAN = 3
+    ASSIGN = 1
+    EQUAL = 2
+    LESS_THAN = 3
+    GREATER_THAN = 4
     LESS_THAN_OR_EQUAL = 4
-    GREATER_THAN_OR_EQUAL = 5
-    NOT_EQUAL = 6
-    MUL = 7
-    DIV = 8
-    ADD = 9
-    SUB = 10
-    POW = 11
-    AND = 12
-    OR = 13
-    NOT = 14
+    GREATER_THAN_OR_EQUAL = 6
+    NOT_EQUAL = 7
+    MUL = 8
+    DIV = 9
+    ADD = 10
+    SUB = 11
+    POW = 12
+    AND = 13
+    OR = 14
+    NOT = 15
 
     # !!! INTERNAL USE ONLY !!!
     # This is for the purposes of optimization. Library routine calls
     # are typed by default, and they are SLOW!
-    FLOOR_DIV = 15
-    MOD = 16
+    FLOOR_DIV = 16
+    MOD = 17
 
     @classmethod
     def from_str(cls, data: str) -> "Operator":

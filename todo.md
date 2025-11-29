@@ -15,14 +15,18 @@
   - [ ] Proper FFI interface
   - [ ] Variadic arguments
   - [ ] Array passing support
-- [ ] MAKEARRAY/CLEARARRAY whatever library routine
+- [x] MAKEARRAY/CLEARARRAY whatever library routine
 - [x] BCValue shrink (Proper tagged union)
-- [ ] AST Optimizer
-  - [ ] static expression evaluation (includes library routines)
+- [x] AST Optimizer
+  - [ ] optimize array initialization
+  - [x] static expression evaluation (includes library routines)
   - [ ] block optimizations
-  - [ ] replacing constants
-  - [ ] inlining library routines
-  - [ ] insert native Python calls when possible 
+    - [ ] folding loops with an always false condition
+    - [ ] folding loops that will fail after the first iteration
+    - [ ] inlining small loops?
+  - [x] replacing constants
+  - [x] inlining library routines
+  - [x] insert native Python calls when possible (maybe?) 
   - [ ] AST caching to JSON
 - [ ] Make string concatenation faster
 

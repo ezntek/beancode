@@ -231,7 +231,7 @@ class Optimizer:
             raise BCError(
                 f"cannot have NULL in the right hand side of {human_kind}\n"
                 + "is your value an uninitialized value/variable?",
-                expr.lhs.pos,
+                expr.rhs.pos,
             )
 
         match expr.op:
@@ -239,7 +239,7 @@ class Optimizer:
                 raise ValueError("impossible to have assign in binaryexpr")
             case Operator.EQUAL:
                 if lhs.is_uninitialized() and rhs.is_uninitialized():
-                    return BCValue.new_boolean(True)
+                    return BCValue(BCPrimitiveType.BOOLEAN, True)
 
                 if lhs.kind != rhs.kind:
                     raise BCError(
@@ -248,10 +248,10 @@ class Optimizer:
                     )
 
                 res = lhs == rhs
-                return BCValue.new_boolean(res)
+                return BCValue(BCPrimitiveType.BOOLEAN, res)
             case Operator.NOT_EQUAL:
                 if lhs.is_uninitialized() and rhs.is_uninitialized():
-                    return BCValue.new_boolean(True)
+                    return BCValue(BCPrimitiveType.BOOLEAN, True)
 
                 if lhs.kind != rhs.kind:
                     raise BCError(
@@ -260,13 +260,13 @@ class Optimizer:
                     )
 
                 res = not (lhs == rhs)  # python is RIDICULOUS
-                return BCValue.new_boolean(res)
+                return BCValue(BCPrimitiveType.BOOLEAN, res)
             case Operator.GREATER_THAN:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind_is_numeric():
-                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+                    lhs_num = lhs.val  # type: ignore
 
                     if not rhs.kind_is_numeric():
                         raise BCError(
@@ -274,9 +274,9 @@ class Optimizer:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+                    rhs_num = rhs.val  # type: ignore
 
-                    return BCValue.new_boolean((lhs_num > rhs_num))
+                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num > rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         raise BCError(
@@ -289,13 +289,13 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue.new_boolean(lhs.get_string() > rhs.get_string())
+                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() > rhs.get_string())
             case Operator.LESS_THAN:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind_is_numeric():
-                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+                    lhs_num = lhs.val  # type: ignore
 
                     if not rhs.kind_is_numeric():
                         raise BCError(
@@ -303,9 +303,9 @@ class Optimizer:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+                    rhs_num = rhs.val  # type: ignore
 
-                    return BCValue.new_boolean((lhs_num < rhs_num))
+                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         raise BCError(
@@ -318,13 +318,13 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue.new_boolean(lhs.get_string() < rhs.get_string())
+                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() < rhs.get_string())
             case Operator.GREATER_THAN_OR_EQUAL:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind_is_numeric():
-                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+                    lhs_num = lhs.val  # type: ignore
 
                     if not rhs.kind_is_numeric():
                         raise BCError(
@@ -332,9 +332,9 @@ class Optimizer:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+                    rhs_num = rhs.val  # type: ignore
 
-                    return BCValue.new_boolean((lhs_num >= rhs_num))
+                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num >= rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         raise BCError(
@@ -347,13 +347,13 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue.new_boolean(lhs.get_string() >= rhs.get_string())
+                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() >= rhs.get_string())
             case Operator.LESS_THAN_OR_EQUAL:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
 
                 if lhs.kind_is_numeric():
-                    lhs_num = lhs.val if lhs.val is not None else lhs.val  # type: ignore
+                    lhs_num = lhs.val  # type: ignore
 
                     if not rhs.kind_is_numeric():
                         raise BCError(
@@ -361,9 +361,9 @@ class Optimizer:
                             expr.rhs.pos,
                         )
 
-                    rhs_num = rhs.val if rhs.val is not None else rhs.val  # type: ignore
+                    rhs_num = rhs.val  # type: ignore
 
-                    return BCValue.new_boolean((lhs_num < rhs_num))
+                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num < rhs_num))
                 else:
                     if lhs.kind != rhs.kind:
                         raise BCError(
@@ -373,7 +373,7 @@ class Optimizer:
                     elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         raise BCError(f"illegal to compare booleans", expr.lhs.pos)
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue.new_boolean(lhs.get_string() <= rhs.get_string())
+                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() <= rhs.get_string())
             case Operator.POW:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -395,25 +395,15 @@ class Optimizer:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
+                lhs_num: int | float = lhs.val # type: ignore
+                rhs_num: int | float = rhs.val # type: ignore
 
-                if lhs.kind == BCPrimitiveType.INTEGER:
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == BCPrimitiveType.REAL:
-                    lhs_num = lhs.get_real()
+                if int(lhs_num) == 2 and type(rhs_num) is int:
+                    res = 1 << rhs_num
+                else:
+                    res = lhs_num**rhs_num
 
-                if rhs.kind == BCPrimitiveType.INTEGER:
-                    rhs_num = rhs.get_integer()
-                elif rhs.kind == BCPrimitiveType.REAL:
-                    rhs_num = rhs.get_real()
-
-                res = lhs_num**rhs_num
-
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
             case Operator.MUL:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -435,25 +425,12 @@ class Optimizer:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind == BCPrimitiveType.INTEGER:
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == BCPrimitiveType.REAL:
-                    lhs_num = lhs.get_real()
-
-                if rhs.kind == BCPrimitiveType.INTEGER:
-                    rhs_num = rhs.get_integer()
-                elif rhs.kind == BCPrimitiveType.REAL:
-                    rhs_num = rhs.get_real()
+                lhs_num: int | float = lhs.val # type: ignore
+                rhs_num: int | float = rhs.val # type: ignore
 
                 res = lhs_num * rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
             case Operator.DIV:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -475,28 +452,12 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind == BCPrimitiveType.INTEGER:
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == BCPrimitiveType.REAL:
-                    lhs_num = lhs.get_real()
-
-                if rhs.kind == BCPrimitiveType.INTEGER:
-                    rhs_num = rhs.get_integer()
-                elif rhs.kind == BCPrimitiveType.REAL:
-                    rhs_num = rhs.get_real()
-
-                if rhs_num == 0:
-                    raise BCError("cannot divide by zero!", expr.rhs.pos)
+                lhs_num: int | float = lhs.val # type: ignore
+                rhs_num: int | float = rhs.val # type: ignore
 
                 res = lhs_num / rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
             case Operator.ADD:
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     # concatenate instead
@@ -518,7 +479,7 @@ class Optimizer:
                         rhs_str_or_char = str(rhs)
 
                     res = str(lhs_str_or_char + rhs_str_or_char)
-                    return BCValue.new_string(res)
+                    return BCValue(BCPrimitiveType.STRING, res)
 
                 if (
                     lhs.kind == BCPrimitiveType.BOOLEAN
@@ -526,25 +487,12 @@ class Optimizer:
                 ):
                     raise BCError("Cannot add BOOLEANs, CHARs and STRINGs!", expr.pos)
 
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind == BCPrimitiveType.INTEGER:
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == BCPrimitiveType.REAL:
-                    lhs_num = lhs.get_real()
-
-                if rhs.kind == BCPrimitiveType.INTEGER:
-                    rhs_num = rhs.get_integer()
-                elif rhs.kind == BCPrimitiveType.REAL:
-                    rhs_num = rhs.get_real()
+                lhs_num: int | float = lhs.val # type: ignore
+                rhs_num: int | float = rhs.val # type: ignore
 
                 res = lhs_num + rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
             case Operator.SUB:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -560,25 +508,13 @@ class Optimizer:
                 }:
                     raise BCError("Cannot subtract BOOLEANs, CHARs and STRINGs!")
 
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind == BCPrimitiveType.INTEGER:
-                    lhs_num = lhs.get_integer()
-                elif lhs.kind == BCPrimitiveType.REAL:
-                    lhs_num = lhs.get_real()
-
-                if rhs.kind == BCPrimitiveType.INTEGER:
-                    rhs_num = rhs.get_integer()
-                elif rhs.kind == BCPrimitiveType.REAL:
-                    rhs_num = rhs.get_real()
+                lhs_num: int | float = lhs.val # type: ignore
+                rhs_num: int | float = rhs.val # type: ignore
 
                 res = lhs_num - rhs_num
 
-                if isinstance(res, int):
-                    return BCValue.new_integer(res)
-                elif isinstance(res, float):
-                    return BCValue.new_real(res)
+                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+            # FLOOR_DIV and MOD are impossible here
             case Operator.AND:
                 if lhs.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
@@ -592,11 +528,11 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_b = lhs.get_boolean()
-                rhs_b = rhs.get_boolean()
+                lhs_b: bool = lhs.val # type: ignore
+                rhs_b: bool = rhs.val # type: ignore
 
                 res = lhs_b and rhs_b
-                return BCValue.new_boolean(res)
+                return BCValue(BCPrimitiveType.BOOLEAN, res)
             case Operator.OR:
                 if lhs.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
@@ -610,12 +546,12 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_b = lhs.get_boolean()
-                rhs_b = rhs.get_boolean()
+                lhs_b: bool = lhs.val # type: ignore
+                rhs_b: bool = rhs.val # type: ignore
 
                 res = lhs_b or rhs_b
 
-                return BCValue.new_boolean(res)
+                return BCValue(BCPrimitiveType.BOOLEAN, res)
 
     def visit_array_index(self, expr: ArrayIndex):
         _ = expr
