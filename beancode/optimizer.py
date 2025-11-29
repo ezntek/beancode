@@ -1,5 +1,3 @@
-import gc
-
 from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
@@ -835,6 +833,13 @@ class Optimizer:
 
         return default 
 
+    def visit_type(self, typ: Type):
+        if isinstance(typ, ArrayType):
+            new = list()
+            for itm in typ.bounds:
+                new.append(self.visit_expr(itm))
+            typ.bounds = tuple(new)
+
     def visit_if_stmt(self, stmt: IfStatement):
         stmt.cond = self.visit_expr(stmt.cond)
         stmt.if_block = self.visit_block(stmt.if_block)
@@ -873,9 +878,15 @@ class Optimizer:
             stmt.expr = self.visit_expr(stmt.expr)
 
     def visit_procedure(self, stmt: ProcedureStatement):
+        for arg in stmt.args:
+            self.visit_type(arg.typ)
+
         stmt.block = self.visit_block(stmt.block)
 
     def visit_function(self, stmt: FunctionStatement):
+        for arg in stmt.args:
+            self.visit_type(arg.typ)
+
         stmt.block = self.visit_block(stmt.block)
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
@@ -902,7 +913,7 @@ class Optimizer:
         self.unwanted_items[-1].append(self.cur_stmt)
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
-        _ = stmt
+        self.visit_type(stmt.typ)
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         _ = stmt
@@ -997,5 +1008,4 @@ class Optimizer:
         self._update_active_constants()
         res = [itm for i, itm in enumerate(blk) if i not in self.unwanted_items[-1]]
         self.unwanted_items.pop()
-        gc.collect()
         return res

@@ -9,7 +9,7 @@ from . import Pos
 from .error import *
 
 
-@dataclass
+@dataclass(slots=True)
 class Expr:
     pos: Pos
 
@@ -359,14 +359,14 @@ class BCValue:
                 return "(null)"
 
 
-@dataclass
+@dataclass(slots=True)
 class File:
     stream: IO[Any]  # im lazy
     # read, write, append
     mode: tuple[bool, bool, bool]
 
 
-@dataclass
+@dataclass(slots=True)
 class FileCallbacks:
     open: Callable[[str, str], IO[Any]]
     close: Callable[[IO[Any]], None]
@@ -375,45 +375,45 @@ class FileCallbacks:
     append: Callable[[str], None]
 
 
-@dataclass
+@dataclass(slots=True)
 class Literal(Expr):
     val: BCValue
 
 
-@dataclass
+@dataclass(slots=True)
 class Negation(Expr):
     inner: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class Not(Expr):
     inner: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class Grouping(Expr):
     inner: Expr
 
 # !!! INTERNAL USE ONLY !!!
 # This is for the purposes of optimization. Library routine calls
 # are typed by default, and they are SLOW!
-@dataclass
+@dataclass(slots=True)
 class Sqrt(Expr):
     inner: Expr
 
-@dataclass
+@dataclass(slots=True)
 class Identifier(Expr):
     ident: str
     libroutine: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class Typecast(Expr):
     typ: BCPrimitiveType
     expr: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class ArrayLiteral(Expr):
     items: list[Expr]
 
@@ -488,14 +488,14 @@ class Operator(IntEnum):
         return self.__repr__()
 
 
-@dataclass
+@dataclass(slots=True)
 class BinaryExpr(Expr):
     lhs: Expr
     op: Operator
     rhs: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class ArrayIndex(Expr):
     ident: Identifier
     idx_outer: Expr
@@ -505,44 +505,44 @@ class ArrayIndex(Expr):
 Lvalue = Identifier | ArrayIndex
 
 
-@dataclass
+@dataclass(slots=True)
 class Statement:
     pos: Pos
 
 
-@dataclass
+@dataclass(slots=True)
 class CallStatement(Statement):
     ident: str
     args: list[Expr]
     libroutine: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class FunctionCall(Expr):
     ident: str
     args: list[Expr]
     libroutine: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class OutputStatement(Statement):
     items: list[Expr]
     newline: bool = True
 
 
-@dataclass
+@dataclass(slots=True)
 class InputStatement(Statement):
     ident: Lvalue
 
 
-@dataclass
+@dataclass(slots=True)
 class ConstantStatement(Statement):
     ident: Identifier
     value: Expr
     export: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class DeclareStatement(Statement):
     ident: list[Identifier]
     typ: Type
@@ -550,42 +550,42 @@ class DeclareStatement(Statement):
     expr: Expr | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class AssignStatement(Statement):
     ident: Lvalue
     value: Expr
     is_ident: bool = True # for optimization
 
 
-@dataclass
+@dataclass(slots=True)
 class IfStatement(Statement):
     cond: Expr
     if_block: list["Statement"]
     else_block: list["Statement"]
 
 
-@dataclass
+@dataclass(slots=True)
 class CaseofBranch:
     pos: Pos
     expr: Expr
     stmt: "Statement"
 
 
-@dataclass
+@dataclass(slots=True)
 class CaseofStatement(Statement):
     expr: Expr
     branches: list[CaseofBranch]
     otherwise: "Statement | None"
 
 
-@dataclass
+@dataclass(slots=True)
 class WhileStatement(Statement):
     end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
 
 
-@dataclass
+@dataclass(slots=True)
 class ForStatement(Statement):
     end_pos: Pos  # for tracing
     counter: Identifier
@@ -595,21 +595,21 @@ class ForStatement(Statement):
     step: Expr | None
 
 
-@dataclass
+@dataclass(slots=True)
 class RepeatUntilStatement(Statement):
     end_pos: Pos  # for tracing
     cond: Expr
     block: list["Statement"]
 
 
-@dataclass
+@dataclass(slots=True)
 class FunctionArgument:
     pos: Pos
     name: str
     typ: Type
 
 
-@dataclass
+@dataclass(slots=True)
 class ProcedureStatement(Statement):
     name: str
     args: list[FunctionArgument]
@@ -617,7 +617,7 @@ class ProcedureStatement(Statement):
     export: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class FunctionStatement(Statement):
     name: str
     args: list[FunctionArgument]
@@ -626,7 +626,7 @@ class FunctionStatement(Statement):
     export: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class ReturnStatement(Statement):
     expr: Expr | None = None
 
@@ -634,7 +634,7 @@ class ReturnStatement(Statement):
 FileMode = typing.Literal["read", "write", "append"]
 
 
-@dataclass
+@dataclass(slots=True)
 class OpenfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
@@ -642,52 +642,52 @@ class OpenfileStatement(Statement):
     mode: tuple[bool, bool, bool]
 
 
-@dataclass
+@dataclass(slots=True)
 class ReadfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
     target: Lvalue
 
 
-@dataclass
+@dataclass(slots=True)
 class WritefileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
     src: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class ClosefileStatement(Statement):
     file_ident: Expr | str
 
 
 # extra statements
-@dataclass
+@dataclass(slots=True)
 class AppendfileStatement(Statement):
     # file identifier or path
     file_ident: Expr | str
     src: Expr
 
 
-@dataclass
+@dataclass(slots=True)
 class ScopeStatement(Statement):
     block: list["Statement"]
 
 
-@dataclass
+@dataclass(slots=True)
 class IncludeStatement(Statement):
     file: str
     ffi: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class TraceStatement(Statement):
     vars: list[str]
     file_name: str | None
     block: list["Statement"]
 
 
-@dataclass
+@dataclass(slots=True)
 class ExprStatement(Statement):
     inner: Expr
 
@@ -696,12 +696,12 @@ class ExprStatement(Statement):
         return cls(e.pos, e)
 
 
-@dataclass
+@dataclass(slots=True)
 class Program:
     stmts: list[Statement]
 
 
-@dataclass
+@dataclass(slots=True)
 class Variable:
     val: BCValue
     const: bool
@@ -714,7 +714,7 @@ class Variable:
         return self.val.is_null()
 
 
-@dataclass
+@dataclass(slots=True)
 class CallStackEntry:
     name: str
     rtype: Type | None

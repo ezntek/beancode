@@ -11,10 +11,15 @@
 
 ## High Priority
 
-- [ ] Library routine refactor
-  - [ ] Proper FFI interface
-  - [ ] Variadic arguments
-  - [ ] Array passing support
+- [ ] Lexer Refactor
+  - [ ] Destringify Types
+  - [ ] Destringify tokens
+- [ ] AST Refactor
+  - [ ] Stop using dataclasses
+- [x] Library routine refactor
+  - [x] Proper FFI interface
+  - [x] Variadic arguments
+  - [x] Array passing support
 - [x] MAKEARRAY/CLEARARRAY whatever library routine
 - [x] BCValue shrink (Proper tagged union)
 - [x] AST Optimizer

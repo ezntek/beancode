@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import argparse
+import gc
 from typing import NoReturn
 
 from .repl import Repl
@@ -115,6 +116,7 @@ def real_main():
         except BCError as err:
             err.print(args.file, file_content)
             exit(1)
+        gc.collect()
 
     if args.debug:
         print("\033[1m=== AST ===\033[0m", file=sys.stderr)

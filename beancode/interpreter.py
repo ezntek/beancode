@@ -13,7 +13,7 @@ from .lexer import Lexer
 from .parser import *
 from .error import *
 from .libroutines import *
-from . import __version__, Pos, is_case_consistent
+from . import __version__, Pos
 from .tracer import *
 
 
