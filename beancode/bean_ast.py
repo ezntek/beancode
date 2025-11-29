@@ -1,4 +1,5 @@
 import typing
+import copy
 
 from enum import IntEnum
 from typing import IO, Any, Callable
@@ -256,6 +257,12 @@ class BCValue:
 
     def kind_is_alpha(self) -> bool:
         return self.kind == BCPrimitiveType.STRING or self.kind == BCPrimitiveType.CHAR
+
+    def copy(self) -> "BCValue":
+        if self.is_array:
+            return BCValue(self.kind, copy.deepcopy(self.val), True)
+        else:
+            return BCValue(self.kind, self.val)
 
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":

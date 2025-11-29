@@ -19,7 +19,7 @@ ENDFUNCTION
 PROCEDURE PrimeTorture(Num: INTEGER)
     FOR Counter <- 1 TO Num
         IF IsPrime(Counter) THEN
-            OUTPUT Counter, ", "
+            PRINT Counter, ", "
         ENDIF
     NEXT Counter
 ENDPROCEDURE

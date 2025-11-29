@@ -1680,7 +1680,7 @@ class Interpreter:
         if var_existed:
             var_prev_value = intp.variables[stmt.counter.ident]
 
-        counter = Variable(copy.copy(begin), const=False)
+        counter = Variable(begin.copy(), const=False)
         intp.variables[stmt.counter.ident] = counter
 
         if step > 0:
@@ -1830,9 +1830,9 @@ class Interpreter:
                 elif a.typ.is_flat() and a.typ.bounds != var.val.get_array().typ.bounds:
                     self.error(f"mismatched array sizes in array assignment", s.pos)
 
-                self.variables[key].val = copy.deepcopy(exp)
+                self.variables[key].val = exp.copy() 
             else:
-                self.variables[key].val = BCValue(exp.kind, exp.val, exp.is_array)
+                self.variables[key].val = exp.copy() 
         else: # elif isinstance(s.ident, ArrayIndex)
             key: str = s.ident.ident.ident # type: ignore
             arridx: ArrayIndex = s.ident # type: ignore
@@ -1867,7 +1867,7 @@ class Interpreter:
                 if a.data[first][second].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first][second].kind).upper()} in a 2D array", s.pos)  # type: ignore
 
-                a.data[first][second] = BCValue(val.kind, val.val, val.is_array)  # type: ignore
+                a.data[first][second] = val.copy()  # type: ignore
             else:
                 bounds = a.get_flat_bounds()
                 if tup[0] not in range(bounds[0], bounds[1] + 1):  # type: ignore
@@ -1881,7 +1881,7 @@ class Interpreter:
                 if a.data[first].kind != val.kind:  # type: ignore
                     self.error(f"cannot assign {str(val.kind).upper()} to {str(a.data[first].kind).upper()} in an array", s.pos)  # type: ignore
 
-                a.data[first] = BCValue(val.kind, val.val, val.is_array)  # type: ignore
+                a.data[first] = val.copy()  # type: ignore
 
         self.trace(s.pos.row)
 
