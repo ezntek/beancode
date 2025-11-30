@@ -179,6 +179,14 @@ class BCArray:
         self.typ = typ
         self.data = data
 
+    def __eq__(self, value: object, /) -> bool:
+        if type(value) is not type(self):
+            return False
+        return self.typ == value.typ and self.data == value.data # type: ignore
+
+    def __neq__(self, value: object, /) -> bool:
+        return not self.__eq__(value)
+
     @classmethod
     def new_flat(cls, typ: BCArrayType, flat: list["BCValue"]) -> "BCArray":
         return cls(typ, flat)
@@ -345,25 +353,18 @@ class BCValue:
         return self.val  # type: ignore
 
     def __repr__(self) -> str:  # type: ignore
-        if self.is_array:
-            return str(self.val)
-
         if self.is_uninitialized():
             return "(null)"
 
         match self.kind:
             case BCPrimitiveType.STRING:
-                return self.get_string()
-            case BCPrimitiveType.REAL:
-                return str(self.get_real())
-            case BCPrimitiveType.INTEGER:
-                return str(self.get_integer())
-            case BCPrimitiveType.CHAR:
-                return str(self.get_char())
+                return self.val # type: ignore
             case BCPrimitiveType.BOOLEAN:
-                return str(self.get_boolean()).upper()
+                return str(self.val).upper()
             case BCPrimitiveType.NULL:
                 return "(null)"
+            case _:
+                return str(self.val)
 
 
 @dataclass(slots=True)

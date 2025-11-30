@@ -22,7 +22,7 @@ None!
 
 ### Notice
 
-If you want to enjoy actually good performance, ***please use PyPy!*** It is a Python JIT (Just-in-time) compiler, making it far faster than the usual Python implementation CPython. I would recommend you use PyPy even if you werent using this project for running serious work, but it works really well for this project.
+If you want to enjoy actually good performance, ***please use PyPy!*** It is a [Python JIT (Just-in-time) compiler](https://pypy.org), making it far faster than the usual Python implementation CPython. I would recommend you use PyPy even if you werent using this project for running serious work, but it works really well for this project.
 
 Check the appendix for some stats.
 
@@ -75,12 +75,14 @@ You may also run
 
 `./main.py file.bean`
 
+if you are in the project directory.
+
 ## The REPL
 
 The REPL (or Read-Eval-Print-Loop) allows you to write beancode directly in your terminal. Run beancode (with the above instructions) without any arguments (i.e. just the command), and you will be dropped into this prompt:
 
 ```
-=== welcome to beancode 0.5.0 ===
+=== welcome to beancode 0.6.0 ==
 Using Python 3.13.7 (main, Sep  9 2025, 16:20:24) [GCC 15.2.1 20250813]
 type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
 >> 
@@ -218,7 +220,6 @@ There are many extra features, or beancode extensions, which are not standard to
   ```
   Please put your code into a procedure instead, or use the recommended trick above.
 * No-declare assignments are only bound to the `local block-level scope`, they are not global. Please declare it globally if you want to use it like a global variable.
-* ***File IO is completely unsupported.*** You might get cryptic errors if you try.
 * Not more than 1 parse error can be reported at one time.
 * Variable shadowing is ***extremely weird!***
   * You can shadow variables perfectly fine in functions and procedures, check `examples/ShadowingDemo.bean` for examples. However, you cannot do so in
@@ -247,7 +248,7 @@ Python was perfect due to its dynamism, and the fact that I could abuse it to th
 
 ### Performance
 
-It's really bad. However, PyPy makes it a lot better. Here's some data for the PrimeTorture benchmark in the examples, ran on an i7-14700KF with 32GB RAM on Arch Linux:
+It's really bad. However, PyPy makes it a lot better. Here's some data for the PrimeTorture benchmark (750,000 primes, beancode `0.3.x`) in the examples, ran on an i7-14700KF with 32GB RAM on Arch Linux:
 
 |Language|Time Taken (s)|
 |--------|----------|

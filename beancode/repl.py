@@ -404,7 +404,7 @@ class Repl:
         setup_readline()
         print(BANNER, end="\n")
 
-        inp = str()
+        inp = ""
         while True:
             self.lx.reset()
             self.p.reset()

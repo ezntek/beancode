@@ -48,7 +48,7 @@ class Interpreter:
     tracer_outputs: list[str] | None = None
     tracer_open = False  # open generated html or not by default
     files: dict[str, File]
-    file_callbacks: FileCallbacks
+    file_callbacks: FileCallbacks # support non-file files (via StringIOs for web frontends)
 
     def __init__(
         self,
@@ -121,6 +121,8 @@ class Interpreter:
             self.file_callbacks.close(f.stream)
 
         self.files = dict()
+        for file in self.files.values():
+            self.file_callbacks.close(file.stream)
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
@@ -2112,7 +2114,7 @@ class Interpreter:
         file.stream.seek(0)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
-        name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
+        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
         if not file.mode[1]:
             self.error("file not open for writing!", stmt.pos)
