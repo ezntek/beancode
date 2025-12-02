@@ -33,7 +33,6 @@ ENDPROCEDURE
 //OUTPUT "File Name?"
 //INPUT FileName
 CONSTANT FileName <- "image.ppm"
-
 OPENFILE(FileName) FOR WRITE
 CALL Image(FileName)
 CLOSEFILE(FileName)

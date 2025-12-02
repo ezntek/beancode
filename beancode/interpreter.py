@@ -645,60 +645,39 @@ class Interpreter:
                 return BCValue(BCPrimitiveType.BOOLEAN, res)
 
     def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
-        index = self.visit_expr(ind.idx_outer)
-        if index is None:
-            self.error("found (null) for array index", ind.idx_outer.pos)
-        index = index.get_integer()
+        index_v = self.visit_expr(ind.idx_outer) # type: ignore
+        if index_v.kind != BCPrimitiveType.INTEGER:
+            self.error(f"type of array index is {index_v.kind}, not an INTEGER!")
 
-        v = self.variables[ind.ident.ident].val
+        v = self.visit_expr(ind.expr)
+        a: BCArray = v.val  # type: ignore
 
-        if v.is_array:
-            a: BCArray = v.val  # type: ignore
+        if a.typ.is_matrix():
+            if ind.idx_inner is None:
+                self.error("expected 2 indices for matrix indexing", ind.pos)
 
-            if a.typ.is_matrix():
-                if ind.idx_inner is None:
-                    self.error("expected 2 indices for matrix indexing", ind.pos)
+            inner_index_v = self.visit_expr(ind.idx_inner)  # type: ignore
+            if inner_index_v.kind != BCPrimitiveType.INTEGER:
+                self.error(f"type of inner array index is {index_v.kind}, not an INTEGER!")
 
-                inner_index = self.visit_expr(ind.idx_inner).get_integer()  # type: ignore
-                if inner_index is None:
-                    self.error("found (null) for inner array index", ind.idx_inner.pos)  # type: ignore
-
-                return (index, inner_index)
-            else:
-                if ind.idx_inner is not None:
-                    self.error("expected only 1 index for array indexing", ind.pos)
-                return (index, None)
+            return (index_v.val, inner_index_v.val) # type: ignore
         else:
-            if v.kind == BCPrimitiveType.STRING:
-                self.error(
-                    "cannot index a string! please use the SUBSTRING library routine instead.",
-                    ind.ident.pos,
-                )
-            else:
-                self.error(f"cannot index {v.kind}", ind.ident.pos)
+            if ind.idx_inner is not None:
+                self.error("expected only 1 index for array indexing", ind.pos)
+            return (index_v.val, None) # type: ignore
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
-        index = self.visit_expr(ind.idx_outer).get_integer()
-
-        if index is None:
-            self.error("Found (null) for array index", ind.idx_outer.pos)
-
-        # TODO: warn if indexing library routine
-        temp = self.variables.get(ind.ident.ident)
-        if temp is None:
-            self.error(f'array "{ind.ident.ident}" not found for indexing', ind.pos)
-        v = temp.val
+        v = self.visit_expr(ind.expr)
 
         if v.is_array:
             a = v.get_array()
-
             tup = self._get_array_index(ind)
             if a.typ.is_matrix():
                 outer, inner = tup
                 bounds = a.get_matrix_bounds()
                 if inner is None:
                     self.error(
-                        "second index not present for matrix index", ind.ident.pos
+                        "second index not present for matrix index", ind.expr.pos
                     )
 
                 bounds = a.get_matrix_bounds()
@@ -734,14 +713,14 @@ class Interpreter:
 
                 res = a.get_flat()[tup[0] - a.get_flat_bounds()[0]]
                 return res
+        elif v.kind == BCPrimitiveType.STRING:
+            self.error(
+                # FIXME: nicer diagnostics with the AST printer
+                f"cannot index a string!\nplease use SUBSTRING(YourString, YourIndex, 1) instead.",
+                ind.expr.pos,
+            )
         else:
-            if v.kind == BCPrimitiveType.STRING:
-                self.error(
-                    f"cannot index a string! please use SUBSTRING({ind.ident.ident}, {index}, 1) instead.",
-                    ind.ident.pos,
-                )
-            else:
-                self.error(f"cannot index {v.kind}", ind.ident.pos)
+            self.error(f"cannot index {v.kind}", ind.expr.pos)
 
     def _eval_libroutine_args(
         self,

@@ -16,6 +16,8 @@
   - [ ] Destringify tokens
 - [ ] AST Refactor
   - [ ] Stop using dataclasses
+- [ ] REPL
+  - [ ] Don't forcibly run the parser constantly, just rely on an empty line to terminate (Credit: PseudoEngine2)
 - [x] Library routine refactor
   - [x] Proper FFI interface
   - [x] Variadic arguments

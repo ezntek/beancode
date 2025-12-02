@@ -60,11 +60,11 @@ class Parser:
 
         return self.tokens[self.cur + 1]
 
-    def peek_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
+    def peek_and_expect(self, expected: TokenKind, ctx="", help="") -> Token:
         tok = self.peek()
 
-        s = " " + ctx if ctx else str()
-        h = "\n" + help if help else str()
+        s = " " + ctx if ctx else ""
+        h = "\n" + help if help else ""
 
         if tok.kind != expected:
             raise BCError(
@@ -73,11 +73,11 @@ class Parser:
             )
         return tok
 
-    def peek_next_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
+    def peek_next_and_expect(self, expected: TokenKind, ctx="", help="") -> Token:
         tok = self.peek_next()
 
-        s = " " + ctx if ctx else str()
-        h = "\n" + help if help else str()
+        s = " " + ctx if ctx else ""
+        h = "\n" + help if help else ""
 
         if not tok:
             raise BCError(
@@ -107,11 +107,11 @@ class Parser:
         else:
             return
 
-    def consume_and_expect(self, expected: TokenKind, ctx=str(), help=str()) -> Token:
+    def consume_and_expect(self, expected: TokenKind, ctx="", help="") -> Token:
         cons = self.consume()
         if cons.kind != expected:
-            s = " " + ctx if ctx else str()
-            h = "\n" + help if help else str()
+            s = " " + ctx if ctx else ""
+            h = "\n" + help if help else ""
 
             if help:
                 h = "\n" + help
@@ -364,48 +364,12 @@ class Parser:
         else:
             return BCPrimitiveType.from_string(adv.data)  # type: ignore
 
-    def ident(self, function=False) -> Identifier:
-        c = self.consume_and_expect("ident")
+    def ident(self, ctx="", function=False) -> Identifier:
+        c = self.consume_and_expect("ident", ctx=ctx)
         libroutine = False
         if not function and is_case_consistent(c.data) and c.data in LIBROUTINES: # type: ignore
             libroutine = True 
         return Identifier(c.pos, c.data, libroutine=libroutine)  # type: ignore
-
-    def expect_ident(self, ctx=str()) -> Identifier:
-        c = self.consume_and_expect("ident", ctx)
-        return Identifier(c.pos, c.data)  # type: ignore
-
-    def array_index(self) -> ArrayIndex | None:
-        pn = self.peek_next()
-        if not pn:
-            return
-        if pn.kind != "left_bracket":
-            return
-
-        ident = self.ident()
-
-        leftb = self.consume_and_expect("left_bracket")
-        exp = self.expr()
-        if not exp:
-            raise BCError("expected expression as array index", leftb.pos)
-
-        rightb = self.consume()
-        exp_inner = None
-        if rightb.kind == "right_bracket":
-            pass
-        elif rightb.kind == "comma":
-            exp_inner = self.expr()
-            if not exp_inner:
-                raise BCError("expected expression as array index", exp_inner)
-
-            self.consume_and_expect("right_bracket", "after expression in array index")
-        else:
-            raise BCError(
-                "expected right_bracket or comma after expression in array index",
-                rightb.pos,
-            )
-
-        return ArrayIndex(leftb.pos, ident=ident, idx_outer=exp, idx_inner=exp_inner)
 
     def function_call(self) -> Expr | None:
         # avoid consuming tokens
@@ -491,11 +455,8 @@ class Parser:
                 return self.array_literal()
             case "ident":
                 pn = self.peek_next()
-                if pn is not None:
-                    if pn.kind == "left_bracket":
-                        return self.array_index()
-                    elif pn.kind == "left_paren":
-                        return self.function_call()
+                if pn and pn.kind == "left_paren":
+                    return self.function_call()
                 return self.ident()
             case "type":
                 pn = self.peek_next()
@@ -521,8 +482,46 @@ class Parser:
             case _:
                 return
 
-    def pow(self) -> Expr | None:
+    def array_index(self) -> Expr | None:
         expr = self.unary()
+
+        leftb = self.check_and_consume("left_bracket")
+        if not leftb:
+            return expr
+
+        exp = self.expr()
+        if not exp:
+            raise BCError("expected expression as array index", leftb.pos)
+
+        rightb = self.consume()
+        exp_inner = None
+        if rightb.kind == "right_bracket":
+            pass
+        elif rightb.kind == "comma":
+            exp_inner = self.expr()
+            if not exp_inner:
+                raise BCError("expected expression as array index", exp_inner)
+
+            self.consume_and_expect("right_bracket", "after expression in array index")
+        else:
+            raise BCError(
+                "expected right_bracket or comma after expression in array index",
+                rightb.pos,
+            )
+
+        return ArrayIndex(leftb.pos, expr, idx_outer=exp, idx_inner=exp_inner) # type: ignore
+
+    def array_index_or_none(self) -> ArrayIndex | None:
+        saved_point = self.cur
+        arridx = self.array_index()
+        if not isinstance(arridx, ArrayIndex):
+            self.cur = saved_point
+            return 
+        else:
+            return arridx
+
+    def pow(self) -> Expr | None:
+        expr = self.array_index()
         if not expr:
             return
 
@@ -679,9 +678,9 @@ class Parser:
             return
 
         ident: ArrayIndex | Identifier
-        array_index = self.array_index()
+        array_index = self.array_index_or_none()
         if not array_index:
-            ident = self.expect_ident("after INPUT")
+            ident = self.ident("after INPUT")
         else:
             ident = array_index  # type: ignore
 
@@ -708,7 +707,7 @@ class Parser:
         if not begin:
             return
 
-        ident = self.expect_ident("after procedure call")
+        ident = self.ident("after procedure call")
 
         leftb = self.peek()
         args = []
@@ -869,9 +868,9 @@ class Parser:
         if p.kind != "assign":
             return
 
-        ident = self.array_index()
+        ident = self.array_index_or_none()
         if not ident:
-            ident = self.expect_ident("for left hand side of assignment")
+            ident = self.ident("for left hand side of assignment")
 
         self.consume()  # go past the arrow
 
@@ -1001,7 +1000,7 @@ class Parser:
         if not initial:
             return
 
-        counter = self.expect_ident("for for loop counter")
+        counter = self.ident("for for loop counter")
 
         self.consume_and_expect("assign", "after counter in for loop")
 
@@ -1028,7 +1027,7 @@ class Parser:
         stmts = self.block("next")
         next = self.consume()
 
-        next_counter = self.expect_ident("after NEXT in for loop")
+        next_counter = self.ident("after NEXT in for loop")
 
         if counter.ident != next_counter.ident:
             raise BCError(
@@ -1067,7 +1066,7 @@ class Parser:
 
     def function_arg(self) -> FunctionArgument | None:
         # ident : type
-        ident = self.expect_ident("for function argument")
+        ident = self.ident("for function argument")
         colon = self.consume_and_expect(
             "colon", "after identifier in function argument"
         )
@@ -1103,7 +1102,7 @@ class Parser:
         if export == True:
             self.consume()
 
-        ident = self.expect_ident("after PROCEDURE declaration")
+        ident = self.ident("after PROCEDURE declaration")
 
         args = []
         leftb = self.peek()
@@ -1160,7 +1159,7 @@ class Parser:
         if export == True:
             self.consume()
 
-        ident = self.expect_ident("after FUNCTION declaration")
+        ident = self.ident("after FUNCTION declaration")
 
         args = []
         leftb = self.peek()
@@ -1246,7 +1245,7 @@ class Parser:
 
         vars = list()
         while not self.check("right_paren"):
-            ident = self.expect_ident("in variable list in TRACE statement")
+            ident = self.ident("in variable list in TRACE statement")
 
             vars.append(ident.ident)  # type: ignore
 
@@ -1355,11 +1354,11 @@ class Parser:
 
         self.consume_and_expect("comma")
 
-        val: ArrayIndex | Identifier | None = self.array_index()
+        val: ArrayIndex | Identifier | None = self.array_index_or_none() # type: ignore
         if not val:
-            val = self.expect_ident()
+            val = self.ident()
 
-        return ReadfileStatement(begin.pos, fileid, val)
+        return ReadfileStatement(begin.pos, fileid, val) # type: ignore
 
     def writefile_stmt(self) -> Statement | None:
         begin = self.check_and_consume("writefile")

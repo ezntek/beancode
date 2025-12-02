@@ -19,8 +19,7 @@ def _error(s: str) -> NoReturn:
     error(s)
     exit(1)
 
-
-def real_main():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d", "--debug", action="store_true", help="show debugging information"
@@ -58,8 +57,9 @@ def real_main():
         help="pass a program in as a string",
     )
     group.add_argument("file", nargs="?", type=str)
-    args = parser.parse_args()
+    return parser.parse_args()
 
+def real_main(args: argparse.Namespace):
     if args.no_run:
         args.debug = True
 
@@ -95,10 +95,10 @@ def real_main():
         exit(1)
 
     if args.debug:
-        print("\033[1m=== TOKENS ===\033[0m", file=sys.stderr)
+        print("\033[2m=== TOKENS ===\033[0m", file=sys.stderr)
         for tok in toks:
             tok.print(file=sys.stderr)
-        print("\033[1m==============\033[0m", file=sys.stderr)
+        print("\033[2m==============\033[0m", file=sys.stderr)
         sys.stderr.flush()
 
     parser = Parser(toks)
@@ -119,11 +119,11 @@ def real_main():
         gc.collect()
 
     if args.debug:
-        print("\033[1m=== AST ===\033[0m", file=sys.stderr)
+        print("\033[2m=== AST ===\033[0m", file=sys.stderr)
         for stmt in program.stmts:
             print(stmt, file=sys.stderr)
             print()
-        print("\033[0m\033[1m=== AST ===\033[0m", file=sys.stderr)
+        print("\033[0m\033[2m===========\033[0m", file=sys.stderr)
         sys.stderr.flush()
 
     if args.no_run:
@@ -141,16 +141,22 @@ def real_main():
 def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    args = parse_args()
+    if args.debug:
+        set_bcerror_debug(True)
+
     try:
-        real_main()
+        real_main(args)
     except KeyboardInterrupt:
         warn("Caught keyboard interrupt")
         exit(1)
     except EOFError:
         warn("Caught EOF")
         exit(1)
-    except RecursionError:
+    except RecursionError as e:
         warn("Python recursion depth exceeded! Did you forget your base case?")
+        if args.debug:
+            raise e
     except Exception as e:
         error(
             f'Python exception caught ({type(e)}: "{e}")! Please report this to the developers.'

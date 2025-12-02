@@ -3,7 +3,6 @@ import copy
 
 from enum import IntEnum
 from typing import IO, Any, Callable
-from io import StringIO
 from dataclasses import dataclass
 
 from . import Pos
@@ -451,7 +450,7 @@ class Operator(IntEnum):
 
     @classmethod
     def from_str(cls, data: str) -> "Operator":
-        return {
+        TABLE = {
             "assign": Operator.ASSIGN,
             "equal": Operator.EQUAL,
             "less_than": Operator.LESS_THAN,
@@ -469,7 +468,11 @@ class Operator(IntEnum):
             "not": Operator.NOT,
             "floor_div": Operator.FLOOR_DIV,
             "mod": Operator.MOD,
-        }[data]
+        }
+        res = TABLE.get(data)
+        if not res:
+            raise BCError(f"invalid string operator {data}")
+        return res
 
     def __repr__(self) -> str:
         return {
@@ -505,7 +508,7 @@ class BinaryExpr(Expr):
 
 @dataclass(slots=True)
 class ArrayIndex(Expr):
-    ident: Identifier
+    expr: Expr
     idx_outer: Expr
     idx_inner: Expr | None = None
 

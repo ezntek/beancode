@@ -867,9 +867,26 @@ class Optimizer:
         stmt.block = self.visit_block(stmt.block)
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        for i, itm in enumerate(stmt.items):
-            stmt.items[i] = self.visit_expr(itm)
+        i = 0
+        new_items: list[Expr] = list()
+        cur_item = ""
+        while i < len(stmt.items):
+            if cur_item == "":
+                first_pos = stmt.items[i].pos
+            itm = self.visit_expr(stmt.items[i])
+            if not isinstance(itm, Literal):
+                new_items.append(Literal(first_pos, BCValue.new_string(cur_item))) # type: ignore
+                new_items.append(itm)
+                cur_item = ""
+            else:
+                cur_item += str(itm.val)
+            i += 1
 
+        if cur_item != "":
+            new_items.append(Literal(first_pos, BCValue.new_string(cur_item))) # type: ignore
+            
+        stmt.items = new_items
+        
     def visit_input_stmt(self, stmt: InputStatement):
         _ = stmt
 

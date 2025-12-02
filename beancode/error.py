@@ -3,6 +3,7 @@ import os
 
 from . import Pos
 
+_bcerror_debug = False
 
 class BCError(Exception):
     pos: Pos | None
@@ -83,6 +84,9 @@ class BCError(Exception):
         print(indicator, file=sys.stderr)
         sys.stderr.flush()
 
+        if not self.pos:
+            raise RuntimeError("a traceback is provided:")
+
 
 def info(msg: str):
     print(
@@ -106,3 +110,7 @@ def error(msg: str):
         file=sys.stderr,
     )
     sys.stderr.flush()
+
+def set_bcerror_debug(state):
+    global _bcerror_debug
+    _bcerror_debug = state

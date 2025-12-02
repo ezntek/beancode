@@ -1,8 +1,7 @@
 CONSTANT Max <- 20000
 
 FUNCTION IsPrime(Num: INTEGER) RETURNS BOOLEAN
-    /* Manually calculating the bound is faster!
-    */
+    // Manually calculating the bound is faster!
     DECLARE Bound: INTEGER
     Bound <- INTEGER(SQRT(Num)) 
     
