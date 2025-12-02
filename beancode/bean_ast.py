@@ -271,6 +271,14 @@ class BCValue:
         else:
             return BCValue(self.kind, self.val)
 
+    def replace_inner(self, other: "BCValue"):
+        self.kind = other.kind
+        self.is_array = other.is_array
+        if self.is_array:
+            self.val = copy.deepcopy(other.val)
+        else:
+            self.val = other.val
+        
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
         return cls(kind, None)
