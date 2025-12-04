@@ -11,42 +11,28 @@
 
 ## High Priority
 
-- [ ] Lexer Refactor
-  - [ ] Destringify Types
-  - [ ] Destringify tokens
-- [ ] AST Refactor
-  - [ ] Stop using dataclasses
-- [ ] REPL
-  - [ ] Don't forcibly run the parser constantly, just rely on an empty line to terminate (Credit: PseudoEngine2)
+- [x] Lexer Refactor
+  - [x] Destringify tokens
 - [x] Library routine refactor
   - [x] Proper FFI interface
   - [x] Variadic arguments
   - [x] Array passing support
-- [x] MAKEARRAY/CLEARARRAY whatever library routine
+- [x] MAKEARRAY/CLEARARRAY whatever library routine (INITARRAY)
 - [x] BCValue shrink (Proper tagged union)
 - [x] AST Optimizer
-  - [ ] optimize array initialization
   - [x] static expression evaluation (includes library routines)
-  - [ ] block optimizations
-    - [ ] folding loops with an always false condition
-    - [ ] folding loops that will fail after the first iteration
-    - [ ] inlining small loops?
   - [x] replacing constants
   - [x] inlining library routines
   - [x] insert native Python calls when possible (maybe?) 
-  - [ ] AST caching to JSON
-- [ ] Make string concatenation faster
-
-## Medium Priority
-
-- [ ] AST
-  - [ ] Formatter
-  - [ ] Decompiler
-- [ ] Multiple Error Reporting
-- [ ] Refactor error implementation (no more hardcoded file names with file IDs, proper context support)
+- [ ] Formatter
 
 ## Low Priority
 
+(0.7)
+
+- [ ] Multiple Error Reporting 
+- [ ] Refactor error implementation (no more hardcoded file names with file IDs, proper context support)
+- [ ] Make string concatenation faster
 - [ ] Python Compiler? (Turning an AST into an exec call)
 - [ ] Static/Semantic Analyzer
 - [ ] File IO with raw bytes
