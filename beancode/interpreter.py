@@ -1,7 +1,6 @@
 import os
 import sys
 import importlib
-import copy
 import math
 import subprocess
 
@@ -1502,8 +1501,9 @@ class Interpreter:
             mod: Exports = importlib.import_module(
                 f"beancode.modules.{stmt.file}"
             ).EXPORTS
-        except ModuleNotFoundError:
+        except Exception as e:
             self.error(f"failed to include module {stmt.file}", stmt.pos)
+            raise e
 
         for const in mod["constants"]:
             self.variables[const.name] = Variable(val=const.value, const=True)

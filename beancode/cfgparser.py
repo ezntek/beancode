@@ -1,5 +1,5 @@
 from .bean_ast import BCValue, Literal
-from .lexer import Lexer
+from .lexer import Lexer, TokenKind
 from .parser import Parser
 from .error import BCError
 
@@ -14,8 +14,8 @@ def parse_config_from_source(src: str) -> dict[str, BCValue]:
     while ps.cur < len(ps.tokens):
         ps.consume_newlines()
         # Ident Assign Literal
-        ident = ps.expect_ident("for configuration file key")
-        ps.consume_and_expect("assign", "after each configuration file key")
+        ident = ps.ident("for configuration file key")
+        ps.consume_and_expect(TokenKind.ASSIGN, "after each configuration file key")
         lit: Literal | None = ps.literal()  # type: ignore
         if lit is None:
             raise BCError(
@@ -23,7 +23,7 @@ def parse_config_from_source(src: str) -> dict[str, BCValue]:
             )
 
         if ps.cur != len(ps.tokens) - 1:
-            ps.consume_and_expect("newline", "after configuration entry")
+            ps.consume_and_expect(TokenKind.NEWLINE, "after configuration entry")
 
         ps.consume_newlines()
         res[ident.ident] = lit.val

@@ -2,11 +2,44 @@ import typing
 
 from dataclasses import dataclass
 
-from beancode.bean_ast import BCPrimitiveType
+from .bean_ast import TokenKind, BCPrimitiveType, Type
 from .error import *
 from . import Pos, __version__, is_case_consistent, panic
 
-TokenKind = typing.Literal[
+
+@dataclass
+class Token:
+    kind: TokenKind
+    pos: Pos
+    data: str | BCPrimitiveType | typing.Literal["array"] | None = None
+
+    def print(self, file=sys.stdout):
+        match self.kind:
+            case TokenKind.LITERAL_STRING:
+                s = f'"{self.data}"'
+            case TokenKind.LITERAL_CHAR:
+                s = f"'{self.data}'"
+            case TokenKind.LITERAL_NUMBER | "ident":
+                s = self.data
+            case TokenKind.TYPE:
+                s = f"<{str(self.data).upper()}>"
+            case _:
+                s = f"<{self.kind}>"
+
+        print(f"token[{self.pos}]: {s}", file=file)
+
+    def to_humanized_string(self) -> str:
+        match self.kind:
+            case TokenKind.TYPE:
+                return f"{str(self.data).upper()}"
+            case _:
+                return self.kind.humanize() 
+
+    def __repr__(self) -> str:
+        return f"token({self.kind})"
+
+TYPES = {"integer", "boolean", "real", "char", "string", "array"}
+KEYWORDS = {
     "declare",
     "constant",
     "output",
@@ -35,8 +68,8 @@ TokenKind = typing.Literal[
     "endprocedure",
     "call",
     "function",
-    "return",
     "returns",
+    "return",
     "endfunction",
     "openfile",
     "readfile",
@@ -44,205 +77,26 @@ TokenKind = typing.Literal[
     "closefile",
     "read",
     "write",
-    # extra feachur™
     "appendfile",
-    "append",  # file mode
+    "append",
+    "trace",
+    "endtrace",
+    "scope",
+    "endscope",
     "include",
     "include_ffi",
     "export",
-    "scope",
-    "endscope",
     "print",
-    "trace",
-    "endtrace",
-    # symbols
-    "assign",
-    "equal",
-    "less_than",
-    "greater_than",
-    "less_than_or_equal",
-    "greater_than_or_equal",
-    "not_equal",
-    "mul",
-    "div",
-    "add",
-    "sub",
-    "pow",
-    "left_paren",
-    "right_paren",
-    "left_bracket",
-    "right_bracket",
-    "left_curly",
-    "right_curly",
-    "colon",
-    "comma",
-    "dot",
-    "newline",
-    # types, literals
-    "literal_string",
-    "literal_char",
-    "literal_number",
-    "true",
-    "false",
-    "null",
-    "ident",
-    "type",
-]
-
-
-def humanize_token_kind(k: TokenKind) -> str:
-    match k:
-        case "assign":
-            return "'<-'"
-        case "equal":
-            return "'='"
-        case "less_than":
-            return "'<'"
-        case "greater_than":
-            return "'>'"
-        case "less_than_or_equal":
-            return "'<='"
-        case "greater_than_or_equal":
-            return "'>='"
-        case "not_equal":
-            return "'<>'"
-        case "mul":
-            return "'*'"
-        case "div":
-            return "'/'"
-        case "add":
-            return "'+'"
-        case "sub":
-            return "'-'"
-        case "pow":
-            return "'^'"
-        case "left_paren":
-            return "'('"
-        case "right_paren":
-            return "')'"
-        case "left_bracket":
-            return "'['"
-        case "right_bracket":
-            return "']'"
-        case "left_curly":
-            return "'{'"
-        case "right_curly":
-            return "'}'"
-        case "colon":
-            return "':'"
-        case "comma":
-            return "','"
-        case "dot":
-            return "'.'"
-        case "newline":
-            return "newline"
-        case "literal_string":
-            return "string literal"
-        case "literal_char":
-            return "character literal"
-        case "literal_number":
-            return "number literal"
-        case "ident":
-            return "identifier or name"
-        case "type":
-            return "type"
-        case _:
-            return k.upper()
-
-
-@dataclass
-class Token:
-    kind: TokenKind
-    pos: Pos
-    data: str | BCPrimitiveType | typing.Literal["array"] | None = None
-
-    def print(self, file=sys.stdout):
-        match self.kind:
-            case "literal_string":
-                s = f'"{self.data}"'
-            case "literal_char":
-                s = f"'{self.data}'"
-            case "literal_number" | "ident":
-                s = self.data
-            case "type":
-                s = f"<{str(self.data).upper()}>"
-            case _:
-                s = f"<{self.kind}>"
-
-        print(f"token[{self.pos}]: {s}", file=file)
-
-    def to_humanized_string(self) -> str:
-        match self.kind:
-            case "type":
-                return f"{str(self.data).upper()}"
-            case _:
-                return humanize_token_kind(self.kind)
-
-    def __repr__(self) -> str:
-        return f"token({self.kind})"
-
+}
 
 class Lexer:
     src: str
     row: int
     bol: int
     cur: int
-    keywords: list[str]
-    types: list[str]
 
     def __init__(self, src: str) -> None:
         self.src = src
-        self.keywords = [
-            "declare",
-            "constant",
-            "output",
-            "input",
-            "and",
-            "or",
-            "not",
-            "if",
-            "then",
-            "else",
-            "endif",
-            "case",
-            "of",
-            "otherwise",
-            "endcase",
-            "while",
-            "do",
-            "endwhile",
-            "repeat",
-            "until",
-            "for",
-            "to",
-            "step",
-            "next",
-            "procedure",
-            "endprocedure",
-            "call",
-            "function",
-            "returns",
-            "return",
-            "endfunction",
-            "openfile",
-            "readfile",
-            "writefile",
-            "closefile",
-            "read",
-            "write",
-            # extra feature
-            "appendfile",
-            "append",
-            "trace",
-            "endtrace",
-            "scope",
-            "endscope",
-            "include",
-            "include_ffi",
-            "export",
-            "print",
-        ]
-        self.types = ["integer", "real", "boolean", "string", "char", "array"]
         self.reset()
 
     def reset(self):
@@ -325,10 +179,10 @@ class Lexer:
             return None
 
         TABLE: dict[str, TokenKind] = {
-            "<>": "not_equal",
-            ">=": "greater_than_or_equal",
-            "<=": "less_than_or_equal",
-            "<-": "assign",
+            "<>": TokenKind.NOT_EQUAL,
+            ">=": TokenKind.GREATER_THAN_OR_EQUAL,
+            "<=": TokenKind.LESS_THAN_OR_EQUAL,
+            "<-": TokenKind.ASSIGN,
         }
 
         pair = self.src[self.cur : self.cur + 2]
@@ -350,24 +204,24 @@ class Lexer:
             )
 
         TABLE: dict[str, TokenKind] = {
-            "{": "left_curly",
-            "}": "right_curly",
-            "[": "left_bracket",
-            "]": "right_bracket",
-            "(": "left_paren",
-            ")": "right_paren",
-            ":": "colon",
-            ";": "newline",
-            ",": "comma",
-            "=": "equal",
-            "<": "less_than",
-            ">": "greater_than",
-            "*": "mul",
-            "/": "div",
-            "+": "add",
-            "-": "sub",
-            "^": "pow",
-            "←": "assign",
+            "{": TokenKind.LEFT_CURLY,
+            "}": TokenKind.RIGHT_CURLY,
+            "[": TokenKind.LEFT_BRACKET,
+            "]": TokenKind.RIGHT_BRACKET,
+            "(": TokenKind.LEFT_PAREN,
+            ")": TokenKind.RIGHT_PAREN,
+            ":": TokenKind.COLON,
+            ";": TokenKind.NEWLINE,
+            ",": TokenKind.COMMA,
+            "=": TokenKind.EQUAL,
+            "<": TokenKind.LESS_THAN,
+            ">": TokenKind.GREATER_THAN,
+            "*": TokenKind.MUL,
+            "/": TokenKind.DIV,
+            "+": TokenKind.ADD,
+            "-": TokenKind.SUB,
+            "^": TokenKind.POW,
+            "←": TokenKind.ASSIGN,
         }
 
         kind = TABLE.get(cur)
@@ -430,23 +284,22 @@ class Lexer:
 
     def next_keyword(self, word: str) -> Token | None:
         if is_case_consistent(word):
-            if word.lower() not in self.keywords:
+            if word.lower() not in KEYWORDS:
                 return None
         else:
             return None
 
-        kind: TokenKind = word.lower()  # type: ignore
+        kind = TokenKind.from_str(word.lower())
         return Token(kind, self.pos(len(word)))
 
     def next_type(self, word: str) -> Token | None:
         if is_case_consistent(word):
-            if word.lower() not in self.types:
+            if word.lower() not in TYPES:
                 return None
         else:
             return None
 
-        typ: BCPrimitiveType = word.lower()  # type: ignore
-        return Token("type", self.pos(len(word)), data=typ)
+        return Token(TokenKind.TYPE, self.pos(len(word)), data=word.lower())
 
     def _is_number(self, word: str) -> bool:
         found_decimal = False
@@ -475,22 +328,22 @@ class Lexer:
                 panic("reached unreachable code")
 
             res = word[1:-1]
-            kind: TokenKind = "literal_string" if word[0] == '"' else "literal_char"
+            kind: TokenKind = TokenKind.LITERAL_STRING if word[0] == '"' else TokenKind.LITERAL_CHAR
 
             return Token(kind, self.pos(len(word)), data=res)
 
         if self._is_number(word):
-            return Token("literal_number", self.pos(len(word)), data=word)
+            return Token(TokenKind.LITERAL_NUMBER, self.pos(len(word)), data=word)
         elif word[0].isdigit():
             raise BCError("invalid number literal", self.pos(len(word)))
 
         if is_case_consistent(word):
             if word.lower() == "true":
-                return Token("true", self.pos(len(word)))
+                return Token(TokenKind.TRUE, self.pos(len(word)))
             elif word.lower() == "false":
-                return Token("false", self.pos(len(word)))
+                return Token(TokenKind.FALSE, self.pos(len(word)))
             elif word.lower() == "null":
-                return Token("null", self.pos(len(word)))
+                return Token(TokenKind.NULL, self.pos(len(word)))
 
     def _is_ident(self, word: str) -> bool:
         if not word[0].isalpha() and word[0] not in "_":
@@ -510,7 +363,7 @@ class Lexer:
                     "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
                     self.pos(len(word)),
                 )
-            return Token("ident", p, data=word)
+            return Token(TokenKind.IDENT, p, data=word)
         else:
             raise BCError("invalid identifier or symbol", p)
 
@@ -520,7 +373,7 @@ class Lexer:
             return
 
         if self.get_cur() == "\n":
-            t = Token("newline", self.pos_here(1))
+            t = Token(TokenKind.NEWLINE, self.pos_here(1))
             self.bump_newline()
             return t
 
@@ -551,5 +404,5 @@ class Lexer:
             if not t:
                 break
             res.append(t)
-        res.append(Token("newline", self.pos_here(1)))
+        res.append(Token(TokenKind.NEWLINE, self.pos_here(1)))
         return res

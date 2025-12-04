@@ -68,7 +68,7 @@ class Parser:
 
         if tok.kind != expected:
             raise BCError(
-                f"expected {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                f"expected {expected.humanize()}{s}, but got {tok.to_humanized_string()}{h}",
                 tok.pos,
             )
         return tok
@@ -81,14 +81,14 @@ class Parser:
 
         if not tok:
             raise BCError(
-                f"expected {humanize_token_kind(expected)}{s}, but reached end of file{h}",
+                f"expected {expected.humanize()}{s}, but reached end of file{h}",
                 self.pos(),
                 eof=True,
             )
 
         if tok.kind != expected:
             raise BCError(
-                f"expected {humanize_token_kind(expected)}{s}, but got {tok.to_humanized_string()}{h}",
+                f"expected {expected.humanize()}{s}, but got {tok.to_humanized_string()}{h}",
                 tok.pos,
             )
 
@@ -116,7 +116,7 @@ class Parser:
             if help:
                 h = "\n" + help
             raise BCError(
-                f"expected {humanize_token_kind(expected)}{s}, but got {cons.to_humanized_string()}{h}",
+                f"expected {expected.humanize()}{s}, but got {cons.to_humanized_string()}{h}",
                 cons.pos,
             )
         return cons
@@ -134,11 +134,11 @@ class Parser:
         return self.prev()
 
     def consume_newlines(self):
-        while self.cur < len(self.tokens) and self.peek().kind == "newline":
+        while self.cur < len(self.tokens) and self.peek().kind == TokenKind.NEWLINE:
             self.consume()
 
     def check_newline(self, s: str):
-        self.consume_and_expect("newline", ctx=f"after {s}")
+        self.consume_and_expect(TokenKind.NEWLINE, ctx=f"after {s}")
 
     def match(self, *typs: TokenKind) -> bool:
         for typ in typs:
@@ -152,13 +152,13 @@ class Parser:
         return self.peek().kind in typs
 
     def array_literal(self, nested=False) -> Expr | None:
-        lbrace = self.consume_and_expect("left_curly", "for array or matrix literal")
+        lbrace = self.consume_and_expect(TokenKind.LEFT_CURLY, "for array or matrix literal")
 
         exprs = []
-        while not self.check("right_curly"):
+        while not self.check(TokenKind.RIGHT_CURLY):
             self.clean_newlines()
 
-            if self.check("left_curly"):
+            if self.check(TokenKind.LEFT_CURLY):
                 if nested:
                     raise BCError(
                         "cannot nest array literals over 2 dimensions!", self.pos()
@@ -176,9 +176,9 @@ class Parser:
 
             self.clean_newlines()
             comma = self.peek()
-            if comma.kind == "right_curly":
+            if comma.kind == TokenKind.RIGHT_CURLY:
                 break
-            elif comma.kind != "comma":
+            elif comma.kind != TokenKind.COMMA:
                 raise BCError(
                     f"expected comma after expression in array literal, found {comma.kind}",
                     comma.pos,
@@ -193,19 +193,19 @@ class Parser:
                 self.pos(),
             )
 
-        self.check_and_consume("right_curly")
+        self.check_and_consume(TokenKind.RIGHT_CURLY)
 
         return ArrayLiteral(lbrace.pos, exprs)
 
     def literal(self) -> Expr | None:
         if not self.check_many(
-            "literal_string", "literal_char", "literal_number", "true", "false", "null"
+            TokenKind.LITERAL_STRING, TokenKind.LITERAL_CHAR, TokenKind.LITERAL_NUMBER, TokenKind.TRUE, TokenKind.FALSE, TokenKind.NULL
         ):
             return
 
         lit = self.consume()
         match lit.kind:
-            case "literal_char":
+            case TokenKind.LITERAL_CHAR:
                 if len(lit.data) == 0:  # type: ignore
                     raise BCError(
                         "CHAR literal cannot have no characters in it!", lit.pos
@@ -230,7 +230,7 @@ class Parser:
                             f"more than 1 character in char literal '{val}'", lit.pos
                         )
                     return Literal(lit.pos, BCValue.new_char(val[0]))
-            case "literal_string":
+            case TokenKind.LITERAL_STRING:
                 val: str = lit.data  # type: ignore
                 res = list()
                 i = 0
@@ -256,7 +256,7 @@ class Parser:
                     i += 1
 
                 return Literal(lit.pos, BCValue.new_string("".join(res)))
-            case "literal_number":
+            case TokenKind.LITERAL_NUMBER:
                 val: str = lit.data  # type: ignore
 
                 if is_real(val):
@@ -275,17 +275,17 @@ class Parser:
                     return Literal(lit.pos, BCValue.new_integer(res))
                 else:
                     raise BCError(f'invalid number literal "{val}"', lit.pos)
-            case "true":
+            case TokenKind.TRUE:
                 return Literal(lit.pos, BCValue.new_boolean(True))
-            case "false":
+            case TokenKind.FALSE:
                 return Literal(lit.pos, BCValue.new_boolean(False))
-            case BCPrimitiveType.NULL:
+            case TokenKind.NULL:
                 return Literal(lit.pos, BCValue.new_null())
 
     def _array_type(self) -> Type:
         inner: BCPrimitiveType
 
-        self.consume_and_expect("left_bracket", "for array type declaration")
+        self.consume_and_expect(TokenKind.LEFT_BRACKET, "for array type declaration")
         begin = self.expr()
         if not begin:
             raise BCError(
@@ -293,7 +293,7 @@ class Parser:
                 begin,
             )
 
-        self.consume_and_expect("colon", "after beginning value of array declaration")
+        self.consume_and_expect(TokenKind.COLON, "after beginning value of array declaration")
 
         end = self.expr()
         if not end:
@@ -306,9 +306,9 @@ class Parser:
         matrix_bounds = None
 
         right_bracket = self.consume()
-        if right_bracket.kind == "right_bracket":
+        if right_bracket.kind == TokenKind.RIGHT_BRACKET:
             pass
-        elif right_bracket.kind == "comma":
+        elif right_bracket.kind == TokenKind.COMMA:
             inner_begin = self.expr()
             if not inner_begin:
                 raise BCError(
@@ -317,7 +317,7 @@ class Parser:
                 )
 
             self.consume_and_expect(
-                "colon", "after beginning value of array declaration"
+                TokenKind.COLON, "after beginning value of array declaration"
             )
 
             inner_end = self.expr()
@@ -336,16 +336,16 @@ class Parser:
 
             flat_bounds = None
 
-            self.consume_and_expect("right_bracket", "after matrix length declaration")
+            self.consume_and_expect(TokenKind.RIGHT_BRACKET, "after matrix length declaration")
         else:
             raise BCError(
                 "expected right bracket or comma after array bounds declaration",
                 right_bracket.pos,
             )
 
-        self.consume_and_expect("of", "after array size declaration")
+        self.consume_and_expect(TokenKind.OF, "after array size declaration")
 
-        arrtyp = self.consume_and_expect("type", "after array size declaration")
+        arrtyp = self.consume_and_expect(TokenKind.TYPE, "after array size declaration")
         if arrtyp.data == "array":
             raise BCError(
                 "cannot have array as array element type, please use the matrix syntax instead",
@@ -358,14 +358,14 @@ class Parser:
         return ArrayType(inner, bounds)  # type: ignore
 
     def typ(self) -> Type:
-        adv = self.consume_and_expect("type")
+        adv = self.consume_and_expect(TokenKind.TYPE)
         if adv.data == "array":
             return self._array_type()
         else:
             return BCPrimitiveType.from_string(adv.data)  # type: ignore
 
     def ident(self, ctx="", function=False) -> Identifier:
-        c = self.consume_and_expect("ident", ctx=ctx)
+        c = self.consume_and_expect(TokenKind.IDENT, ctx=ctx)
         libroutine = False
         if not function and is_case_consistent(c.data) and c.data in LIBROUTINES: # type: ignore
             libroutine = True 
@@ -374,13 +374,13 @@ class Parser:
     def function_call(self) -> Expr | None:
         # avoid consuming tokens
         ident = self.peek()
-        if ident.kind != "ident":
+        if ident.kind != TokenKind.IDENT:
             return
 
         leftb = self.peek_next()
         if not leftb:
             return
-        if leftb.kind != "left_paren":
+        if leftb.kind != TokenKind.LEFT_PAREN:
             return
 
         # consume both the ident and left_paren
@@ -388,7 +388,7 @@ class Parser:
         self.consume()
 
         args = []
-        while self.peek().kind != "right_paren":
+        while self.peek().kind != TokenKind.RIGHT_PAREN:
             expr = self.expr()
             if not expr:
                 raise BCError(
@@ -398,12 +398,12 @@ class Parser:
             args.append(expr)
 
             comma = self.peek()
-            if comma.kind not in ("comma", "right_paren"):
+            if comma.kind not in (TokenKind.COMMA, TokenKind.RIGHT_PAREN):
                 raise BCError(
                     "expected comma or right parenthesis after argument in function call argument list",
                     comma.pos,
                 )
-            elif comma.kind == "comma":
+            elif comma.kind == TokenKind.COMMA:
                 self.consume()
 
         dat = str(ident.data)
@@ -412,11 +412,11 @@ class Parser:
             dat = dat.lower()
             libroutine = True
 
-        self.consume_and_expect("right_paren", "after argument list in function call")
+        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after argument list in function call")
         return FunctionCall(leftb.pos, ident=dat, args=args, libroutine=libroutine)
 
     def typecast(self) -> Typecast | None:
-        typ = self.consume_and_expect("type", "for typecast")
+        typ = self.consume_and_expect(TokenKind.TYPE, "for typecast")
         if typ.data == "array":
             # should be unreachable
             raise BCError("cannot typecast to an array!", typ.pos)
@@ -428,17 +428,17 @@ class Parser:
         if not expr:
             raise BCError("invalid or no expression supplied for type cast", typ.pos)
 
-        self.consume_and_expect("right_paren", "after type cast expression")
+        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after type cast expression")
 
         return Typecast(typ.pos, t, expr)
 
     def grouping(self) -> Expr | None:
-        begin = self.consume_and_expect("left_paren", "in grouping")
+        begin = self.consume_and_expect(TokenKind.LEFT_PAREN, "in grouping")
         e = self.expr()
         if not e:
             raise BCError("invalid or no expression inside grouping", begin.pos)
 
-        self.consume_and_expect("right_paren", "after expression in grouping")
+        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after expression in grouping")
         return Grouping(begin.pos, inner=e)
 
     def unary(self) -> Expr | None:
@@ -449,31 +449,31 @@ class Parser:
             return lit
 
         match p.kind:
-            case "null":
+            case TokenKind.NULL:
                 return Literal(p.pos, BCValue.new_null())
-            case "left_curly":
+            case TokenKind.LEFT_CURLY:
                 return self.array_literal()
-            case "ident":
+            case TokenKind.IDENT:
                 pn = self.peek_next()
-                if pn and pn.kind == "left_paren":
+                if pn and pn.kind == TokenKind.LEFT_PAREN:
                     return self.function_call()
                 return self.ident()
-            case "type":
+            case TokenKind.TYPE:
                 pn = self.peek_next()
                 if not pn:
                     return
 
-                if pn.kind == "left_paren":
+                if pn.kind == TokenKind.LEFT_PAREN:
                     return self.typecast()
-            case "left_paren":
+            case TokenKind.LEFT_PAREN:
                 return self.grouping()
-            case "sub":
+            case TokenKind.SUB:
                 begin = self.consume()
                 e = self.unary()
                 if not e:
                     raise BCError("invalid or no expression for negation", begin.pos)
                 return Negation(begin.pos, e)
-            case "not":
+            case TokenKind.NOT:
                 begin = self.consume()
                 e = self.expr()
                 if not e:
@@ -485,7 +485,7 @@ class Parser:
     def array_index(self) -> Expr | None:
         expr = self.unary()
 
-        leftb = self.check_and_consume("left_bracket")
+        leftb = self.check_and_consume(TokenKind.LEFT_BRACKET)
         if not leftb:
             return expr
 
@@ -495,14 +495,14 @@ class Parser:
 
         rightb = self.consume()
         exp_inner = None
-        if rightb.kind == "right_bracket":
+        if rightb.kind == TokenKind.RIGHT_BRACKET:
             pass
-        elif rightb.kind == "comma":
+        elif rightb.kind == TokenKind.COMMA:
             exp_inner = self.expr()
             if not exp_inner:
                 raise BCError("expected expression as array index", exp_inner)
 
-            self.consume_and_expect("right_bracket", "after expression in array index")
+            self.consume_and_expect(TokenKind.RIGHT_BRACKET, "after expression in array index")
         else:
             raise BCError(
                 "expected right_bracket or comma after expression in array index",
@@ -525,7 +525,7 @@ class Parser:
         if not expr:
             return
 
-        if self.match("pow"):
+        if self.match(TokenKind.POW):
             op_tok = self.prev()
             right = self.pow()
 
@@ -541,7 +541,7 @@ class Parser:
         if not expr:
             return
 
-        if self.check("ident") and is_case_consistent(s := self.peek().data.lower()):  # type: ignore
+        if self.check(TokenKind.IDENT) and is_case_consistent(s := self.peek().data.lower()):  # type: ignore
             if s == "div":
                 raise BCError(
                     "DIV is not an infix operator!\nPlease use the DIV(a, b) library routine instead of a DIV b!",
@@ -553,9 +553,9 @@ class Parser:
                     self.pos(),
                 )
 
-        while self.match("mul", "div"):
+        while self.match(TokenKind.MUL, TokenKind.DIV):
             op_tok = self.prev()
-            op = Operator.from_str(op_tok.kind)
+            op = Operator.from_token_kind(op_tok.kind)
 
             right = self.pow()
 
@@ -572,9 +572,9 @@ class Parser:
         if not expr:
             return
 
-        while self.match("add", "sub"):
+        while self.match(TokenKind.ADD, TokenKind.SUB):
             op_tok = self.prev()
-            op = Operator.from_str(op_tok.kind)
+            op = Operator.from_token_kind(op_tok.kind)
 
             right = self.factor()
             if not right:
@@ -591,10 +591,10 @@ class Parser:
             return
 
         while self.match(
-            "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal"
+            TokenKind.GREATER_THAN, TokenKind.LESS_THAN, TokenKind.GREATER_THAN_OR_EQUAL, TokenKind.LESS_THAN_OR_EQUAL
         ):
             op_tok = self.prev()
-            op = Operator.from_str(op_tok.kind)
+            op = Operator.from_token_kind(op_tok.kind)
 
             right = self.term()
             if not right:
@@ -610,9 +610,9 @@ class Parser:
         if not expr:
             return
 
-        while self.match("equal", "not_equal"):
+        while self.match(TokenKind.EQUAL, TokenKind.NOT_EQUAL):
             op_tok = self.prev()
-            op = Operator.from_str(op_tok.kind)
+            op = Operator.from_token_kind(op_tok.kind)
 
             right = self.comparison()
             if not right:
@@ -627,9 +627,9 @@ class Parser:
         if not expr:
             return
 
-        while self.match("and", "or"):
+        while self.match(TokenKind.AND, TokenKind.OR):
             op_tok = self.prev()
-            op = Operator.from_str(op_tok.kind)  # type: ignore
+            op = Operator.from_token_kind(op_tok.kind)  # type: ignore
 
             right = self.equality()
 
@@ -647,11 +647,11 @@ class Parser:
         exprs = []
         begin = self.peek()
 
-        if begin.kind not in ("output", "print"):
+        if begin.kind not in (TokenKind.OUTPUT, TokenKind.PRINT):
             return
 
         newline = True
-        if begin.kind == "print":
+        if begin.kind == TokenKind.PRINT:
             newline = False
 
         self.consume()
@@ -663,7 +663,7 @@ class Parser:
 
         exprs.append(initial)
 
-        while self.match("comma"):
+        while self.match(TokenKind.COMMA):
             new = self.expr()
             if not new:
                 break
@@ -673,7 +673,7 @@ class Parser:
         return OutputStatement(begin.pos, items=exprs, newline=newline)
 
     def input_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("input")
+        begin = self.check_and_consume(TokenKind.INPUT)
         if not begin:
             return
 
@@ -687,11 +687,11 @@ class Parser:
         return InputStatement(begin.pos, ident)
 
     def return_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("return")
+        begin = self.check_and_consume(TokenKind.RETURN)
         if not begin:
             return
 
-        if self.check("newline"):
+        if self.check(TokenKind.NEWLINE):
             return ReturnStatement(begin.pos)
 
         expr = self.expr()
@@ -703,7 +703,7 @@ class Parser:
         return ReturnStatement(begin.pos, expr)
 
     def call_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("call")
+        begin = self.check_and_consume(TokenKind.CALL)
         if not begin:
             return
 
@@ -711,9 +711,9 @@ class Parser:
 
         leftb = self.peek()
         args = []
-        if leftb.kind == "left_paren":
+        if leftb.kind == TokenKind.LEFT_PAREN:
             self.consume()
-            while self.peek().kind != "right_paren":
+            while self.peek().kind != TokenKind.RIGHT_PAREN:
                 expr = self.expr()
                 if not expr:
                     raise BCError(
@@ -723,15 +723,15 @@ class Parser:
                 args.append(expr)
 
                 comma = self.peek()
-                if comma.kind != "comma" and comma.kind != "right_paren":
+                if comma.kind != TokenKind.COMMA and comma.kind != TokenKind.RIGHT_PAREN:
                     raise BCError(
                         "expected comma after argument in procedure call argument list",
                         comma.pos,
                     )
-                elif comma.kind == "comma":
+                elif comma.kind == TokenKind.COMMA:
                     self.consume()
 
-            self.consume_and_expect("right_paren", "after arg list in procedure call")
+            self.consume_and_expect(TokenKind.RIGHT_PAREN, "after arg list in procedure call")
 
         self.consume_newlines()
 
@@ -745,7 +745,7 @@ class Parser:
         begin = self.peek()
         export = False
 
-        if begin.kind == "export":
+        if begin.kind == TokenKind.EXPORT:
             export = True
             begin = self.peek_next()
             if not begin:
@@ -755,7 +755,7 @@ class Parser:
                     eof=True,
                 )
 
-        if begin.kind != "declare":
+        if begin.kind != TokenKind.DECLARE:
             return
 
         # consume the keyword
@@ -764,29 +764,29 @@ class Parser:
             self.consume()
 
         idents = []
-        ident = self.consume_and_expect("ident", "after declare statement")
+        ident = self.consume_and_expect(TokenKind.IDENT, "after declare statement")
         idents.append(Identifier(ident.pos, str(ident.data)))
 
-        while self.check("comma"):
+        while self.check(TokenKind.COMMA):
             self.consume()  # consume the sep
-            if self.check("colon"):
+            if self.check(TokenKind.COLON):
                 break
 
-            ident = self.consume_and_expect("ident", "after comma in declare statement")
+            ident = self.consume_and_expect(TokenKind.IDENT, "after comma in declare statement")
             idents.append(Identifier(ident.pos, str(ident.data)))
 
         typ = None
         expr = None
 
         colon = self.peek()
-        if self.check("colon"):
+        if self.check(TokenKind.COLON):
             self.consume()
 
             typ = self.typ()
             if not typ:
                 raise BCError("invalid type after DECLARE", colon.pos)
 
-        if self.check("assign"):
+        if self.check(TokenKind.ASSIGN):
             tok = self.consume()
             if len(idents) > 1:
                 raise BCError(
@@ -814,7 +814,7 @@ class Parser:
         begin = self.peek()
         export = False
 
-        if self.check("export"):
+        if self.check(TokenKind.EXPORT):
             begin = self.peek_next()
             if not begin:
                 raise BCError(
@@ -824,7 +824,7 @@ class Parser:
                 )
             export = True
 
-        if begin.kind != "constant":
+        if begin.kind != TokenKind.CONSTANT:
             return
 
         # consume the kw
@@ -832,8 +832,8 @@ class Parser:
         if export == True:
             self.consume()
 
-        ident = self.consume_and_expect("ident", "after constant declaration")
-        self.consume_and_expect("assign", "after variable name in constant declaration")
+        ident = self.consume_and_expect(TokenKind.IDENT, "after constant declaration")
+        self.consume_and_expect(TokenKind.ASSIGN, "after variable name in constant declaration")
 
         expr = self.expr()
         if not expr:
@@ -852,9 +852,9 @@ class Parser:
         if not p:
             return
 
-        if p.kind == "left_bracket":
+        if p.kind == TokenKind.LEFT_BRACKET:
             temp_idx = self.cur
-            while self.tokens[temp_idx].kind != "right_bracket":
+            while self.tokens[temp_idx].kind != TokenKind.RIGHT_BRACKET:
                 temp_idx += 1
                 if temp_idx == len(self.tokens):
                     raise BCError(
@@ -865,7 +865,7 @@ class Parser:
 
             p = self.tokens[temp_idx + 1]
 
-        if p.kind != "assign":
+        if p.kind != TokenKind.ASSIGN:
             return
 
         ident = self.array_index_or_none()
@@ -894,7 +894,7 @@ class Parser:
         return res
 
     def if_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("if")
+        begin = self.check_and_consume(TokenKind.IF)
         if not begin:
             return
 
@@ -903,21 +903,21 @@ class Parser:
             raise BCError("found invalid or no expression for if condition", self.pos())
 
         # allow stupid igcse stuff
-        if self.peek().kind == "newline":
+        if self.peek().kind == TokenKind.NEWLINE:
             self.clean_newlines()
 
-        self.consume_and_expect("then", "after if condition")
+        self.consume_and_expect(TokenKind.THEN, "after if condition")
         self.clean_newlines()
 
         if_stmts = []
         else_stmts = []
 
-        while not self.check_many("else", "endif"):
+        while not self.check_many(TokenKind.ELSE, TokenKind.ENDIF):
             if_stmts.append(self.scan_one_statement())
 
-        if self.check_and_consume("else"):
+        if self.check_and_consume(TokenKind.ELSE):
             self.clean_newlines()
-            else_stmts = self.block("endif")
+            else_stmts = self.block(TokenKind.ENDIF)
 
         self.consume()  # byebye endif
 
@@ -926,11 +926,11 @@ class Parser:
         )
 
     def caseof_stmt(self) -> Statement | None:
-        case = self.check_and_consume("case")
+        case = self.check_and_consume(TokenKind.CASE)
         if not case:
             return
 
-        self.consume_and_expect("of", "after CASE keyword")
+        self.consume_and_expect(TokenKind.OF, "after CASE keyword")
 
         main_expr = self.expr()
         if not main_expr:
@@ -942,8 +942,8 @@ class Parser:
 
         branches: list[CaseofBranch] = []
         otherwise: Statement | None = None
-        while not self.check("endcase"):
-            is_otherwise = self.check("otherwise")
+        while not self.check(TokenKind.ENDCASE):
+            is_otherwise = self.check(TokenKind.OTHERWISE)
             if not is_otherwise:
                 expr = self.expr()
                 if not expr:
@@ -951,10 +951,10 @@ class Parser:
                         "invalid or no expression for case of branch", self.pos()
                     )
 
-                self.consume_and_expect("colon", "after case of branch expression")
+                self.consume_and_expect(TokenKind.COLON, "after case of branch expression")
             else:
                 self.consume()
-                if self.check("colon"):
+                if self.check(TokenKind.COLON):
                     raise BCError(
                         'a colon ":" after OTHERWISE is A-level Pseudocode syntax!\nRemove this colon.',
                         self.pos(),
@@ -976,7 +976,7 @@ class Parser:
         return CaseofStatement(case.pos, main_expr, branches, otherwise)
 
     def while_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("while")
+        begin = self.check_and_consume(TokenKind.WHILE)
         if not begin:
             return
 
@@ -987,35 +987,35 @@ class Parser:
             )
 
         self.clean_newlines()
-        self.consume_and_expect("do", "after while loop condition")
+        self.consume_and_expect(TokenKind.DO, "after while loop condition")
         self.clean_newlines()
 
-        stmts = self.block("endwhile")
+        stmts = self.block(TokenKind.ENDWHILE)
         end = self.consume()
 
         return WhileStatement(begin.pos, end.pos, expr, stmts)
 
     def for_stmt(self):
-        initial = self.check_and_consume("for")
+        initial = self.check_and_consume(TokenKind.FOR)
         if not initial:
             return
 
         counter = self.ident("for for loop counter")
 
-        self.consume_and_expect("assign", "after counter in for loop")
+        self.consume_and_expect(TokenKind.ASSIGN, "after counter in for loop")
 
         begin = self.expr()
         if not begin:
             raise BCError("invalid or no expression as begin in for loop", self.pos())
 
-        self.consume_and_expect("to", "after beginning value in for loop")
+        self.consume_and_expect(TokenKind.TO, "after beginning value in for loop")
 
         end = self.expr()
         if not end:
             raise BCError("invalid or no expression as end in for loop", self.pos())
 
         step: Expr | None = None
-        if self.check("step"):
+        if self.check(TokenKind.STEP):
             self.consume()
             step = self.expr()
             if not step:
@@ -1024,7 +1024,7 @@ class Parser:
                 )
 
         self.clean_newlines()
-        stmts = self.block("next")
+        stmts = self.block(TokenKind.NEXT)
         next = self.consume()
 
         next_counter = self.ident("after NEXT in for loop")
@@ -1046,13 +1046,13 @@ class Parser:
         )
 
     def repeatuntil_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("repeat")
+        begin = self.check_and_consume(TokenKind.REPEAT)
         if not begin:
             return
 
         self.clean_newlines()
 
-        stmts = self.block("until")
+        stmts = self.block(TokenKind.UNTIL)
         until = self.consume()
 
         expr = self.expr()
@@ -1068,7 +1068,7 @@ class Parser:
         # ident : type
         ident = self.ident("for function argument")
         colon = self.consume_and_expect(
-            "colon", "after identifier in function argument"
+            TokenKind.COLON, "after identifier in function argument"
         )
 
         typ = self.typ()
@@ -1085,7 +1085,7 @@ class Parser:
         begin = self.peek()
         export = False
 
-        if begin.kind == "export":
+        if begin.kind == TokenKind.EXPORT:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
@@ -1095,7 +1095,7 @@ class Parser:
                 )
             export = True
 
-        if begin.kind != "procedure":
+        if begin.kind != TokenKind.PROCEDURE:
             return
 
         self.consume()  # byebye PROCEDURE
@@ -1106,31 +1106,31 @@ class Parser:
 
         args = []
         leftb = self.peek()
-        if leftb.kind == "left_paren":
+        if leftb.kind == TokenKind.LEFT_PAREN:
             # there is an arg list
             self.consume()
-            while not self.check("right_paren"):
+            while not self.check(TokenKind.RIGHT_PAREN):
                 arg = self.function_arg()
                 if not arg:
                     raise BCError("invalid function argument", self.pos())
 
                 args.append(arg)
 
-                if not self.check_many("comma", "right_paren"):
+                if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
                     raise BCError(
                         "expected comma after procedure argument list", self.pos()
                     )
 
-                if self.check("comma"):
+                if self.check(TokenKind.COMMA):
                     self.consume()
 
             self.consume_and_expect(
-                "right_paren", "after argument list in procedure declaration"
+                TokenKind.RIGHT_PAREN, "after argument list in procedure declaration"
             )
 
         self.consume_newlines()
 
-        stmts = self.block("endprocedure")
+        stmts = self.block(TokenKind.ENDPROCEDURE)
 
         self.consume()
 
@@ -1142,7 +1142,7 @@ class Parser:
         begin = self.peek()
         export = False
 
-        if begin.kind == "export":
+        if begin.kind == TokenKind.EXPORT:
             begin = self.peek_next()
             if not begin:
                 raise BCError(
@@ -1152,7 +1152,7 @@ class Parser:
                 )
             export = True
 
-        if begin.kind != "function":
+        if begin.kind != TokenKind.FUNCTION:
             return
 
         self.consume()  # byebye FUNCTION
@@ -1163,29 +1163,29 @@ class Parser:
 
         args = []
         leftb = self.peek()
-        if leftb.kind == "left_paren":
+        if leftb.kind == TokenKind.LEFT_PAREN:
             # there is an arg list
             self.consume()
-            while not self.check("right_paren"):
+            while not self.check(TokenKind.RIGHT_PAREN):
                 arg = self.function_arg()
                 if not arg:
                     raise BCError("invalid function argument", self.pos())
 
                 args.append(arg)
 
-                if not self.check_many("comma", "right_paren"):
+                if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
                     raise BCError(
                         "expected comma after function argument in list", self.pos()
                     )
 
-                if self.check("comma"):
+                if self.check(TokenKind.COMMA):
                     self.consume()
 
             self.consume_and_expect(
-                "right_paren", "after argument list in function declaration"
+                TokenKind.RIGHT_PAREN, "after argument list in function declaration"
             )
 
-        self.consume_and_expect("returns", "after function arguments")
+        self.consume_and_expect(TokenKind.RETURNS, "after function arguments")
 
         typ = self.typ()
         if not typ:
@@ -1195,7 +1195,7 @@ class Parser:
 
         self.consume_newlines()
 
-        stmts = self.block("endfunction")
+        stmts = self.block(TokenKind.ENDFUNCTION)
         self.consume()
 
         return FunctionStatement(
@@ -1208,27 +1208,27 @@ class Parser:
         )
 
     def scope_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("scope")
+        begin = self.check_and_consume(TokenKind.SCOPE)
         if not begin:
             return
 
         self.clean_newlines()
-        stmts = self.block("endscope")
+        stmts = self.block(TokenKind.ENDSCOPE)
         self.consume()
 
         return ScopeStatement(begin.pos, stmts)
 
     def include_stmt(self) -> Statement | None:
-        if not self.check_many("include", "include_ffi"):
+        if not self.check_many(TokenKind.INCLUDE, TokenKind.INCLUDE_FFI):
             return
         include = self.consume()
 
         ffi = False
-        if include.kind == "include_ffi":
+        if include.kind == TokenKind.INCLUDE_FFI:
             ffi = True
 
         name = self.consume()
-        if name.kind != "literal_string":
+        if name.kind != TokenKind.LITERAL_STRING:
             raise BCError(
                 "include must be followed by a literal of the name of the file to include",
                 name.pos,
@@ -1237,29 +1237,29 @@ class Parser:
         return IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
 
     def trace_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("trace")
+        begin = self.check_and_consume(TokenKind.TRACE)
         if not begin:
             return
 
-        self.consume_and_expect("left_paren", "after TRACE keyword")
+        self.consume_and_expect(TokenKind.LEFT_PAREN, "after TRACE keyword")
 
         vars = list()
-        while not self.check("right_paren"):
+        while not self.check(TokenKind.RIGHT_PAREN):
             ident = self.ident("in variable list in TRACE statement")
 
             vars.append(ident.ident)  # type: ignore
 
-            if not self.check_many("comma", "right_paren"):
+            if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
                 raise BCError(
                     "expected comma after procedure argument list", self.pos()
                 )
-            elif self.check("comma"):
+            elif self.check(TokenKind.COMMA):
                 self.consume()
 
-        self.consume_and_expect("right_paren", "after variable list in TRACE statement")
+        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after variable list in TRACE statement")
 
         file_name: str | None = None
-        if self.check_and_consume("to"):
+        if self.check_and_consume(TokenKind.TO):
             lit: Literal | None = self.literal()  # type: ignore
             if not lit:
                 raise BCError(
@@ -1278,13 +1278,13 @@ class Parser:
             file_name = val.get_string()
 
         self.consume_newlines()
-        block = self.block("endtrace")
+        block = self.block(TokenKind.ENDTRACE)
         self.consume()  # byebye ENDTRACE
 
         return TraceStatement(begin.pos, vars, file_name, block)
 
     def _file_id(self, ctx: str) -> Expr | str:
-        s = self.check_and_consume("literal_string")
+        s = self.check_and_consume(TokenKind.LITERAL_STRING)
         if not s:
             expr = self.expr()
             if not expr:
@@ -1298,31 +1298,31 @@ class Parser:
             return str(s.data)
 
     def openfile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("openfile")
+        begin = self.check_and_consume(TokenKind.OPENFILE)
         if not begin:
             return
 
         filename: Expr | str = self._file_id("OPENFILE")
 
-        self.consume_and_expect("for")
+        self.consume_and_expect(TokenKind.FOR)
 
         read = False
         write = False
         append = False
 
-        while not self.check("newline"):
+        while not self.check(TokenKind.NEWLINE):
             mode = self.consume()
-            if mode.kind in ("read", "write", "append"):
+            if mode.kind in (TokenKind.READ, TokenKind.WRITE, TokenKind.APPEND):
                 match mode.kind:
-                    case "read":
+                    case TokenKind.READ:
                         if read:
                             raise BCError("duplicate file mode READ", mode.pos)
                         read = True
-                    case "write":
+                    case TokenKind.WRITE:
                         if write:
                             raise BCError("duplicate file mode WRITE", mode.pos)
                         write = True
-                    case "append":
+                    case TokenKind.APPEND:
                         if append:
                             raise BCError("duplicate file mode APPEND", mode.pos)
                         append = True
@@ -1338,7 +1338,7 @@ class Parser:
                     self.pos(),
                 )
 
-            self.check_and_consume("and")
+            self.check_and_consume(TokenKind.AND)
 
         if not (read or write or append):
             raise BCError("No file modes specified!", begin.pos)
@@ -1346,13 +1346,13 @@ class Parser:
         return OpenfileStatement(begin.pos, filename, (read, write, append))
 
     def readfile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("readfile")
+        begin = self.check_and_consume(TokenKind.READFILE)
         if not begin:
             return
 
         fileid: Expr | str = self._file_id("READFILE")
 
-        self.consume_and_expect("comma")
+        self.consume_and_expect(TokenKind.COMMA)
 
         val: ArrayIndex | Identifier | None = self.array_index_or_none() # type: ignore
         if not val:
@@ -1361,13 +1361,13 @@ class Parser:
         return ReadfileStatement(begin.pos, fileid, val) # type: ignore
 
     def writefile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("writefile")
+        begin = self.check_and_consume(TokenKind.WRITEFILE)
         if not begin:
             return
 
         fileid: Expr | str = self._file_id("WRITEFILE")
 
-        self.consume_and_expect("comma")
+        self.consume_and_expect(TokenKind.COMMA)
 
         val = self.expr()
         if not val:
@@ -1379,13 +1379,13 @@ class Parser:
         return WritefileStatement(begin.pos, fileid, val)
 
     def appendfile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("appendfile")
+        begin = self.check_and_consume(TokenKind.APPENDFILE)
         if not begin:
             return
 
         fileid: Expr | str = self._file_id("APPENDFILE")
 
-        self.consume_and_expect("comma")
+        self.consume_and_expect(TokenKind.COMMA)
 
         val = self.expr()
         if not val:
@@ -1397,7 +1397,7 @@ class Parser:
         return AppendfileStatement(begin.pos, fileid, val)
 
     def closefile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume("closefile")
+        begin = self.check_and_consume(TokenKind.CLOSEFILE)
         if not begin:
             return
 
@@ -1407,7 +1407,7 @@ class Parser:
 
     def clean_newlines(self):
         while self.cur < len(self.tokens):
-            if not self.check("newline"):
+            if not self.check(TokenKind.NEWLINE):
                 break
             self.consume()
 
@@ -1507,18 +1507,19 @@ class Parser:
         if expr:
             return ExprStatement.from_expr(expr)
         else:
+            print(cur)
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
-            if cur.kind == "next":
+            if cur.kind == TokenKind.NEXT:
                 raise BCError("cannot end FOR loop now!\n" + DIDNT_END, cur.pos)
-            elif cur.kind[:3] == "end":
-                end = cur.kind[3:].upper()
+            elif str(cur.kind)[:3] == "end":
+                end = str(cur.kind)[3:].upper()
                 if end == "CASE":
                     end += " OF"
                 raise BCError(
                     f"cannot end a {end} statement now!\n" + DIDNT_END, cur.pos
                 )
             else:
-                raise BCError("invalid statement or expression", cur.pos)
+                raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
 
     def scan_one_statement(self) -> Statement | None:
         s = self.stmt()

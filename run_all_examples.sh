@@ -1,9 +1,8 @@
 #!/usr/bin/env sh
 
 set -e
-PREFIX=""
 
-for dir in $(/usr/bin/ls examples); do
-    echo -e "\033[33;1m===> running example \"${dir}\"\033[0m"
-    ${PREFIX} python3 -m beancode "examples/${dir}"
+for f in examples/*; do
+    echo -e "\033[33;1m===> running example \"$f\"\033[0m"
+    ${PYTHON:-python3} -m beancode $@ "$f" 
 done

@@ -26,7 +26,7 @@ class BCError(Exception):
         if self.pos is None:
             print(self.msg, end="", file=sys.stderr)
             sys.stderr.flush()
-            return
+            raise RuntimeError("a traceback is provided:")
 
         line_no = self.pos.row
         col = self.pos.col
@@ -84,8 +84,6 @@ class BCError(Exception):
         print(indicator, file=sys.stderr)
         sys.stderr.flush()
 
-        if not self.pos:
-            raise RuntimeError("a traceback is provided:")
 
 
 def info(msg: str):

@@ -11,7 +11,7 @@ ENDPROCEDURE
 PROCEDURE Line(Size : INTEGER)
     DECLARE Length : INTEGER
     FOR Length ← 1 TO Size
-        CALL PUTCHAR('-')
+        PRINT '-'
     NEXT Length
     OUTPUT ""
 ENDPROCEDURE
