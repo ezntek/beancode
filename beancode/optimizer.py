@@ -200,12 +200,6 @@ class Optimizer:
         lhs: BCValue
         rhs: BCValue
 
-        if lhs.kind != rhs.kind:
-            raise BCError(
-                f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                expr.pos,
-            )
-
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
             human_kind = "a comparison"
         elif expr.op in {
@@ -216,14 +210,11 @@ class Optimizer:
         }:
             human_kind = "an ordered comparison"
 
-            if lhs.kind_is_numeric() != rhs.kind_is_numeric():
+            if lhs.kind != rhs.kind and not (
+                lhs.kind_is_numeric() and rhs.kind_is_numeric()
+            ):
                 raise BCError(
-                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}",
-                    expr.pos,
-                )
-            elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                raise BCError(
-                    f"illegal to compare booleans with ordered comparisons",
+                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
                     expr.pos,
                 )
         elif expr.op in {
@@ -232,6 +223,12 @@ class Optimizer:
             Operator.NOT,
         }:
             human_kind = "a boolean operation"
+
+            if lhs.kind != rhs.kind:
+                raise BCError(
+                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
+                    expr.pos,
+                )
 
             if not (
                 lhs.kind == BCPrimitiveType.BOOLEAN
@@ -245,7 +242,7 @@ class Optimizer:
             human_kind = "an arithmetic expression"
 
             if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
-                lhs.kind_is_numeric() or rhs.kind_is_numeric()
+                lhs.kind_is_numeric() and rhs.kind_is_numeric()
             ):
                 raise BCError(
                     f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
@@ -395,7 +392,6 @@ class Optimizer:
                 return BCValue(BCPrimitiveType.BOOLEAN, lhs.val and rhs.val)  # type: ignore
             case Operator.OR:
                 return BCValue(BCPrimitiveType.BOOLEAN, lhs.val or rhs.val)  # type: ignore
-
 
     def visit_array_index(self, expr: ArrayIndex):
         _ = expr

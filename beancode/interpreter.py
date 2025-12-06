@@ -226,12 +226,6 @@ class Interpreter:
         lhs = self.visit_expr(expr.lhs)
         rhs = self.visit_expr(expr.rhs)
 
-        if lhs.kind != rhs.kind:
-            self.error(
-                f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                expr.pos,
-            )
-
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
             human_kind = "a comparison"
         elif expr.op in {
@@ -242,14 +236,11 @@ class Interpreter:
         }:
             human_kind = "an ordered comparison"
 
-            if lhs.kind_is_numeric() != rhs.kind_is_numeric():
+            if lhs.kind != rhs.kind and not (
+                lhs.kind_is_numeric() and rhs.kind_is_numeric()
+            ):
                 self.error(
-                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}",
-                    expr.pos,
-                )
-            elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                self.error(
-                    f"illegal to compare booleans with ordered comparisons",
+                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
                     expr.pos,
                 )
         elif expr.op in {
@@ -258,6 +249,12 @@ class Interpreter:
             Operator.NOT,
         }:
             human_kind = "a boolean operation"
+
+            if lhs.kind != rhs.kind:
+                self.error(
+                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
+                    expr.pos,
+                )
 
             if not (
                 lhs.kind == BCPrimitiveType.BOOLEAN
@@ -271,7 +268,7 @@ class Interpreter:
             human_kind = "an arithmetic expression"
 
             if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
-                lhs.kind_is_numeric() or rhs.kind_is_numeric()
+                lhs.kind_is_numeric() and rhs.kind_is_numeric()
             ):
                 self.error(
                     f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
@@ -359,7 +356,7 @@ class Interpreter:
                 )
             case Operator.DIV:
                 if rhs.val == 0:
-                    raise BCError("cannot divide by zero!", expr.rhs.pos)
+                    self.error("cannot divide by zero!", expr.rhs.pos)
 
                 res = lhs.val / rhs.val  # type: ignore
                 return (
@@ -372,7 +369,7 @@ class Interpreter:
                     lhs.kind == BCPrimitiveType.BOOLEAN
                     or rhs.kind == BCPrimitiveType.BOOLEAN
                 ):
-                    raise BCError("cannot add BOOLEANs!", expr.pos)
+                    self.error("cannot add BOOLEANs!", expr.pos)
 
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     return BCValue(BCPrimitiveType.STRING, str(lhs) + str(rhs))

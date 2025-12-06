@@ -256,6 +256,9 @@ class BCArrayType:
         self.inner = inner
         self.bounds = bounds
 
+    def __hash__(self) -> int:
+        return hash((self.inner, self.bounds))
+
     def __eq__(self, value: object, /) -> bool:
         if type(self) is not type(value):
             return False
@@ -393,6 +396,9 @@ class BCValue:
 
     def is_null(self) -> bool:
         return self.kind == BCPrimitiveType.NULL or self.val is None
+
+    def __hash__(self) -> int:
+        return hash((self.kind, self.val, self.is_array))
 
     def __eq__(self, value: object, /) -> bool:
         if type(self) is not type(value):
