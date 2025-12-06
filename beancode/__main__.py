@@ -19,6 +19,7 @@ def _error(s: str) -> NoReturn:
     error(s)
     exit(1)
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -58,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     )
     group.add_argument("file", nargs="?", type=str)
     return parser.parse_args()
+
 
 def real_main(args: argparse.Namespace):
     if args.no_run:

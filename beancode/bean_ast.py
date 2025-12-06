@@ -101,7 +101,7 @@ class TokenKind(IntEnum):
         if not res:
             raise BCError(f"tried to convert invalid string token type {s}")
         return res
-        
+
     def __repr__(self) -> str:
         return self.name.lower()
 
@@ -168,7 +168,6 @@ class TokenKind(IntEnum):
                 return str(self).upper()
 
 
-
 @dataclass(slots=True)
 class Expr:
     pos: Pos
@@ -194,7 +193,7 @@ class BCPrimitiveType(IntEnum):
 
     @classmethod
     def from_str(cls, kind: str):
-        res = cls.__members__.get(kind.upper()) 
+        res = cls.__members__.get(kind.upper())
         if res is None:
             raise BCError(
                 f"tried to convert invalid string type {kind} to a BCPrimitiveType!"
@@ -326,7 +325,7 @@ class BCArray:
     def __eq__(self, value: object, /) -> bool:
         if type(value) is not type(self):
             return False
-        return self.typ == value.typ and self.data == value.data # type: ignore
+        return self.typ == value.typ and self.data == value.data  # type: ignore
 
     def __neq__(self, value: object, /) -> bool:
         return not self.__eq__(value)
@@ -423,7 +422,7 @@ class BCValue:
             self.val = copy.deepcopy(other.val)
         else:
             self.val = other.val
-        
+
     @classmethod
     def empty(cls, kind: BCType) -> "BCValue":
         return cls(kind, None)
@@ -510,7 +509,7 @@ class BCValue:
 
         match self.kind:
             case BCPrimitiveType.STRING:
-                return self.val # type: ignore
+                return self.val  # type: ignore
             case BCPrimitiveType.BOOLEAN:
                 return str(self.val).upper()
             case BCPrimitiveType.NULL:
@@ -585,7 +584,7 @@ class Operator(IntEnum):
     EQUAL = 2
     LESS_THAN = 3
     GREATER_THAN = 4
-    LESS_THAN_OR_EQUAL = 4
+    LESS_THAN_OR_EQUAL = 5
     GREATER_THAN_OR_EQUAL = 6
     NOT_EQUAL = 7
     MUL = 8
@@ -608,6 +607,32 @@ class Operator(IntEnum):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    # should return a verb!
+    def humanize(self) -> str:
+        match self:
+            case Operator.MUL:
+                return "multiply"
+            case Operator.DIV:
+                return "divide"
+            case Operator.ADD:
+                return "add"
+            case Operator.SUB:
+                return "subtract"
+            case Operator.POW:
+                return "exponentiate"
+            case Operator.AND | Operator.OR | Operator.NOT:
+                return self.name.upper()
+            case Operator.ASSIGN:
+                return "assign"
+            case Operator.FLOOR_DIV:
+                return "perform DIV()"
+            case Operator.MOD:
+                return "perform MOD()"
+            case Operator.EQUAL | Operator.NOT_EQUAL:
+                return "compare"
+            case _:
+                return f"perform {self.name.lower().replace('_', ' ')} between"
 
 
 @dataclass(slots=True)
@@ -676,7 +701,7 @@ class DeclareStatement(Statement):
 class AssignStatement(Statement):
     ident: Lvalue
     value: Expr
-    is_ident: bool = True # for optimization
+    is_ident: bool = True  # for optimization
 
 
 @dataclass(slots=True)

@@ -287,7 +287,9 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() > rhs.get_string())
+                        return BCValue(
+                            BCPrimitiveType.BOOLEAN, lhs.get_string() > rhs.get_string()
+                        )
             case Operator.LESS_THAN:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
@@ -316,7 +318,9 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() < rhs.get_string())
+                        return BCValue(
+                            BCPrimitiveType.BOOLEAN, lhs.get_string() < rhs.get_string()
+                        )
             case Operator.GREATER_THAN_OR_EQUAL:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
@@ -345,7 +349,10 @@ class Optimizer:
                             expr.lhs.pos,
                         )
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() >= rhs.get_string())
+                        return BCValue(
+                            BCPrimitiveType.BOOLEAN,
+                            lhs.get_string() >= rhs.get_string(),
+                        )
             case Operator.LESS_THAN_OR_EQUAL:
                 lhs_num: int | float = 0
                 rhs_num: int | float = 0
@@ -371,7 +378,10 @@ class Optimizer:
                     elif lhs.kind == BCPrimitiveType.BOOLEAN:
                         raise BCError(f"illegal to compare booleans", expr.lhs.pos)
                     elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(BCPrimitiveType.BOOLEAN, lhs.get_string() <= rhs.get_string())
+                        return BCValue(
+                            BCPrimitiveType.BOOLEAN,
+                            lhs.get_string() <= rhs.get_string(),
+                        )
             case Operator.POW:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -393,15 +403,19 @@ class Optimizer:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float = lhs.val # type: ignore
-                rhs_num: int | float = rhs.val # type: ignore
+                lhs_num: int | float = lhs.val  # type: ignore
+                rhs_num: int | float = rhs.val  # type: ignore
 
                 if int(lhs_num) == 2 and type(rhs_num) is int:
                     res = 1 << rhs_num
                 else:
                     res = lhs_num**rhs_num
 
-                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             case Operator.MUL:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -423,12 +437,16 @@ class Optimizer:
                         expr.lhs.pos,
                     )
 
-                lhs_num: int | float = lhs.val # type: ignore
-                rhs_num: int | float = rhs.val # type: ignore
+                lhs_num: int | float = lhs.val  # type: ignore
+                rhs_num: int | float = rhs.val  # type: ignore
 
                 res = lhs_num * rhs_num
 
-                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             case Operator.DIV:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -450,12 +468,16 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_num: int | float = lhs.val # type: ignore
-                rhs_num: int | float = rhs.val # type: ignore
+                lhs_num: int | float = lhs.val  # type: ignore
+                rhs_num: int | float = rhs.val  # type: ignore
 
                 res = lhs_num / rhs_num
 
-                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             case Operator.ADD:
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     # concatenate instead
@@ -485,12 +507,16 @@ class Optimizer:
                 ):
                     raise BCError("Cannot add BOOLEANs, CHARs and STRINGs!", expr.pos)
 
-                lhs_num: int | float = lhs.val # type: ignore
-                rhs_num: int | float = rhs.val # type: ignore
+                lhs_num: int | float = lhs.val  # type: ignore
+                rhs_num: int | float = rhs.val  # type: ignore
 
                 res = lhs_num + rhs_num
 
-                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             case Operator.SUB:
                 if lhs.kind in {
                     BCPrimitiveType.BOOLEAN,
@@ -506,12 +532,16 @@ class Optimizer:
                 }:
                     raise BCError("Cannot subtract BOOLEANs, CHARs and STRINGs!")
 
-                lhs_num: int | float = lhs.val # type: ignore
-                rhs_num: int | float = rhs.val # type: ignore
+                lhs_num: int | float = lhs.val  # type: ignore
+                rhs_num: int | float = rhs.val  # type: ignore
 
                 res = lhs_num - rhs_num
 
-                return BCValue(BCPrimitiveType.INTEGER, res) if type(res) is int else BCValue(BCPrimitiveType.REAL, res)
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             # FLOOR_DIV and MOD are impossible here
             case Operator.AND:
                 if lhs.kind != BCPrimitiveType.BOOLEAN:
@@ -526,8 +556,8 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_b: bool = lhs.val # type: ignore
-                rhs_b: bool = rhs.val # type: ignore
+                lhs_b: bool = lhs.val  # type: ignore
+                rhs_b: bool = rhs.val  # type: ignore
 
                 res = lhs_b and rhs_b
                 return BCValue(BCPrimitiveType.BOOLEAN, res)
@@ -544,8 +574,8 @@ class Optimizer:
                         expr.rhs.pos,
                     )
 
-                lhs_b: bool = lhs.val # type: ignore
-                rhs_b: bool = rhs.val # type: ignore
+                lhs_b: bool = lhs.val  # type: ignore
+                rhs_b: bool = rhs.val  # type: ignore
 
                 res = lhs_b or rhs_b
 
@@ -728,7 +758,7 @@ class Optimizer:
     def visit_fncall(self, expr: FunctionCall):
         if is_case_consistent(expr.ident) and expr.ident.lower() in LIBROUTINES:
             return self.visit_libroutine(expr)
-        
+
         for i, itm in enumerate(expr.args):
             val = self.fold_expr(itm)
             if val:
@@ -787,7 +817,7 @@ class Optimizer:
     def visit_expr(self, expr: Expr) -> Expr:
         default = self.fold_expr_if_possible(expr)
         if isinstance(default, Literal):
-            return default # always favor static folding
+            return default  # always favor static folding
 
         match expr:
             case Typecast():
@@ -799,9 +829,9 @@ class Optimizer:
             case Not():
                 expr.inner = self.visit_expr(expr.inner)
             case Identifier():
-                pass # nothing inside to optimize
+                pass  # nothing inside to optimize
             case Literal():
-                pass # unreachable
+                pass  # unreachable
             case ArrayLiteral():
                 for i, itm in enumerate(expr.items):
                     expr.items[i] = self.visit_expr(itm)
@@ -814,11 +844,11 @@ class Optimizer:
                     expr.idx_inner = self.visit_expr(expr.idx_inner)
             case FunctionCall():
                 if not expr.libroutine:
-                    return default 
+                    return default
 
                 if expr.ident in {"div", "mod"}:
                     if len(expr.args) != 2:
-                        return default 
+                        return default
 
                     lhs = self.visit_expr(expr.args[0])
                     rhs = self.visit_expr(expr.args[1])
@@ -831,7 +861,7 @@ class Optimizer:
                     arg = self.visit_expr(expr.args[0])
                     return Sqrt(expr.pos, arg)
 
-        return default 
+        return default
 
     def visit_type(self, typ: Type):
         if isinstance(typ, ArrayType):
@@ -875,7 +905,7 @@ class Optimizer:
                 first_pos = stmt.items[i].pos
             itm = self.visit_expr(stmt.items[i])
             if not isinstance(itm, Literal):
-                new_items.append(Literal(first_pos, BCValue.new_string(cur_item))) # type: ignore
+                new_items.append(Literal(first_pos, BCValue.new_string(cur_item)))  # type: ignore
                 new_items.append(itm)
                 cur_item = ""
             else:
@@ -883,10 +913,10 @@ class Optimizer:
             i += 1
 
         if cur_item != "":
-            new_items.append(Literal(first_pos, BCValue.new_string(cur_item))) # type: ignore
-            
+            new_items.append(Literal(first_pos, BCValue.new_string(cur_item)))  # type: ignore
+
         stmt.items = new_items
-        
+
     def visit_input_stmt(self, stmt: InputStatement):
         _ = stmt
 
@@ -946,7 +976,7 @@ class Optimizer:
     def visit_writefile_stmt(self, stmt: WritefileStatement):
         if isinstance(stmt.file_ident, Expr):
             stmt.file_ident = self.visit_expr(stmt.file_ident)
-        
+
         stmt.src = self.visit_expr(stmt.src)
 
     def visit_appendfile_stmt(self, stmt: AppendfileStatement):

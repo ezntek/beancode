@@ -470,7 +470,7 @@ class Tracer:
                     if var is None:
                         continue
 
-                    if var.is_array and var.kind.is_flat(): # type: ignore
+                    if var.is_array and var.kind.is_flat():  # type: ignore
                         prev_arr: list[BCValue] | None = None
                         if row_num != 0:
                             prev_var = rows[row_num - 1][1][col]

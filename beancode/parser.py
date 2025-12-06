@@ -152,7 +152,9 @@ class Parser:
         return self.peek().kind in typs
 
     def array_literal(self, nested=False) -> Expr | None:
-        lbrace = self.consume_and_expect(TokenKind.LEFT_CURLY, "for array or matrix literal")
+        lbrace = self.consume_and_expect(
+            TokenKind.LEFT_CURLY, "for array or matrix literal"
+        )
 
         exprs = []
         while not self.check(TokenKind.RIGHT_CURLY):
@@ -199,7 +201,12 @@ class Parser:
 
     def literal(self) -> Expr | None:
         if not self.check_many(
-            TokenKind.LITERAL_STRING, TokenKind.LITERAL_CHAR, TokenKind.LITERAL_NUMBER, TokenKind.TRUE, TokenKind.FALSE, TokenKind.NULL
+            TokenKind.LITERAL_STRING,
+            TokenKind.LITERAL_CHAR,
+            TokenKind.LITERAL_NUMBER,
+            TokenKind.TRUE,
+            TokenKind.FALSE,
+            TokenKind.NULL,
         ):
             return
 
@@ -293,7 +300,9 @@ class Parser:
                 begin,
             )
 
-        self.consume_and_expect(TokenKind.COLON, "after beginning value of array declaration")
+        self.consume_and_expect(
+            TokenKind.COLON, "after beginning value of array declaration"
+        )
 
         end = self.expr()
         if not end:
@@ -336,7 +345,9 @@ class Parser:
 
             flat_bounds = None
 
-            self.consume_and_expect(TokenKind.RIGHT_BRACKET, "after matrix length declaration")
+            self.consume_and_expect(
+                TokenKind.RIGHT_BRACKET, "after matrix length declaration"
+            )
         else:
             raise BCError(
                 "expected right bracket or comma after array bounds declaration",
@@ -367,8 +378,8 @@ class Parser:
     def ident(self, ctx="", function=False) -> Identifier:
         c = self.consume_and_expect(TokenKind.IDENT, ctx=ctx)
         libroutine = False
-        if not function and is_case_consistent(c.data) and c.data in LIBROUTINES: # type: ignore
-            libroutine = True 
+        if not function and is_case_consistent(c.data) and c.data in LIBROUTINES:  # type: ignore
+            libroutine = True
         return Identifier(c.pos, c.data, libroutine=libroutine)  # type: ignore
 
     def function_call(self) -> Expr | None:
@@ -412,7 +423,9 @@ class Parser:
             dat = dat.lower()
             libroutine = True
 
-        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after argument list in function call")
+        self.consume_and_expect(
+            TokenKind.RIGHT_PAREN, "after argument list in function call"
+        )
         return FunctionCall(leftb.pos, ident=dat, args=args, libroutine=libroutine)
 
     def typecast(self) -> Typecast | None:
@@ -502,21 +515,23 @@ class Parser:
             if not exp_inner:
                 raise BCError("expected expression as array index", exp_inner)
 
-            self.consume_and_expect(TokenKind.RIGHT_BRACKET, "after expression in array index")
+            self.consume_and_expect(
+                TokenKind.RIGHT_BRACKET, "after expression in array index"
+            )
         else:
             raise BCError(
                 "expected right_bracket or comma after expression in array index",
                 rightb.pos,
             )
 
-        return ArrayIndex(leftb.pos, expr, idx_outer=exp, idx_inner=exp_inner) # type: ignore
+        return ArrayIndex(leftb.pos, expr, idx_outer=exp, idx_inner=exp_inner)  # type: ignore
 
     def array_index_or_none(self) -> ArrayIndex | None:
         saved_point = self.cur
         arridx = self.array_index()
         if not isinstance(arridx, ArrayIndex):
             self.cur = saved_point
-            return 
+            return
         else:
             return arridx
 
@@ -591,7 +606,10 @@ class Parser:
             return
 
         while self.match(
-            TokenKind.GREATER_THAN, TokenKind.LESS_THAN, TokenKind.GREATER_THAN_OR_EQUAL, TokenKind.LESS_THAN_OR_EQUAL
+            TokenKind.GREATER_THAN,
+            TokenKind.LESS_THAN,
+            TokenKind.GREATER_THAN_OR_EQUAL,
+            TokenKind.LESS_THAN_OR_EQUAL,
         ):
             op_tok = self.prev()
             op = Operator.from_token_kind(op_tok.kind)
@@ -723,7 +741,10 @@ class Parser:
                 args.append(expr)
 
                 comma = self.peek()
-                if comma.kind != TokenKind.COMMA and comma.kind != TokenKind.RIGHT_PAREN:
+                if (
+                    comma.kind != TokenKind.COMMA
+                    and comma.kind != TokenKind.RIGHT_PAREN
+                ):
                     raise BCError(
                         "expected comma after argument in procedure call argument list",
                         comma.pos,
@@ -731,7 +752,9 @@ class Parser:
                 elif comma.kind == TokenKind.COMMA:
                     self.consume()
 
-            self.consume_and_expect(TokenKind.RIGHT_PAREN, "after arg list in procedure call")
+            self.consume_and_expect(
+                TokenKind.RIGHT_PAREN, "after arg list in procedure call"
+            )
 
         self.consume_newlines()
 
@@ -739,7 +762,9 @@ class Parser:
         if is_case_consistent(ident.ident) and ident.ident.lower() in LIBROUTINES:
             libroutine = True
 
-        return CallStatement(begin.pos, ident=ident.ident, args=args, libroutine=libroutine)
+        return CallStatement(
+            begin.pos, ident=ident.ident, args=args, libroutine=libroutine
+        )
 
     def declare_stmt(self) -> Statement | None:
         begin = self.peek()
@@ -772,7 +797,9 @@ class Parser:
             if self.check(TokenKind.COLON):
                 break
 
-            ident = self.consume_and_expect(TokenKind.IDENT, "after comma in declare statement")
+            ident = self.consume_and_expect(
+                TokenKind.IDENT, "after comma in declare statement"
+            )
             idents.append(Identifier(ident.pos, str(ident.data)))
 
         typ = None
@@ -833,7 +860,9 @@ class Parser:
             self.consume()
 
         ident = self.consume_and_expect(TokenKind.IDENT, "after constant declaration")
-        self.consume_and_expect(TokenKind.ASSIGN, "after variable name in constant declaration")
+        self.consume_and_expect(
+            TokenKind.ASSIGN, "after variable name in constant declaration"
+        )
 
         expr = self.expr()
         if not expr:
@@ -951,7 +980,9 @@ class Parser:
                         "invalid or no expression for case of branch", self.pos()
                     )
 
-                self.consume_and_expect(TokenKind.COLON, "after case of branch expression")
+                self.consume_and_expect(
+                    TokenKind.COLON, "after case of branch expression"
+                )
             else:
                 self.consume()
                 if self.check(TokenKind.COLON):
@@ -1256,7 +1287,9 @@ class Parser:
             elif self.check(TokenKind.COMMA):
                 self.consume()
 
-        self.consume_and_expect(TokenKind.RIGHT_PAREN, "after variable list in TRACE statement")
+        self.consume_and_expect(
+            TokenKind.RIGHT_PAREN, "after variable list in TRACE statement"
+        )
 
         file_name: str | None = None
         if self.check_and_consume(TokenKind.TO):
@@ -1354,11 +1387,11 @@ class Parser:
 
         self.consume_and_expect(TokenKind.COMMA)
 
-        val: ArrayIndex | Identifier | None = self.array_index_or_none() # type: ignore
+        val: ArrayIndex | Identifier | None = self.array_index_or_none()  # type: ignore
         if not val:
             val = self.ident()
 
-        return ReadfileStatement(begin.pos, fileid, val) # type: ignore
+        return ReadfileStatement(begin.pos, fileid, val)  # type: ignore
 
     def writefile_stmt(self) -> Statement | None:
         begin = self.check_and_consume(TokenKind.WRITEFILE)

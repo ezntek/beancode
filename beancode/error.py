@@ -5,6 +5,7 @@ from . import Pos
 
 _bcerror_debug = False
 
+
 class BCError(Exception):
     pos: Pos | None
     eof: bool
@@ -89,7 +90,6 @@ class BCError(Exception):
         sys.stderr.flush()
 
 
-
 def info(msg: str):
     print(
         f"\033[34;1minfo:\033[0m {msg}",
@@ -112,6 +112,7 @@ def error(msg: str):
         file=sys.stderr,
     )
     sys.stderr.flush()
+
 
 def set_bcerror_debug(state):
     global _bcerror_debug

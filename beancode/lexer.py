@@ -33,10 +33,11 @@ class Token:
             case TokenKind.TYPE:
                 return f"{str(self.data).upper()}"
             case _:
-                return self.kind.humanize() 
+                return self.kind.humanize()
 
     def __repr__(self) -> str:
         return f"token({self.kind})"
+
 
 TYPES = {"integer", "boolean", "real", "char", "string", "array"}
 KEYWORDS = {
@@ -88,6 +89,7 @@ KEYWORDS = {
     "export",
     "print",
 }
+
 
 class Lexer:
     src: str
@@ -328,7 +330,9 @@ class Lexer:
                 panic("reached unreachable code")
 
             res = word[1:-1]
-            kind: TokenKind = TokenKind.LITERAL_STRING if word[0] == '"' else TokenKind.LITERAL_CHAR
+            kind: TokenKind = (
+                TokenKind.LITERAL_STRING if word[0] == '"' else TokenKind.LITERAL_CHAR
+            )
 
             return Token(kind, self.pos(len(word)), data=res)
 
