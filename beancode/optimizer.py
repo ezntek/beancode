@@ -200,7 +200,12 @@ class Optimizer:
         lhs: BCValue
         rhs: BCValue
 
-        human_kind = ""
+        if lhs.kind != rhs.kind:
+            raise BCError(
+                f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
+                expr.pos,
+            )
+
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
             human_kind = "a comparison"
         elif expr.op in {
@@ -210,206 +215,109 @@ class Optimizer:
             Operator.GREATER_THAN_OR_EQUAL,
         }:
             human_kind = "an ordered comparison"
+
+            if lhs.kind_is_numeric() != rhs.kind_is_numeric():
+                raise BCError(
+                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}",
+                    expr.pos,
+                )
+            elif lhs.kind == BCPrimitiveType.BOOLEAN:
+                raise BCError(
+                    f"illegal to compare booleans with ordered comparisons",
+                    expr.pos,
+                )
         elif expr.op in {
             Operator.AND,
             Operator.OR,
             Operator.NOT,
         }:
             human_kind = "a boolean operation"
+
+            if not (
+                lhs.kind == BCPrimitiveType.BOOLEAN
+                or rhs.kind == BCPrimitiveType.BOOLEAN
+            ):
+                raise BCError(
+                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
+                    expr.pos,
+                )
         else:
             human_kind = "an arithmetic expression"
 
-        if lhs.is_uninitialized():
-            raise BCError(
-                f"cannot have NULL in the left hand side of {human_kind}\n"
-                + "is your value an uninitialized value/variable?",
-                expr.lhs.pos,
-            )
-        if rhs.is_uninitialized():
-            raise BCError(
-                f"cannot have NULL in the right hand side of {human_kind}\n"
-                + "is your value an uninitialized value/variable?",
-                expr.rhs.pos,
-            )
+            if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
+                lhs.kind_is_numeric() or rhs.kind_is_numeric()
+            ):
+                raise BCError(
+                    f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
+                    expr.pos,
+                )
+
+        if expr.op != Operator.EQUAL:
+            if lhs.is_uninitialized():
+                raise BCError(
+                    f"cannot have NULL in the left hand side of {human_kind}\n"
+                    + "is your value an uninitialized value/variable?",
+                    expr.lhs.pos,
+                )
+            if rhs.is_uninitialized():
+                raise BCError(
+                    f"cannot have NULL in the right hand side of {human_kind}\n"
+                    + "is your value an uninitialized value/variable?",
+                    expr.rhs.pos,
+                )
 
         match expr.op:
             case Operator.ASSIGN:
                 raise ValueError("impossible to have assign in binaryexpr")
             case Operator.EQUAL:
-                if lhs.is_uninitialized() and rhs.is_uninitialized():
-                    return BCValue(BCPrimitiveType.BOOLEAN, True)
-
-                if lhs.kind != rhs.kind:
-                    raise BCError(
-                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
-                        expr.pos,
-                    )
-
-                res = lhs == rhs
-                return BCValue(BCPrimitiveType.BOOLEAN, res)
+                return BCValue(BCPrimitiveType.BOOLEAN, lhs == rhs)
             case Operator.NOT_EQUAL:
-                if lhs.is_uninitialized() and rhs.is_uninitialized():
-                    return BCValue(BCPrimitiveType.BOOLEAN, True)
-
-                if lhs.kind != rhs.kind:
-                    raise BCError(
-                        f"cannot compare incompatible types {lhs.kind} and {rhs.kind}!",
-                        expr.pos,
-                    )
-
-                res = not (lhs == rhs)  # python is RIDICULOUS
-                return BCValue(BCPrimitiveType.BOOLEAN, res)
+                return BCValue(BCPrimitiveType.BOOLEAN, lhs != rhs)
             case Operator.GREATER_THAN:
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind_is_numeric():
-                    lhs_num = lhs.val  # type: ignore
-
-                    if not rhs.kind_is_numeric():
-                        raise BCError(
-                            f"impossible to perform greater_than between {lhs.kind} and {rhs.kind}",
-                            expr.rhs.pos,
-                        )
-
-                    rhs_num = rhs.val  # type: ignore
-
-                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num > rhs_num))
-                else:
-                    if lhs.kind != rhs.kind:
-                        raise BCError(
-                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                        raise BCError(
-                            f"illegal to compare booleans with inequality comparisons",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(
-                            BCPrimitiveType.BOOLEAN, lhs.get_string() > rhs.get_string()
-                        )
+                return BCValue(
+                    BCPrimitiveType.BOOLEAN,
+                    (
+                        ord(lhs.val) > ord(rhs.val)  # type: ignore
+                        if lhs.kind == BCPrimitiveType.CHAR
+                        else lhs.val > rhs.val  # type: ignore
+                    ),
+                )
             case Operator.LESS_THAN:
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind_is_numeric():
-                    lhs_num = lhs.val  # type: ignore
-
-                    if not rhs.kind_is_numeric():
-                        raise BCError(
-                            f"impossible to perform less_than between {lhs.kind} and {rhs.kind}",
-                            expr.rhs.pos,
-                        )
-
-                    rhs_num = rhs.val  # type: ignore
-
-                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num < rhs_num))
-                else:
-                    if lhs.kind != rhs.kind:
-                        raise BCError(
-                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                        raise BCError(
-                            f"illegal to compare booleans with inequality comparisons",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(
-                            BCPrimitiveType.BOOLEAN, lhs.get_string() < rhs.get_string()
-                        )
+                return BCValue(
+                    BCPrimitiveType.BOOLEAN,
+                    (
+                        ord(lhs.val) < ord(rhs.val)  # type: ignore
+                        if lhs.kind == BCPrimitiveType.CHAR
+                        else lhs.val < rhs.val  # type: ignore
+                    ),
+                )
             case Operator.GREATER_THAN_OR_EQUAL:
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind_is_numeric():
-                    lhs_num = lhs.val  # type: ignore
-
-                    if not rhs.kind_is_numeric():
-                        raise BCError(
-                            f"impossible to perform greater_than_or_equal between {lhs.kind} and {rhs.kind}",
-                            expr.rhs.pos,
-                        )
-
-                    rhs_num = rhs.val  # type: ignore
-
-                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num >= rhs_num))
-                else:
-                    if lhs.kind != rhs.kind:
-                        raise BCError(
-                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                        raise BCError(
-                            f"illegal to compare booleans with inequality comparisons",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(
-                            BCPrimitiveType.BOOLEAN,
-                            lhs.get_string() >= rhs.get_string(),
-                        )
+                return BCValue(
+                    BCPrimitiveType.BOOLEAN,
+                    (
+                        ord(lhs.val) >= ord(rhs.val)  # type: ignore
+                        if lhs.kind == BCPrimitiveType.CHAR
+                        else lhs.val >= rhs.val  # type: ignore
+                    ),
+                )
             case Operator.LESS_THAN_OR_EQUAL:
-                lhs_num: int | float = 0
-                rhs_num: int | float = 0
-
-                if lhs.kind_is_numeric():
-                    lhs_num = lhs.val  # type: ignore
-
-                    if not rhs.kind_is_numeric():
-                        raise BCError(
-                            f"impossible to perform less_than_or_equal between {lhs.kind} and {rhs.kind}",
-                            expr.rhs.pos,
-                        )
-
-                    rhs_num = rhs.val  # type: ignore
-
-                    return BCValue(BCPrimitiveType.BOOLEAN, (lhs_num < rhs_num))
-                else:
-                    if lhs.kind != rhs.kind:
-                        raise BCError(
-                            f"cannot compare incompatible types {lhs.kind} and {rhs.kind}",
-                            expr.lhs.pos,
-                        )
-                    elif lhs.kind == BCPrimitiveType.BOOLEAN:
-                        raise BCError(f"illegal to compare booleans", expr.lhs.pos)
-                    elif lhs.kind == BCPrimitiveType.STRING:
-                        return BCValue(
-                            BCPrimitiveType.BOOLEAN,
-                            lhs.get_string() <= rhs.get_string(),
-                        )
+                return BCValue(
+                    BCPrimitiveType.BOOLEAN,
+                    (
+                        ord(lhs.val) <= ord(rhs.val)  # type: ignore
+                        if lhs.kind == BCPrimitiveType.CHAR
+                        else lhs.val <= rhs.val  # type: ignore
+                    ),
+                )
             case Operator.POW:
-                if lhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot exponentiate BOOLEANs, CHARs and STRINGs!",
-                        expr.lhs.pos,
-                    )
-
-                if rhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot exponentiate BOOLEANs, CHARs and STRINGs!",
-                        expr.lhs.pos,
-                    )
-
                 lhs_num: int | float = lhs.val  # type: ignore
                 rhs_num: int | float = rhs.val  # type: ignore
 
-                if int(lhs_num) == 2 and type(rhs_num) is int:
-                    res = 1 << rhs_num
-                else:
-                    res = lhs_num**rhs_num
+                res = (
+                    1 << rhs_num
+                    if (int(lhs_num) == 2 and type(rhs_num) is int)
+                    else lhs_num**rhs_num
+                )
 
                 return (
                     BCValue(BCPrimitiveType.INTEGER, res)
@@ -417,169 +325,77 @@ class Optimizer:
                     else BCValue(BCPrimitiveType.REAL, res)
                 )
             case Operator.MUL:
-                if lhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot multiply between BOOLEANs, CHARs and STRINGs!",
-                        expr.lhs.pos,
-                    )
-
-                if rhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot multiply between BOOLEANs, CHARs and STRINGs!",
-                        expr.lhs.pos,
-                    )
-
-                lhs_num: int | float = lhs.val  # type: ignore
-                rhs_num: int | float = rhs.val  # type: ignore
-
-                res = lhs_num * rhs_num
-
+                res = lhs.val * rhs.val  # type: ignore
                 return (
                     BCValue(BCPrimitiveType.INTEGER, res)
                     if type(res) is int
                     else BCValue(BCPrimitiveType.REAL, res)
                 )
             case Operator.DIV:
-                if lhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
-                        expr.lhs.pos,
-                    )
+                if rhs.val == 0:
+                    raise BCError("cannot divide by zero!", expr.rhs.pos)
 
-                if rhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError(
-                        "Cannot divide between BOOLEANs, CHARs and STRINGs!",
-                        expr.rhs.pos,
-                    )
-
-                lhs_num: int | float = lhs.val  # type: ignore
-                rhs_num: int | float = rhs.val  # type: ignore
-
-                res = lhs_num / rhs_num
-
+                res = lhs.val / rhs.val  # type: ignore
                 return (
                     BCValue(BCPrimitiveType.INTEGER, res)
                     if type(res) is int
                     else BCValue(BCPrimitiveType.REAL, res)
                 )
             case Operator.ADD:
-                if lhs.kind_is_alpha() or rhs.kind_is_alpha():
-                    # concatenate instead
-                    lhs_str_or_char: str = str()
-                    rhs_str_or_char: str = str()
-
-                    if lhs.kind == BCPrimitiveType.STRING:
-                        lhs_str_or_char = lhs.get_string()
-                    elif lhs.kind == BCPrimitiveType.CHAR:
-                        lhs_str_or_char = lhs.get_char()
-                    else:
-                        lhs_str_or_char = str(lhs)
-
-                    if rhs.kind == BCPrimitiveType.STRING:
-                        rhs_str_or_char = rhs.get_string()
-                    elif rhs.kind == BCPrimitiveType.CHAR:
-                        rhs_str_or_char = rhs.get_char()
-                    else:
-                        rhs_str_or_char = str(rhs)
-
-                    res = str(lhs_str_or_char + rhs_str_or_char)
-                    return BCValue(BCPrimitiveType.STRING, res)
-
                 if (
                     lhs.kind == BCPrimitiveType.BOOLEAN
                     or rhs.kind == BCPrimitiveType.BOOLEAN
                 ):
-                    raise BCError("Cannot add BOOLEANs, CHARs and STRINGs!", expr.pos)
+                    raise BCError("cannot add BOOLEANs!", expr.pos)
 
-                lhs_num: int | float = lhs.val  # type: ignore
-                rhs_num: int | float = rhs.val  # type: ignore
-
-                res = lhs_num + rhs_num
-
-                return (
-                    BCValue(BCPrimitiveType.INTEGER, res)
-                    if type(res) is int
-                    else BCValue(BCPrimitiveType.REAL, res)
-                )
+                if lhs.kind_is_alpha() or rhs.kind_is_alpha():
+                    return BCValue(BCPrimitiveType.STRING, str(lhs) + str(rhs))
+                else:
+                    res = lhs.val + rhs.val  # type: ignore
+                    return (
+                        BCValue(BCPrimitiveType.INTEGER, res)
+                        if type(res) is int
+                        else BCValue(BCPrimitiveType.REAL, res)
+                    )
             case Operator.SUB:
-                if lhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError("Cannot subtract BOOLEANs, CHARs and STRINGs!")
-
-                if rhs.kind in {
-                    BCPrimitiveType.BOOLEAN,
-                    BCPrimitiveType.CHAR,
-                    BCPrimitiveType.STRING,
-                }:
-                    raise BCError("Cannot subtract BOOLEANs, CHARs and STRINGs!")
-
-                lhs_num: int | float = lhs.val  # type: ignore
-                rhs_num: int | float = rhs.val  # type: ignore
-
-                res = lhs_num - rhs_num
-
+                res = lhs.val - rhs.val  # type: ignore
                 return (
                     BCValue(BCPrimitiveType.INTEGER, res)
                     if type(res) is int
                     else BCValue(BCPrimitiveType.REAL, res)
                 )
-            # FLOOR_DIV and MOD are impossible here
+            case Operator.FLOOR_DIV:
+                if not (lhs.kind_is_numeric() or rhs.kind_is_numeric()):
+                    raise BCError(
+                        "Cannot DIV() between BOOLEANs, CHARs and STRINGs!",
+                        expr.pos,
+                    )
+
+                if rhs.val == 0:
+                    raise BCError("cannot divide by zero!", expr.rhs.pos)
+
+                return BCValue(BCPrimitiveType.INTEGER, int(lhs.val // rhs.val))  # type: ignore
+            case Operator.MOD:
+                if not (lhs.kind_is_numeric() or rhs.kind_is_numeric()):
+                    raise BCError(
+                        "Cannot MOD() between BOOLEANs, CHARs and STRINGs!",
+                        expr.pos,
+                    )
+
+                if rhs.val == 0:
+                    raise BCError("cannot divide by zero!", expr.rhs.pos)
+
+                res = lhs.val % rhs.val  # type: ignore
+                return (
+                    BCValue(BCPrimitiveType.INTEGER, res)
+                    if type(res) is int
+                    else BCValue(BCPrimitiveType.REAL, res)
+                )
             case Operator.AND:
-                if lhs.kind != BCPrimitiveType.BOOLEAN:
-                    raise BCError(
-                        f"cannot perform logical AND on value with type {lhs.kind}",
-                        expr.lhs.pos,
-                    )
-
-                if rhs.kind != BCPrimitiveType.BOOLEAN:
-                    raise BCError(
-                        f"cannot perform logical AND on value with type {lhs.kind}",
-                        expr.rhs.pos,
-                    )
-
-                lhs_b: bool = lhs.val  # type: ignore
-                rhs_b: bool = rhs.val  # type: ignore
-
-                res = lhs_b and rhs_b
-                return BCValue(BCPrimitiveType.BOOLEAN, res)
+                return BCValue(BCPrimitiveType.BOOLEAN, lhs.val and rhs.val)  # type: ignore
             case Operator.OR:
-                if lhs.kind != BCPrimitiveType.BOOLEAN:
-                    raise BCError(
-                        f"cannot perform logical OR on value with type {lhs.kind}",
-                        expr.lhs.pos,
-                    )
+                return BCValue(BCPrimitiveType.BOOLEAN, lhs.val or rhs.val)  # type: ignore
 
-                if rhs.kind != BCPrimitiveType.BOOLEAN:
-                    raise BCError(
-                        f"cannot perform logical OR on value with type {lhs.kind}",
-                        expr.rhs.pos,
-                    )
-
-                lhs_b: bool = lhs.val  # type: ignore
-                rhs_b: bool = rhs.val  # type: ignore
-
-                res = lhs_b or rhs_b
-
-                return BCValue(BCPrimitiveType.BOOLEAN, res)
 
     def visit_array_index(self, expr: ArrayIndex):
         _ = expr
@@ -786,7 +602,7 @@ class Optimizer:
 
                 if inner.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
-                        f"cannot perform logical NOT on value of type {inner.kind}",
+                        f"cannot perform logical NOT on {inner.kind}",
                         expr.inner.pos,
                     )
 
