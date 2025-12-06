@@ -16,6 +16,9 @@ class Pos:
     def __repr__(self) -> str:
         return f"{self.row} {self.col} {self.span}"
 
+    def copy(self) -> "Pos":
+        return Pos(self.row, self.col, self.span)
+
 
 def prefix_string_with_article(s: str) -> str:
     if s[0].lower() in "aeiou":

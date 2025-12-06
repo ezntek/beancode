@@ -1,5 +1,4 @@
 import typing
-import copy
 
 from enum import IntEnum
 from typing import IO, Any, Callable
@@ -325,6 +324,16 @@ class BCArray:
         self.typ = typ
         self.data = data
 
+    def copy(self):
+        if self.typ.is_matrix():
+            new = [
+                [v.copy() for v in l] # type: ignore
+                for l in self.data
+            ]
+        else:
+            new = [v.copy() for v in self.data] # type: ignore
+        return BCArray(self.typ, new) # type: ignore
+
     def __eq__(self, value: object, /) -> bool:
         if type(value) is not type(self):
             return False
@@ -417,7 +426,7 @@ class BCValue:
 
     def copy(self) -> "BCValue":
         if self.is_array:
-            return BCValue(self.kind, copy.deepcopy(self.val), True)
+            return BCValue(self.kind, self.val.copy(), True) # type: ignore
         else:
             return BCValue(self.kind, self.val)
 
@@ -425,7 +434,7 @@ class BCValue:
         self.kind = other.kind
         self.is_array = other.is_array
         if self.is_array:
-            self.val = copy.deepcopy(other.val)
+            self.val = other.val.copy() # type: ignore 
         else:
             self.val = other.val
 

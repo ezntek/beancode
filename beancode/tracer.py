@@ -1,4 +1,3 @@
-import copy
 import subprocess
 
 from beancode.cfgparser import parse_config_from_file
@@ -245,7 +244,7 @@ class Tracer:
                     v.append(self.last_updated_vals[k])  # type: ignore
                 else:
                     # copy the object and create a new owned value
-                    new_obj = copy.deepcopy(vars[k].val)
+                    new_obj = vars[k].val.copy()
                     v.append(new_obj)
                     self.last_updated_vals[k] = new_obj
                     self.var_types[k] = new_obj.kind
@@ -257,10 +256,10 @@ class Tracer:
             self.last_idx = last_idx
 
         if outputs is not None and len(outputs) > 0:
-            self.outputs[self.last_idx] = copy.copy(outputs)
+            self.outputs[self.last_idx] = list(outputs) 
 
         if inputs is not None and len(inputs) > 0:
-            self.inputs[self.last_idx] = copy.copy(inputs)
+            self.inputs[self.last_idx] = list(inputs)
 
         self.line_numbers[self.last_idx] = line_num
 

@@ -1,5 +1,3 @@
-import copy
-
 from beancode.libroutines import LIBROUTINES
 
 from . import *
@@ -250,7 +248,7 @@ class Parser:
                             i += 1
                             ch = _convert_escape_code(val[i])
                             if not ch:
-                                pos = copy.copy(lit.pos)
+                                pos = lit.pos.copy()
                                 pos.col += i
                                 pos.span = 2
                                 raise BCError(

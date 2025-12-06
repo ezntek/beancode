@@ -2,7 +2,7 @@ import typing
 
 from dataclasses import dataclass
 
-from .bean_ast import TokenKind, BCPrimitiveType, Type
+from .bean_ast import TokenKind, BCPrimitiveType
 from .error import *
 from . import Pos, __version__, is_case_consistent, panic
 
