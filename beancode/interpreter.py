@@ -182,58 +182,37 @@ class Interpreter:
     def visit_array_type(self, t: ArrayType) -> BCArrayType:
         if t.is_matrix():
             s_bounds = t.get_matrix_bounds()
-            outer_begin = self.visit_expr(s_bounds[0])
-            if outer_begin.kind != BCPrimitiveType.INTEGER:
-                self.error(
-                    f"cannot use type of {str(outer_begin.kind)} as array bound!",
-                    s_bounds[0].pos,
-                )
+            ob = self.visit_expr(s_bounds[0])
+            oe = self.visit_expr(s_bounds[1])
+            ib = self.visit_expr(s_bounds[2])
+            ie = self.visit_expr(s_bounds[3])
+            for i, k in enumerate((ob.kind, oe.kind, ib.kind, ie.kind)):
+                if k != BCPrimitiveType.INTEGER:
+                    self.error(
+                        f"cannot use type {k} as array bound!",
+                        s_bounds[i].pos,
+                    )
 
-            outer_end = self.visit_expr(s_bounds[1])  # type: ignore
-            if outer_end.kind != BCPrimitiveType.INTEGER:
-                self.error(
-                    f"cannot use type of {str(outer_end.kind)} as array bound!",
-                    s_bounds[1].pos,
-                )
-
-            inner_begin = self.visit_expr(s_bounds[2])  # type: ignore
-            if inner_begin.kind != BCPrimitiveType.INTEGER:
-                self.error(
-                    f"cannot use type of {str(inner_begin.kind)} as array bound!",
-                    s_bounds[2].pos,
-                )
-
-            inner_end = self.visit_expr(s_bounds[3])  # type: ignore
-            if inner_end.kind != BCPrimitiveType.INTEGER:
-                self.error(
-                    f"cannot use type of {str(inner_end.kind)} as array bound!",
-                    s_bounds[3].pos,
-                )
-
-            ob = outer_begin.get_integer()
-            oe = outer_end.get_integer()
-            ib = inner_begin.get_integer()
-            ie = inner_end.get_integer()
-            bounds = (ob, oe, ib, ie)
-            return BCArrayType.new_matrix(t.inner, bounds)
+            bounds = (ob.val, oe.val, ib.val, ie.val) # type: ignore
+            return BCArrayType.new_matrix(t.inner, bounds) # type: ignore
         else:
             s_bounds = t.get_flat_bounds()
             begin = self.visit_expr(s_bounds[0])
             if begin.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {str(begin.kind)} as array bound!",
+                    f"cannot use type {begin.kind} as array bound!",
                     s_bounds[0].pos,
                 )
 
             end = self.visit_expr(s_bounds[1])  # type: ignore
             if end.kind != BCPrimitiveType.INTEGER:
                 self.error(
-                    f"cannot use type of {str(end.kind)} as array bound!",
+                    f"cannot use type {end.kind} as array bound!",
                     s_bounds[1].pos,
                 )
 
-            bounds = (begin.get_integer(), end.get_integer())
-            return BCArrayType.new_flat(t.inner, bounds)
+            bounds = (begin.val, end.val) # type: ignore
+            return BCArrayType.new_flat(t.inner, bounds) # type: ignore
 
     def visit_type(self, t: Type) -> BCType:
         if isinstance(t, ArrayType):

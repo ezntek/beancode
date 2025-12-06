@@ -352,7 +352,7 @@ class Parser:
                 arrtyp.pos,
             )
 
-        inner = BCPrimitiveType.from_string(arrtyp.data)  # type: ignore
+        inner = BCPrimitiveType.from_str(arrtyp.data)  # type: ignore
 
         bounds = matrix_bounds if matrix_bounds else flat_bounds
         return ArrayType(inner, bounds)  # type: ignore
@@ -362,7 +362,7 @@ class Parser:
         if adv.data == "array":
             return self._array_type()
         else:
-            return BCPrimitiveType.from_string(adv.data)  # type: ignore
+            return BCPrimitiveType.from_str(adv.data)  # type: ignore
 
     def ident(self, ctx="", function=False) -> Identifier:
         c = self.consume_and_expect(TokenKind.IDENT, ctx=ctx)
@@ -421,7 +421,7 @@ class Parser:
             # should be unreachable
             raise BCError("cannot typecast to an array!", typ.pos)
 
-        t = BCPrimitiveType.from_string(typ.data)  # type: ignore
+        t = BCPrimitiveType.from_str(typ.data)  # type: ignore
         self.consume()  # checked already
 
         expr = self.expr()
@@ -1507,7 +1507,6 @@ class Parser:
         if expr:
             return ExprStatement.from_expr(expr)
         else:
-            print(cur)
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
             if cur.kind == TokenKind.NEXT:
                 raise BCError("cannot end FOR loop now!\n" + DIDNT_END, cur.pos)

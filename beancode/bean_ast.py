@@ -5,7 +5,7 @@ from enum import IntEnum
 from typing import IO, Any, Callable
 from dataclasses import dataclass
 
-from . import Pos
+from . import Pos, is_case_consistent
 from .error import *
 
 
@@ -88,88 +88,12 @@ class TokenKind(IntEnum):
     IDENT = 76
     TYPE = 77
 
-    @staticmethod
-    def from_str_or_none(s: str):
-        TABLE = {
-            "declare": TokenKind.DECLARE,
-            "constant": TokenKind.CONSTANT,
-            "output": TokenKind.OUTPUT,
-            "input": TokenKind.INPUT,
-            "and": TokenKind.AND,
-            "or": TokenKind.OR,
-            "not": TokenKind.NOT,
-            "if": TokenKind.IF,
-            "then": TokenKind.THEN,
-            "else": TokenKind.ELSE,
-            "endif": TokenKind.ENDIF,
-            "case": TokenKind.CASE,
-            "of": TokenKind.OF,
-            "otherwise": TokenKind.OTHERWISE,
-            "endcase": TokenKind.ENDCASE,
-            "while": TokenKind.WHILE,
-            "do": TokenKind.DO,
-            "endwhile": TokenKind.ENDWHILE,
-            "repeat": TokenKind.REPEAT,
-            "until": TokenKind.UNTIL,
-            "for": TokenKind.FOR,
-            "to": TokenKind.TO,
-            "step": TokenKind.STEP,
-            "next": TokenKind.NEXT,
-            "procedure": TokenKind.PROCEDURE,
-            "endprocedure": TokenKind.ENDPROCEDURE,
-            "call": TokenKind.CALL,
-            "function": TokenKind.FUNCTION,
-            "return": TokenKind.RETURN,
-            "returns": TokenKind.RETURNS,
-            "endfunction": TokenKind.ENDFUNCTION,
-            "openfile": TokenKind.OPENFILE,
-            "readfile": TokenKind.READFILE,
-            "writefile": TokenKind.WRITEFILE,
-            "closefile": TokenKind.CLOSEFILE,
-            "read": TokenKind.READ,
-            "write": TokenKind.WRITE,
-            "appendfile": TokenKind.APPENDFILE,
-            "append": TokenKind.APPEND,
-            "include": TokenKind.INCLUDE,
-            "include_ffi": TokenKind.INCLUDE_FFI,
-            "export": TokenKind.EXPORT,
-            "scope": TokenKind.SCOPE,
-            "endscope": TokenKind.ENDSCOPE,
-            "print": TokenKind.PRINT,
-            "trace": TokenKind.TRACE,
-            "endtrace": TokenKind.ENDTRACE,
-            "assign": TokenKind.ASSIGN,
-            "equal": TokenKind.EQUAL,
-            "less_than": TokenKind.LESS_THAN,
-            "greater_than": TokenKind.GREATER_THAN,
-            "less_than_or_equal": TokenKind.LESS_THAN_OR_EQUAL,
-            "greater_than_or_equal": TokenKind.GREATER_THAN_OR_EQUAL,
-            "not_equal": TokenKind.NOT_EQUAL,
-            "mul": TokenKind.MUL,
-            "div": TokenKind.DIV,
-            "add": TokenKind.ADD,
-            "sub": TokenKind.SUB,
-            "pow": TokenKind.POW,
-            "left_paren": TokenKind.LEFT_PAREN,
-            "right_paren": TokenKind.RIGHT_PAREN,
-            "left_bracket": TokenKind.LEFT_BRACKET,
-            "right_bracket": TokenKind.RIGHT_BRACKET,
-            "left_curly": TokenKind.LEFT_CURLY,
-            "right_curly": TokenKind.RIGHT_CURLY,
-            "colon": TokenKind.COLON,
-            "comma": TokenKind.COMMA,
-            "dot": TokenKind.DOT,
-            "newline": TokenKind.NEWLINE,
-            "literal_string": TokenKind.LITERAL_STRING,
-            "literal_char": TokenKind.LITERAL_CHAR,
-            "literal_number": TokenKind.LITERAL_NUMBER,
-            "true": TokenKind.TRUE,
-            "false": TokenKind.FALSE,
-            "null": TokenKind.NULL,
-            "ident": TokenKind.IDENT,
-            "type": TokenKind.TYPE,
-        }
-        return TABLE.get(s)
+    @classmethod
+    def from_str_or_none(cls, s: str):
+        if is_case_consistent(s):
+            return cls.__members__.get(s.upper())
+        else:
+            return None
 
     @staticmethod
     def from_str(s: str):
@@ -179,86 +103,7 @@ class TokenKind(IntEnum):
         return res
         
     def __repr__(self) -> str:
-        TABLE = {
-            TokenKind.DECLARE: "declare",
-            TokenKind.CONSTANT: "constant",
-            TokenKind.OUTPUT: "output",
-            TokenKind.INPUT: "input",
-            TokenKind.AND: "and",
-            TokenKind.OR: "or",
-            TokenKind.NOT: "not",
-            TokenKind.IF: "if",
-            TokenKind.THEN: "then",
-            TokenKind.ELSE: "else",
-            TokenKind.ENDIF: "endif",
-            TokenKind.CASE: "case",
-            TokenKind.OF: "of",
-            TokenKind.OTHERWISE: "otherwise",
-            TokenKind.ENDCASE: "endcase",
-            TokenKind.WHILE: "while",
-            TokenKind.DO: "do",
-            TokenKind.ENDWHILE: "endwhile",
-            TokenKind.REPEAT: "repeat",
-            TokenKind.UNTIL: "until",
-            TokenKind.FOR: "for",
-            TokenKind.TO: "to",
-            TokenKind.STEP: "step",
-            TokenKind.NEXT: "next",
-            TokenKind.PROCEDURE: "procedure",
-            TokenKind.ENDPROCEDURE: "endprocedure",
-            TokenKind.CALL: "call",
-            TokenKind.FUNCTION: "function",
-            TokenKind.RETURN: "return",
-            TokenKind.RETURNS: "returns",
-            TokenKind.ENDFUNCTION: "endfunction",
-            TokenKind.OPENFILE: "openfile",
-            TokenKind.READFILE: "readfile",
-            TokenKind.WRITEFILE: "writefile",
-            TokenKind.CLOSEFILE: "closefile",
-            TokenKind.READ: "read",
-            TokenKind.WRITE: "write",
-            TokenKind.APPENDFILE: "appendfile",
-            TokenKind.APPEND: "append",
-            TokenKind.INCLUDE: "include",
-            TokenKind.INCLUDE_FFI: "include_ffi",
-            TokenKind.EXPORT: "export",
-            TokenKind.SCOPE: "scope",
-            TokenKind.ENDSCOPE: "endscope",
-            TokenKind.PRINT: "print",
-            TokenKind.TRACE: "trace",
-            TokenKind.ENDTRACE: "endtrace",
-            TokenKind.ASSIGN: "assign",
-            TokenKind.EQUAL: "equal",
-            TokenKind.LESS_THAN: "less_than",
-            TokenKind.GREATER_THAN: "greater_than",
-            TokenKind.LESS_THAN_OR_EQUAL: "less_than_or_equal",
-            TokenKind.GREATER_THAN_OR_EQUAL: "greater_than_or_equal",
-            TokenKind.NOT_EQUAL: "not_equal",
-            TokenKind.MUL: "mul",
-            TokenKind.DIV: "div",
-            TokenKind.ADD: "add",
-            TokenKind.SUB: "sub",
-            TokenKind.POW: "pow",
-            TokenKind.LEFT_PAREN: "left_paren",
-            TokenKind.RIGHT_PAREN: "right_paren",
-            TokenKind.LEFT_BRACKET: "left_bracket",
-            TokenKind.RIGHT_BRACKET: "right_bracket",
-            TokenKind.LEFT_CURLY: "left_curly",
-            TokenKind.RIGHT_CURLY: "right_curly",
-            TokenKind.COLON: "colon",
-            TokenKind.COMMA: "comma",
-            TokenKind.DOT: "dot",
-            TokenKind.NEWLINE: "newline",
-            TokenKind.LITERAL_STRING: "literal_string",
-            TokenKind.LITERAL_CHAR: "literal_char",
-            TokenKind.LITERAL_NUMBER: "literal_number",
-            TokenKind.TRUE: "true",
-            TokenKind.FALSE: "false",
-            TokenKind.NULL: "null",
-            TokenKind.IDENT: "ident",
-            TokenKind.TYPE: "type",
-        }
-        return TABLE[self]
+        return self.name.lower()
 
     def __str__(self):
         return self.__repr__()
@@ -338,14 +183,7 @@ class BCPrimitiveType(IntEnum):
     NULL = 6
 
     def __repr__(self):
-        return {
-            BCPrimitiveType.INTEGER: "integer",
-            BCPrimitiveType.REAL: "real",
-            BCPrimitiveType.CHAR: "char",
-            BCPrimitiveType.STRING: "string",
-            BCPrimitiveType.BOOLEAN: "boolean",
-            BCPrimitiveType.NULL: "null",
-        }[self]
+        return self.name.lower()
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -355,16 +193,8 @@ class BCPrimitiveType(IntEnum):
         return self.__repr__().upper()
 
     @classmethod
-    def from_string(cls, kind: str):
-        TABLE = {
-            "integer": BCPrimitiveType.INTEGER,
-            "real": BCPrimitiveType.REAL,
-            "char": BCPrimitiveType.CHAR,
-            "string": BCPrimitiveType.STRING,
-            "boolean": BCPrimitiveType.BOOLEAN,
-            "null": BCPrimitiveType.NULL,
-        }
-        res = TABLE.get(kind.lower())
+    def from_str(cls, kind: str):
+        res = cls.__members__.get(kind.upper()) 
         if res is None:
             raise BCError(
                 f"tried to convert invalid string type {kind} to a BCPrimitiveType!"
@@ -766,59 +596,15 @@ class Operator(IntEnum):
     AND = 13
     OR = 14
     NOT = 15
-
-    # !!! INTERNAL USE ONLY !!!
-    # This is for the purposes of optimization. Library routine calls
-    # are typed by default, and they are SLOW!
     FLOOR_DIV = 16
     MOD = 17
 
     @classmethod
     def from_token_kind(cls, token_kind: TokenKind) -> "Operator":
-        TABLE = {
-            TokenKind.ASSIGN: Operator.ASSIGN,
-            TokenKind.EQUAL: Operator.EQUAL,
-            TokenKind.LESS_THAN: Operator.LESS_THAN,
-            TokenKind.GREATER_THAN: Operator.GREATER_THAN,
-            TokenKind.LESS_THAN_OR_EQUAL: Operator.LESS_THAN_OR_EQUAL,
-            TokenKind.GREATER_THAN_OR_EQUAL: Operator.GREATER_THAN_OR_EQUAL,
-            TokenKind.NOT_EQUAL: Operator.NOT_EQUAL,
-            TokenKind.MUL: Operator.MUL,
-            TokenKind.DIV: Operator.DIV,
-            TokenKind.ADD: Operator.ADD,
-            TokenKind.SUB: Operator.SUB,
-            TokenKind.POW: Operator.POW,
-            TokenKind.AND: Operator.AND,
-            TokenKind.OR: Operator.OR,
-            TokenKind.NOT: Operator.NOT,
-            #TokenKind.FLOOR_DIV: Operator.FLOOR_DIV,
-            #TokenKind.MOD: Operator.MOD,
-        }
-        res = TABLE.get(token_kind)
-        if not res:
-            raise BCError(f"invalid string operator {token_kind}")
-        return res
+        return cls[token_kind.name]
 
     def __repr__(self) -> str:
-        return {
-            Operator.ASSIGN: "assign",
-            Operator.EQUAL: "equal",
-            Operator.LESS_THAN: "less_than",
-            Operator.GREATER_THAN: "greater_than",
-            Operator.LESS_THAN_OR_EQUAL: "less_than_or_equal",
-            Operator.GREATER_THAN_OR_EQUAL: "greater_than_or_equal",
-            Operator.NOT_EQUAL: "not_equal",
-            Operator.MUL: "mul",
-            Operator.DIV: "div",
-            Operator.ADD: "add",
-            Operator.SUB: "sub",
-            Operator.POW: "pow",
-            Operator.AND: "and",
-            Operator.OR: "or",
-            Operator.NOT: "not",
-            Operator.FLOOR_DIV: "floor_div",
-            Operator.MOD: "mod",
-        }[self]
+        return self.name.lower()
 
     def __str__(self) -> str:
         return self.__repr__()

@@ -26,7 +26,11 @@ class BCError(Exception):
         if self.pos is None:
             print(self.msg, end="", file=sys.stderr)
             sys.stderr.flush()
-            raise RuntimeError("a traceback is provided:")
+            global _bcerror_debug
+            if _bcerror_debug:
+                raise RuntimeError("a traceback is provided:")
+            else:
+                exit(1)
 
         line_no = self.pos.row
         col = self.pos.col
