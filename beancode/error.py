@@ -56,7 +56,7 @@ class BCError(Exception):
         spaces = lambda *_: " " * padding + "\t" * tabs
 
         res = list()
-         
+
         info = f"{filename}:{line_no}: "
         res.append(f"\033[0m\033[1m{info}")
         msg_lines = self.msg.splitlines()
@@ -64,7 +64,7 @@ class BCError(Exception):
         for msg_line in msg_lines[1:]:
             sp = " " * len(info)
             res.append(f"\033[2m\n{sp}{msg_line}\033[0m")
-        res.append("\n") 
+        res.append("\n")
 
         res.append(line_begin)
         res.append(file_content[bol:eol])

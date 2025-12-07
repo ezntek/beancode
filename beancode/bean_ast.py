@@ -326,13 +326,10 @@ class BCArray:
 
     def copy(self):
         if self.typ.is_matrix():
-            new = [
-                [v.copy() for v in l] # type: ignore
-                for l in self.data
-            ]
+            new = [[v.copy() for v in l] for l in self.data]  # type: ignore
         else:
-            new = [v.copy() for v in self.data] # type: ignore
-        return BCArray(self.typ, new) # type: ignore
+            new = [v.copy() for v in self.data]  # type: ignore
+        return BCArray(self.typ, new)  # type: ignore
 
     def __eq__(self, value: object, /) -> bool:
         if type(value) is not type(self):
@@ -426,7 +423,7 @@ class BCValue:
 
     def copy(self) -> "BCValue":
         if self.is_array:
-            return BCValue(self.kind, self.val.copy(), True) # type: ignore
+            return BCValue(self.kind, self.val.copy(), True)  # type: ignore
         else:
             return BCValue(self.kind, self.val)
 
@@ -434,7 +431,7 @@ class BCValue:
         self.kind = other.kind
         self.is_array = other.is_array
         if self.is_array:
-            self.val = other.val.copy() # type: ignore 
+            self.val = other.val.copy()  # type: ignore
         else:
             self.val = other.val
 

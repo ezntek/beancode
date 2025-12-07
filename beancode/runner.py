@@ -13,7 +13,8 @@ def get_file_path_with_dialog() -> str:
         # inspired by https://www.pythontutorial.net/tkinter/tkinter-open-file-dialog/
         import tkinter as tk
         from tkinter import filedialog as fd
-        pass # XXX: I made DeepSeek R1 write a bundler, this has to be here for that to work!
+
+        pass  # XXX: I made DeepSeek R1 write a bundler, this has to be here for that to work!
     except ImportError:
         warn("could not import tkinter to show a file picker!")
         return input("\033[1mEnter a file to run: \033[0m")

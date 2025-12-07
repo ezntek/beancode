@@ -1287,7 +1287,9 @@ class Interpreter:
                 f"beancode.modules.{stmt.file}"
             ).EXPORTS
         except Exception as e:
-            self.error(f"could not include module {stmt.file}!\nreason: {e.args[0]}", stmt.pos)
+            self.error(
+                f"could not include module {stmt.file}!\nreason: {e.args[0]}", stmt.pos
+            )
 
         for const in mod["constants"]:
             self.variables[const.name] = Variable(val=const.value, const=True)
@@ -1590,11 +1592,11 @@ class Interpreter:
             target = target.val
 
             if val.is_array:
-                a: BCArray = val.val # type: ignore
-                t: BCArray = target.val # type: ignore
-                if a.typ.is_matrix() and a.typ.bounds != t.typ.bounds: # type: ignore
+                a: BCArray = val.val  # type: ignore
+                t: BCArray = target.val  # type: ignore
+                if a.typ.is_matrix() and a.typ.bounds != t.typ.bounds:  # type: ignore
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
-                elif a.typ.is_flat() and a.typ.bounds != t.typ.bounds: # type: ignore
+                elif a.typ.is_flat() and a.typ.bounds != t.typ.bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
 
                 # NOTE: replace_inner strips the guts of another BCValue and puts it in its own;
@@ -1605,17 +1607,16 @@ class Interpreter:
             target = self.visit_expr(s.ident)
 
         should_promote_real = (
-            target.kind == BCPrimitiveType.REAL
-            and val.kind == BCPrimitiveType.INTEGER
+            target.kind == BCPrimitiveType.REAL and val.kind == BCPrimitiveType.INTEGER
         )
         if target.kind != val.kind:
-            if not should_promote_real :
+            if not should_promote_real:
                 self.error(
                     f"cannot assign {val.kind} to {target.kind}",
                     s.ident.pos,
                 )
             else:
-                val = BCValue(BCPrimitiveType.REAL, value=float(val.val), is_array=False) # type: ignore
+                val = BCValue(BCPrimitiveType.REAL, value=float(val.val), is_array=False)  # type: ignore
         elif val.is_array:
             val = val.copy()
 

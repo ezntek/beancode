@@ -371,11 +371,17 @@ class Lexer:
                             p,
                         )
                     case "open":
-                        raise BCError("OPEN is not a valid keyword!\nPlease use OPENFILE instead. If you are copying from the textbook\n"+
-                            "(ISBN 9781398318281), their File I/O examples are incorrect to\n"+
-                            "Cambridge's official pseudocode.", p)
+                        raise BCError(
+                            "OPEN is not a valid keyword!\nPlease use OPENFILE instead. If you are copying from the textbook\n"
+                            + "(ISBN 9781398318281), their File I/O examples are incorrect to\n"
+                            + "Cambridge's official pseudocode.",
+                            p,
+                        )
                     case "close":
-                        raise BCError("CLOSE is not a valid keyword!\nPlease used CLOSEFILE instead.", p)
+                        raise BCError(
+                            "CLOSE is not a valid keyword!\nPlease used CLOSEFILE instead.",
+                            p,
+                        )
             return Token(TokenKind.IDENT, p, data=word)
         else:
             raise BCError("invalid identifier or symbol", p)

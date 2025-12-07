@@ -3,8 +3,10 @@
 import os
 from beancode.runner import *
 
+
 def log(s: str):
     print(f"\033[33;1m===> {s}\033[0m")
+
 
 src = ""
 for file in sorted(os.listdir("examples")):

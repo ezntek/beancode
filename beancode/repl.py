@@ -211,9 +211,7 @@ class Repl:
                 error(f"no procedure or function named {func} found")
                 continue
 
-            if isinstance(func, ProcedureStatement) or isinstance(
-                func, BCProcedure
-            ):
+            if isinstance(func, ProcedureStatement) or isinstance(func, BCProcedure):
                 self.print_proc(func)
             else:
                 self.print_func(func)
@@ -227,9 +225,7 @@ class Repl:
             info("no functions or procedures")
 
         for func in self.i.functions.values():
-            if isinstance(func, ProcedureStatement) or isinstance(
-                func, BCProcedure
-            ):
+            if isinstance(func, ProcedureStatement) or isinstance(func, BCProcedure):
                 self.print_proc(func)
             else:
                 self.print_func(func)
