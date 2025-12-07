@@ -266,13 +266,17 @@ class Interpreter:
         else:
             human_kind = "an arithmetic expression"
 
-            if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                self.error(
-                    f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
-                    expr.pos,
-                )
+            # XXX: microoptimizations™
+            # we are reducing the number of calls we visit in the Python VM per addition. Addition is a
+            # very very common operator and it speeds PrimeTorture up by around 230ms.
+            if expr.op != Operator.ADD:
+                if expr.op not in {Operator.FLOOR_DIV, Operator.MOD} and not (
+                    lhs.kind_is_numeric() and rhs.kind_is_numeric()
+                ):
+                    self.error(
+                        f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
+                        expr.pos,
+                    )
 
         if expr.op != Operator.EQUAL:
             if lhs.is_uninitialized():
