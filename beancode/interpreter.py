@@ -46,10 +46,9 @@ class Interpreter:
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
     tracer_open = False  # open generated html or not by default
+    # support non-file files (via StringIOs for web frontends)
     files: dict[str, File]
-    file_callbacks: (
-        FileCallbacks  # support non-file files (via StringIOs for web frontends)
-    )
+    file_callbacks: FileCallbacks
 
     def __init__(
         self,
@@ -1118,15 +1117,19 @@ class Interpreter:
             return "".join(outer_res)
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        res = "".join(
-            [
-                (
-                    self._display_array(evaled.val)  # type: ignore
-                    if evaled.is_array
-                    else str(evaled)
-                )
-                for evaled in map(self.visit_expr, stmt.items)
-            ]
+        res = (
+            str(self.visit_expr(stmt.items[0]))
+            if len(stmt.items) == 0
+            else "".join(
+                [
+                    (
+                        self._display_array(evaled.val)  # type: ignore
+                        if evaled.is_array
+                        else str(evaled)
+                    )
+                    for evaled in map(self.visit_expr, stmt.items)
+                ]
+            )
         )
 
         if self.tracer_outputs is not None:
