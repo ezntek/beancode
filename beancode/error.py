@@ -55,21 +55,20 @@ class BCError(Exception):
         tabs = 0
         spaces = lambda *_: " " * padding + "\t" * tabs
 
+        res = list()
+         
         info = f"{filename}:{line_no}: "
-        print(f"\033[0m\033[1m{info}", end="", file=sys.stderr)
+        res.append(f"\033[0m\033[1m{info}")
         msg_lines = self.msg.splitlines()
-        print(
-            msg_lines[0], end="", file=sys.stderr
-        )  # splitlines on a non-empty string guarantees one elem
-        if len(msg_lines) == 1:
-            print(file=sys.stderr)
-
+        res.append(msg_lines[0])  # splitlines on a non-empty string guarantees one elem
         for msg_line in msg_lines[1:]:
             sp = " " * len(info)
-            print(f"\033[2m\n{sp}{msg_line}\033[0m", file=sys.stderr)
+            res.append(f"\033[2m\n{sp}{msg_line}\033[0m")
+        res.append("\n") 
 
-        print(line_begin, end="", file=sys.stderr)
-        print(file_content[bol:eol], file=sys.stderr)
+        res.append(line_begin)
+        res.append(file_content[bol:eol])
+        res.append("\n")
 
         for ch in file_content[bol:eol]:
             if ch == "\t":
@@ -77,7 +76,8 @@ class BCError(Exception):
                 tabs += 1
 
         tildes = f"{spaces()}\033[31;1m{'~' * self.pos.span}\033[0m"
-        print(tildes, file=sys.stderr)
+        res.append(tildes)
+        res.append("\n")
 
         indicator = f"{spaces()}\033[31;1m"
         if os.name == "nt":
@@ -86,8 +86,9 @@ class BCError(Exception):
             indicator += "∟"
 
         indicator += f" \033[0m\033[1merror at line {line_no} column {col}\033[0m"
-        print(indicator, file=sys.stderr)
-        sys.stderr.flush()
+        res.append(indicator)
+
+        print("".join(res), file=sys.stdout, flush=True)
 
 
 def info(msg: str):

@@ -362,11 +362,20 @@ class Lexer:
     def next_ident(self, word: str) -> Token:
         p = self.pos(len(word))
         if self._is_ident(word):
-            if is_case_consistent(word) and word.lower() == "endfor":
-                raise BCError(
-                    "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
-                    self.pos(len(word)),
-                )
+            if is_case_consistent(word):
+                p = self.pos(len(word))
+                match word.lower():
+                    case "endfor":
+                        raise BCError(
+                            "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
+                            p,
+                        )
+                    case "open":
+                        raise BCError("OPEN is not a valid keyword!\nPlease use OPENFILE instead. If you are copying from the textbook\n"+
+                            "(ISBN 9781398318281), their File I/O examples are incorrect to\n"+
+                            "Cambridge's official pseudocode.", p)
+                    case "close":
+                        raise BCError("CLOSE is not a valid keyword!\nPlease used CLOSEFILE instead.", p)
             return Token(TokenKind.IDENT, p, data=word)
         else:
             raise BCError("invalid identifier or symbol", p)
