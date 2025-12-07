@@ -1,5 +1,12 @@
 # beancode
 
+## WARNING
+
+This is the development branch of beancode, where breaking changes may be made each commit. To access source history
+for a specific version, please go to the respective branch, like `0.6`.
+
+---
+
 This is a fully syllabus-compliant (optimizing) interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
 
 ***IMPORTANT:*** I do not guarantee this software to be bug-free; most major bugs have been patched by now, and the interpreter has been tested against various examples and IGCSE Markschemes. Version 0.3.0 and up should be relatively stable, but if you find bugs, please report them and I will fix them promptly. **consider this software (all `0.x` versions) unstable and alpha-quality, breaking changes may happen at any time.**
