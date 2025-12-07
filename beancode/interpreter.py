@@ -1287,8 +1287,7 @@ class Interpreter:
                 f"beancode.modules.{stmt.file}"
             ).EXPORTS
         except Exception as e:
-            self.error(f"failed to include module {stmt.file}", stmt.pos)
-            raise e
+            self.error(f"could not include module {stmt.file}!\nreason: {e.args[0]}", stmt.pos)
 
         for const in mod["constants"]:
             self.variables[const.name] = Variable(val=const.value, const=True)

@@ -493,7 +493,7 @@ class Tracer:
         res.append("</table>")
         return "".join(res)
 
-    def gen_html(self, file_name: str | None = None) -> str:
+    def gen_html(self) -> str:
         res = list()
         res.append("<!DOCTYPE html>\n")
         res.append(f"<!-- Generated HTML by beancode's trace table generator, version {__version__} -->\n")
@@ -501,10 +501,7 @@ class Tracer:
         res.append("<meta charset=UTF-8>")
         res.append('<meta name=color-scheme content="dark light">')
 
-        title_s = ""
-        if file_name is not None:
-            title_s = " for " + file_name
-        title = f"Generated Trace Table{title_s}"
+        title = f"Generated Trace Table"
 
         res.append(f"<title>{title}</title>")
 
@@ -536,7 +533,7 @@ class Tracer:
 
         try:
             with open(real_name, "w") as f:
-                f.write(self.gen_html(file_name))
+                f.write(self.gen_html())
         except IsADirectoryError:
             error(f"cannot write the tracer's output to a directory!")
         except PermissionError:

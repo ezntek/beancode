@@ -3,13 +3,13 @@ import os
 
 from typing import Any
 
-from . import bean_ast as ast
-from . import lexer
-from . import parser
-from . import interpreter as intp
-from . import bean_ffi as ffi
-from . import __version__
 from .error import *
+from .lexer import *
+from .parser import *
+from .interpreter import *
+from .bean_ast import *
+from .bean_ffi import *
+from . import __version__
 
 from enum import IntEnum
 
@@ -77,9 +77,9 @@ class ContinuationResult(IntEnum):
 
 
 class Repl:
-    lx: lexer.Lexer
-    p: parser.Parser
-    i: intp.Interpreter
+    lx: Lexer
+    p: Parser
+    i: Interpreter
     buf: list[str]
     func_src: dict[str, str]
     func_src: dict[str, str]
@@ -87,20 +87,20 @@ class Repl:
     no_run: bool
 
     def __init__(self, debug=False, no_run=False):
-        self.lx = lexer.Lexer(str())
-        self.p = parser.Parser(list())
-        self.i = intp.Interpreter(list())
+        self.lx = Lexer(str())
+        self.p = Parser(list())
+        self.i = Interpreter(list())
         self.buf = list()
         self.func_src = dict()
         self.func_src = dict()
         self.debug = debug
         self.no_run = no_run
 
-    def print_var(self, var: intp.Variable):
+    def print_var(self, var: Variable):
         val = var.val
         rep: str
         typ: str
-        if isinstance(val.kind, ast.BCArrayType):
+        if isinstance(val.kind, BCArrayType):
             a = val.get_array()
             rep = self.i._display_array(a)
             typ = str(a.typ)
@@ -108,13 +108,13 @@ class Repl:
             rep = repr(val)
             typ = str(val.kind)
 
-        if isinstance(val.kind, ast.BCArrayType):
+        if isinstance(val.kind, BCArrayType):
             print(f"'{typ}' {rep}")
         else:
             print(f"'{typ.upper()}' ({rep})")
 
     def _args_list_to_string(self, args: list[tuple[str, Any]]) -> str:
-        # Any: either an ast.BCType or ast.Type
+        # Any: either an BCType or Type
         buf = list()
         buf.append("(")
         for i, (name, typ) in enumerate(args):
@@ -126,12 +126,12 @@ class Repl:
         buf.append(")")
         return "".join(buf)
 
-    def print_proc(self, proc: ast.ProcedureStatement | ffi.BCProcedure):
+    def print_proc(self, proc: ProcedureStatement | BCProcedure):
         buf = list()
         buf.append("PROCEDURE ")
         ffi = False
 
-        if isinstance(proc, ast.ProcedureStatement):
+        if isinstance(proc, ProcedureStatement):
             buf.append(proc.name)
             if len(proc.args) != 0:
                 args = [(arg.name, arg.typ) for arg in proc.args]
@@ -148,12 +148,12 @@ class Repl:
 
         print("".join(buf))
 
-    def print_func(self, func: ast.FunctionStatement | ffi.BCFunction):
+    def print_func(self, func: FunctionStatement | BCFunction):
         sio = list()
         sio.append("FUNCTION ")
         ffi = False
 
-        if isinstance(func, ast.FunctionStatement):
+        if isinstance(func, FunctionStatement):
             sio.append(func.name)
             if len(func.args) != 0:
                 args = [(arg.name, arg.typ) for arg in func.args]
@@ -211,8 +211,8 @@ class Repl:
                 error(f"no procedure or function named {func} found")
                 continue
 
-            if isinstance(func, ast.ProcedureStatement) or isinstance(
-                func, ffi.BCProcedure
+            if isinstance(func, ProcedureStatement) or isinstance(
+                func, BCProcedure
             ):
                 self.print_proc(func)
             else:
@@ -227,8 +227,8 @@ class Repl:
             info("no functions or procedures")
 
         for func in self.i.functions.values():
-            if isinstance(func, ast.ProcedureStatement) or isinstance(
-                func, ffi.BCProcedure
+            if isinstance(func, ProcedureStatement) or isinstance(
+                func, BCProcedure
             ):
                 self.print_proc(func)
             else:
@@ -319,7 +319,7 @@ class Repl:
 
         return DotCommandResult.UNKNOWN_COMMAND
 
-    def get_continuation(self) -> tuple[ast.Program | None, ContinuationResult]:
+    def get_continuation(self) -> tuple[Program | None, ContinuationResult]:
         while True:
             oldrow = self.lx.row
             self.lx.reset()
@@ -445,7 +445,7 @@ class Repl:
                 print()
                 continue
 
-            program: ast.Program
+            program: Program
             self.p.tokens = toks
 
             if self.debug:
@@ -473,16 +473,16 @@ class Repl:
             if len(program.stmts) < 1:
                 continue
 
-            if isinstance(program.stmts[0], ast.ProcedureStatement):
+            if isinstance(program.stmts[0], ProcedureStatement):
                 proc = program.stmts[0]
                 self.func_src[proc.name] = "".join(self.buf)
-            elif isinstance(program.stmts[0], ast.FunctionStatement):
+            elif isinstance(program.stmts[0], FunctionStatement):
                 func = program.stmts[0]
                 self.func_src[func.name] = "".join(self.buf)
 
-            if isinstance(program.stmts[-1], ast.ExprStatement):
+            if isinstance(program.stmts[-1], ExprStatement):
                 exp = program.stmts[-1].inner
-                program.stmts[-1] = ast.OutputStatement(pos=Pos(1, 1, 0), items=[exp])
+                program.stmts[-1] = OutputStatement(pos=Pos(1, 1, 0), items=[exp])
 
             if self.debug:
                 print("\033[2m=== AST ===", file=sys.stderr)
