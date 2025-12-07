@@ -77,11 +77,6 @@ def is_real(val: str) -> bool:
     return found_decimal
 
 
-def error(msg: str):
-    print(f"\033[31;1merror: \033[0m{msg}")
-    exit(1)
-
-
 def panic(msg: str):
     print(f"\033[31;1mpanic! \033[0m{msg}")
     print(
