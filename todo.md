@@ -3,7 +3,7 @@
 ## Low-hanging fruit
 
 - [x] `FORMAT` libroutine for printf-like formatting
-- [ ] Tracer
+- [x] Tracer
   - [ ] Refactoring HTML to be more modular
   - [ ] Dark/light mode CSS, theming?
   - [ ] Common class names for bcweb (beancode-web)

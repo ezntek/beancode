@@ -12,39 +12,62 @@ TABLE_STYLE = """
 .bean-table td,
 .bean-table th {
     border: 1px solid;
-    padding-left: 0.7em;
-    padding-right: 0.7em;
+    padding-left: 0.6em;
+    padding-right: 0.6em;
+    padding-top: 0em;
+    padding-bottom: 0em;
     text-align: center;
 }
 .bean-table pre {
-    font-size: 1.2em;
+    font-size: 1.3em;
 }
-.bean-table caption {
-    color: rgb(150, 150, 150);
-    caption-side: bottom;
+.bean-table .io {
+    font-weight: normal;
 }
-.bean-table .fls {
-    color: rgb(230, 41, 55); 
+@media (prefers-color-scheme: light) {
+    .bean-table pre {
+        font-weight: bold;
+    } 
+    .bean-table caption {
+        color: rgb(95, 95, 95);
+        caption-side: bottom;
+    }
+    .bean-table .fls {
+        color: rgb(230, 41, 55); 
+    }
+    .bean-table .tru {
+        color: rgb(0, 158, 47);
+    }
+    .bean-table .int {
+        color: rgb(230, 156, 29); 
+    }
+    .bean-table .dim {
+        font-weight: normal;
+        color: rgb(95, 95, 95);
+    }
 }
-.bean-table .tru {
-    color: rgb(0, 158, 47);
-}
-.bean-table .int {
-    color: rgb(245, 193, 0); 
-}
-.bean-table .dim {
-    color: rgb(130, 130, 130);
+@media (prefers-color-scheme: dark) {
+    .bean-table caption {
+        color: rgb(150, 150, 150);
+        caption-side: bottom;
+    }
+    .bean-table .fls {
+        color: rgb(230, 41, 55); 
+    }
+    .bean-table .tru {
+        color: rgb(0, 158, 47);
+    }
+    .bean-table .int {
+        color: rgb(245, 193, 0); 
+    }
+    .bean-table .dim {
+        color: rgb(130, 130, 130);
+    }
 }
 """
 
 NOSELECT_STYLE = """
-body {
-    -webkit-user-drag: none;
-    -webkit-touch-callout: none;
-    pointer-events: none;
-    user-select: none !important;
-    -ms-user-select: none;
-}
+body{-webkit-user-drag: none;-webkit-touch-callout: none;pointer-events: none;user-select: none !important;-ms-user-select: none;}
 """
 
 def _pascal_case_to_snake(name: str) -> str:
@@ -317,7 +340,7 @@ class Tracer:
         rs = " rowspan=2" if has_array else ""
 
         if should_print_line_nums:
-            res.append(f"<th style=padding:0.2em{rs}>Line</th>\n")
+            res.append(f"<th style=padding:0.23em{rs}>Line</th>\n")
 
         # first pass
         for name, typ in self.var_types.items():
@@ -411,14 +434,14 @@ class Tracer:
             if row_num in self.inputs:
                 l = self.inputs[row_num]
                 s = "<br></br>".join(l)
-            res.append(f"<td><pre>{s}</pre></td>\n")
+            res.append(f"<td><pre class=\"io\">{s}</pre></td>\n")
 
         if len(self.outputs) > 0:
             s = str()
             if row_num in self.outputs:
                 l = self.outputs[row_num]
                 s = "<br></br>".join(l)
-            res.append(f"<td><pre>{s}</pre></td>\n")
+            res.append(f"<td><pre class=\"io\">{s}</pre></td>\n")
 
         return "".join(res)
 
