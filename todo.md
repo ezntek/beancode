@@ -4,9 +4,9 @@
 
 - [x] `FORMAT` libroutine for printf-like formatting
 - [x] Tracer
-  - [ ] Refactoring HTML to be more modular
-  - [ ] Dark/light mode CSS, theming?
-  - [ ] Common class names for bcweb (beancode-web)
+  - [x] Refactoring HTML to be more modular
+  - [x] Dark/light mode CSS, theming?
+  - [x] Common class names for bcweb (beancode-web)
   - [ ] JSON output?
 
 ## High Priority
