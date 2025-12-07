@@ -39,12 +39,6 @@ def get_file_path_with_dialog() -> str:
     return res
 
 
-def run_repl():
-    from .repl import Repl
-
-    Repl(debug=False).repl()
-
-
 def _read_whole_file_nicely(path: str) -> str | None:
     """reads a whole file, running expanduser and catching exceptions."""
 

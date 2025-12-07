@@ -1,6 +1,6 @@
 import subprocess
 
-from beancode.cfgparser import parse_config_from_file
+from .cfgparser import parse_config_from_file
 
 from . import __version__
 from .bean_ast import *

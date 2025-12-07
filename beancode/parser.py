@@ -1,11 +1,8 @@
-from beancode.libroutines import LIBROUTINES
-
 from . import *
 from .lexer import *
 from .bean_ast import *
-
+from .libroutines import LIBROUTINES
 from .error import *
-from . import __version__
 
 
 def _convert_escape_code(ch: str) -> str | None:

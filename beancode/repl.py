@@ -9,6 +9,7 @@ from .parser import *
 from .interpreter import *
 from .bean_ast import *
 from .bean_ffi import *
+from .runner import run_file, trace
 from . import __version__
 
 from enum import IntEnum
@@ -253,8 +254,6 @@ class Repl:
             error("you may only specify one or no arguments to .runfile!")
             return DotCommandResult.NO_OP
 
-        from .runner import run_file
-
         if len(args) == 1:
             run_file()
         else:
@@ -269,8 +268,6 @@ class Repl:
 
         path = args[1]
         vars = args[2:]
-
-        from .runner import trace
 
         trace(path, vars=vars)
         return DotCommandResult.NO_OP
