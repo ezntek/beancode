@@ -1119,7 +1119,7 @@ class Interpreter:
     def visit_output_stmt(self, stmt: OutputStatement):
         res = (
             str(self.visit_expr(stmt.items[0]))
-            if len(stmt.items) == 0
+            if len(stmt.items) == 1
             else "".join(
                 [
                     (
