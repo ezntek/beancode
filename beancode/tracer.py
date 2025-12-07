@@ -4,71 +4,8 @@ from beancode.cfgparser import parse_config_from_file
 
 from .bean_ast import *
 
-TABLE_STYLE = """
-.bean-table {
-    border-collapse: collapse;
-}
-.bean-table tr,
-.bean-table td,
-.bean-table th {
-    border: 1px solid;
-    padding-left: 0.6em;
-    padding-right: 0.6em;
-    padding-top: 0em;
-    padding-bottom: 0em;
-    text-align: center;
-}
-.bean-table pre {
-    font-size: 1.3em;
-}
-.bean-table .io {
-    font-weight: normal;
-}
-@media (prefers-color-scheme: light) {
-    .bean-table pre {
-        font-weight: bold;
-    } 
-    .bean-table caption {
-        color: rgb(95, 95, 95);
-        caption-side: bottom;
-    }
-    .bean-table .fls {
-        color: rgb(230, 41, 55); 
-    }
-    .bean-table .tru {
-        color: rgb(0, 158, 47);
-    }
-    .bean-table .int {
-        color: rgb(230, 156, 29); 
-    }
-    .bean-table .dim {
-        font-weight: normal;
-        color: rgb(95, 95, 95);
-    }
-}
-@media (prefers-color-scheme: dark) {
-    .bean-table caption {
-        color: rgb(150, 150, 150);
-        caption-side: bottom;
-    }
-    .bean-table .fls {
-        color: rgb(230, 41, 55); 
-    }
-    .bean-table .tru {
-        color: rgb(0, 158, 47);
-    }
-    .bean-table .int {
-        color: rgb(245, 193, 0); 
-    }
-    .bean-table .dim {
-        color: rgb(130, 130, 130);
-    }
-}
-"""
-
-NOSELECT_STYLE = """
-body{-webkit-user-drag: none;-webkit-touch-callout: none;pointer-events: none;user-select: none !important;-ms-user-select: none;}
-"""
+TABLE_STYLE = ".bean-table{border-collapse:collapse}.bean-table td,.bean-table th,.bean-table tr{border:1px solid;padding:0 0.6em;text-align:center}.bean-table pre{font-size:1.3em}.bean-table .io{font-weight:normal}@media (prefers-color-scheme: light){.bean-table pre{font-weight:bold}.bean-table caption{color:rgb(95, 95, 95);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(230, 156, 29)}.bean-table .D{font-weight:normal;color:rgb(95, 95, 95)}}@media (prefers-color-scheme: dark){.bean-table caption{color:rgb(150, 150, 150);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(245, 193, 0)}.bean-table .D{color:rgb(130, 130, 130)}}"
+NOSELECT_STYLE = "body{-webkit-user-drag:none;-webkit-touch-callout:none;pointer-events:none;user-select:none !important;-ms-user-select:none}"
 
 def _pascal_case_to_snake(name: str) -> str:
     if len(name) == 0:
@@ -314,7 +251,7 @@ class Tracer:
     def _highlight_var(self, var: BCValue) -> str:
         if var.is_uninitialized():
             if self.config.syntax_highlighting:
-                return f"<td><pre class=dim>null</pre></td>"
+                return f"<td><pre class=D>null</pre></td>"
             else:
                 return "<td><pre>(null)</pre></td>"
 
@@ -323,24 +260,24 @@ class Tracer:
 
         match var.kind:
             case BCPrimitiveType.BOOLEAN:
-                klass = "tru" if var.val == True else "fls"
+                klass = "T" if var.val == True else "F"
                 return f"<td><pre class={klass}>{str(var)}</pre></td>"
             case BCPrimitiveType.INTEGER | BCPrimitiveType.REAL:
-                return f"<td><pre class=int>{str(var)}</pre></td>"
+                return f"<td><pre class=I>{str(var)}</pre></td>"
             case _:
                 return f"<td><pre>{str(var)}</pre></td>"
 
     def _gen_html_table_header(self, should_print_line_nums: bool) -> str:
         res = list()
 
-        res.append("<thead>\n")
-        res.append("<tr>\n")
+        res.append("<thead>")
+        res.append("<tr>")
 
         has_array = self._has_array()
         rs = " rowspan=2" if has_array else ""
 
         if should_print_line_nums:
-            res.append(f"<th style=padding:0.23em{rs}>Line</th>\n")
+            res.append(f"<th style=padding:0.23em{rs}>Line</th>")
 
         # first pass
         for name, typ in self.var_types.items():
@@ -366,15 +303,15 @@ class Tracer:
                     for num in range(bounds[0], bounds[1] + 1):  # never None
                         res.append(f"<th>[{num}]</th>")
 
-        res.append("</tr>\n")
-        res.append("</thead>\n")
+        res.append("</tr>")
+        res.append("</thead>")
 
         return "".join(res)
 
     def _gen_html_table_line_num(self, row_num: int) -> str:
         if self._should_print_line_numbers():
             if row_num in self.line_numbers:
-                return f"<td>{self.line_numbers[row_num]}</td>\n"
+                return f"<td>{self.line_numbers[row_num]}</td>"
         return str()
 
     def _gen_html_table_row(
@@ -394,7 +331,7 @@ class Tracer:
                     # blank the region out
                     bounds = self.var_types[var_name].get_flat_bounds()  # type: ignore
                     for _ in range(bounds[0], bounds[1] + 1):
-                        res.append(f"<td></td>")
+                        res.append(f"<td/>")
                 else:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
                     arr: BCArray = var.get_array()
@@ -410,7 +347,7 @@ class Tracer:
                                 prev_arr and prev_arr[idx] == itm
                             )
                             if repeated or not prev_arr and printed_first:
-                                res.append("<td></td>")
+                                res.append("<td/>")
                             else:
                                 res.append(self._highlight_var(itm))
             else:
@@ -420,7 +357,7 @@ class Tracer:
 
                 repeated = self.config.hide_repeating_entries and var == prev
                 if not var or repeated and printed_first:
-                    res.append("<td></td>")
+                    res.append("<td/>")
                 else:
                     res.append(self._highlight_var(var))
 
@@ -433,22 +370,22 @@ class Tracer:
             s = str()
             if row_num in self.inputs:
                 l = self.inputs[row_num]
-                s = "<br></br>".join(l)
-            res.append(f"<td><pre class=\"io\">{s}</pre></td>\n")
+                s = "<br/>".join(l)
+            res.append(f"<td><pre class=io>{s}</pre></td>")
 
         if len(self.outputs) > 0:
             s = str()
             if row_num in self.outputs:
                 l = self.outputs[row_num]
-                s = "<br></br>".join(l)
-            res.append(f"<td><pre class=\"io\">{s}</pre></td>\n")
+                s = "<br/>".join(l)
+            res.append(f"<td><pre class=io>{s}</pre></td>")
 
         return "".join(res)
 
     def _gen_html_table_body(self):
         res = list()
 
-        res.append("<tbody>\n")
+        res.append("<tbody>")
 
         if len(self.vars) == 0:
             keys = set()
@@ -461,9 +398,9 @@ class Tracer:
                 res.append("<tr>")
                 res.append(self._gen_html_table_line_num(k))
                 res.append(self._gen_html_table_row_io(k))
-                res.append("</tr>\n")
+                res.append("</tr>")
 
-            res.append("</tbody>\n")
+            res.append("</tbody>")
             return "".join(res)
 
         rows: list[tuple[int, tuple[BCValue | None, ...]]] = list(
@@ -516,14 +453,14 @@ class Tracer:
 
             printed_first = True
 
-            res.append("</tr>\n")
+            res.append("</tr>")
 
-        res.append("</tbody>\n")
+        res.append("</tbody>")
         return "".join(res)
 
     def _gen_html_table(self) -> str:
         res = list()
-        res.append("<table class=\"bean-table\">\n")
+        res.append("<table class=bean-table>")
 
         # generate header
         should_print_line_nums = self._should_print_line_numbers()
@@ -534,41 +471,39 @@ class Tracer:
                 res.append("No values were captured.")
             else:
                 res.append(f"All values are captured at line {self.line_numbers[0]}")
-            res.append("</caption>\n")
+            res.append("</caption>")
 
         res.append(self._gen_html_table_header(should_print_line_nums))
         res.append(self._gen_html_table_body())
 
-        res.append("</table>\n")
+        res.append("</table>")
         return "".join(res)
 
     def gen_html(self, file_name: str | None = None) -> str:
         res = list()
         res.append("<!DOCTYPE html>\n")
         res.append("<!-- Generated HTML by beancode's trace table generator -->\n")
-        res.append("<html>\n")
-        res.append(f"<head>\n")
-        res.append("<meta charset=UTF-8>\n")
-        res.append('<meta name=color-scheme content="dark light">\n')
+        res.append("<!-- This HTML is not meant to be read by humans. It is meant to be very minified. -->\n")
+        # HTML tag is optional, so is head
+        res.append("<meta charset=UTF-8>")
+        res.append('<meta name=color-scheme content="dark light">')
 
         title_s = ""
         if file_name is not None:
             title_s = " for " + file_name
         title = f"Generated Trace Table{title_s}"
 
-        res.append(f"<title>{title}</title>\n")
+        res.append(f"<title>{title}</title>")
 
         noselect = "" if self.config.i_will_not_cheat else NOSELECT_STYLE
-        res.append(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
-        res.append("</head>\n")
+        res.append(f"<style>{TABLE_STYLE}{noselect}</style>")
 
-        res.append(f"<body><center>\n")
+        res.append(f"<center>")
 
-        res.append(f"<h1>Generated Trace Table</h1>\n")
-        res.append(self._gen_html_table() + "\n")
+        res.append(f"<h1>Generated Trace Table</h1>")
+        res.append(self._gen_html_table())
 
-        res.append("</center></body>\n")
-        res.append("</html>\n")
+        res.append("</center>")
         return "".join(res)
 
     def write_out(self, file_name: str | None = None) -> str:

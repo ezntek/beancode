@@ -1,0 +1,8 @@
+/* Used to disable selection for the tracer */
+body {
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    pointer-events: none;
+    user-select: none !important;
+    -ms-user-select: none;
+}

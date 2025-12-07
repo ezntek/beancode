@@ -1,0 +1,64 @@
+/* Table style used in the tracer. */
+.bean-table {
+    border-collapse: collapse;
+}
+.bean-table tr,
+.bean-table td,
+.bean-table th {
+    border: 1px solid;
+    padding-left: 0.6em;
+    padding-right: 0.6em;
+    padding-top: 0em;
+    padding-bottom: 0em;
+    text-align: center;
+}
+.bean-table pre {
+    font-size: 1.3em;
+}
+.bean-table .io {
+    font-weight: normal;
+}
+@media (prefers-color-scheme: light) {
+    .bean-table pre {
+        font-weight: bold;
+    } 
+    .bean-table caption {
+        color: rgb(95, 95, 95);
+        caption-side: bottom;
+    }
+    /* False */
+    .bean-table .F {
+        color: rgb(230, 41, 55); 
+    }
+    /* True */
+    .bean-table .T {
+        color: rgb(0, 158, 47);
+    }
+    /* Integers */
+    .bean-table .I {
+        color: rgb(230, 156, 29); 
+    }
+    /* Dim */
+    .bean-table .D {
+        font-weight: normal;
+        color: rgb(95, 95, 95);
+    }
+}
+@media (prefers-color-scheme: dark) {
+    .bean-table caption {
+        color: rgb(150, 150, 150);
+        caption-side: bottom;
+    }
+    .bean-table .F {
+        color: rgb(230, 41, 55); 
+    }
+    .bean-table .T {
+        color: rgb(0, 158, 47);
+    }
+    .bean-table .I {
+        color: rgb(245, 193, 0); 
+    }
+    .bean-table .D {
+        color: rgb(130, 130, 130);
+    }
+}
