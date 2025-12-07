@@ -7,7 +7,6 @@
   - [x] Refactoring HTML to be more modular
   - [x] Dark/light mode CSS, theming?
   - [x] Common class names for bcweb (beancode-web)
-  - [ ] JSON output?
 
 ## High Priority
 
@@ -24,20 +23,19 @@
   - [x] replacing constants
   - [x] inlining library routines
   - [x] insert native Python calls when possible (maybe?) 
-- [ ] Formatter
 
 ## Low Priority
 
 (0.7)
 
+- [ ] Formatter
+- [ ] Make string concatenation faster
+
+(0.8)
+
 - [ ] Multiple Error Reporting 
 - [ ] Refactor error implementation (no more hardcoded file names with file IDs, proper context support)
-- [ ] Make string concatenation faster
 - [ ] Python Compiler? (Turning an AST into an exec call)
 - [ ] Static/Semantic Analyzer
-- [ ] File IO with raw bytes
-- [ ] Proper byte strings and buffers
 - [ ] JS/Lua/C transpiler
 - [ ] Proper FFI
-
-

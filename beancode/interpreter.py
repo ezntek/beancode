@@ -1388,6 +1388,7 @@ class Interpreter:
         block: list[Statement] = stmt.block  # type: ignore
 
         intp = self._make_new_interpreter(block)
+        intp.loop = True
 
         while True:
             evcond = self.visit_expr(cond)
@@ -1441,6 +1442,7 @@ class Interpreter:
                 self.error("step for for loop cannot be 0!", stmt.step.pos)
 
         intp = self._make_new_interpreter(stmt.block)
+        intp.loop = True
 
         var_existed = stmt.counter.ident in intp.variables
         if var_existed:
@@ -1492,7 +1494,9 @@ class Interpreter:
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         cond: Expr = stmt.cond  # type: ignore
+
         intp = self._make_new_interpreter(stmt.block)
+        intp.loop = True
 
         while True:
             intp.visit_block(None)
@@ -1561,48 +1565,62 @@ class Interpreter:
         self.functions[stmt.name] = stmt
 
     def visit_assign_stmt(self, s: AssignStatement):
+        val = self.visit_expr(s.value)
+
         if s.is_ident:  # isinstance(s.ident, Identifier)
             key: str = s.ident.ident  # type: ignore
 
             if s.ident.libroutine:  # type: ignore
                 self.error(f'cannot shadow library routine named "{key}"')
 
-            exp = self.visit_expr(s.value)
-            var = self.variables.get(key)
+            target = self.variables.get(key)
 
-            if var is None:
+            if target is None:
                 if key in self.functions:
                     self.error(
                         f'cannot shadow existing function or procedure named "{key}"',
                         s.pos,
                     )
 
-                var = Variable(exp, False, export=False)
-                self.variables[key] = var
+                target = Variable(val, False, export=False)
+                self.variables[key] = target
 
             if self.variables[key].const:
                 self.error(f"cannot assign constant {key}", s.ident.pos)
 
-            if var.val.kind != exp.kind:
-                self.error(
-                    f"cannot assign {str(exp.kind).upper()} to {str(var.val.kind).upper()}",
-                    s.ident.pos,
-                )
+            target = target.val
 
-            if exp.is_array:
-                a = exp.get_array()
-                if a.typ.is_matrix() and a.typ.bounds != var.val.get_array().typ.bounds:
+            if val.is_array:
+                a: BCArray = val.val # type: ignore
+                t: BCArray = target.val # type: ignore
+                if a.typ.is_matrix() and a.typ.bounds != t.typ.bounds: # type: ignore
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
-                elif a.typ.is_flat() and a.typ.bounds != var.val.get_array().typ.bounds:
+                elif a.typ.is_flat() and a.typ.bounds != t.typ.bounds: # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
 
-                self.variables[key].val = exp.copy()
-            else:
-                self.variables[key].val = exp.copy()
+                # NOTE: replace_inner strips the guts of another BCValue and puts it in its own;
+                # effectively an organ transplant, meaning that for the array to be copied, we
+                # have to copy it ourselves.
+                val = val.copy()
         else:  # elif isinstance(s.ident, ArrayIndex)
             target = self.visit_expr(s.ident)
-            val = self.visit_expr(s.value)
-            target.replace_inner(val)
+
+        should_promote_real = (
+            target.kind == BCPrimitiveType.REAL
+            and val.kind == BCPrimitiveType.INTEGER
+        )
+        if target.kind != val.kind:
+            if not should_promote_real :
+                self.error(
+                    f"cannot assign {val.kind} to {target.kind}",
+                    s.ident.pos,
+                )
+            else:
+                val = BCValue(BCPrimitiveType.REAL, value=float(val.val), is_array=False) # type: ignore
+        elif val.is_array:
+            val = val.copy()
+
+        target.replace_inner(val)
 
         self.trace(s.pos.row)
 
