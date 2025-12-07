@@ -33,7 +33,6 @@ LIBROUTINES: Libroutines = {
     "sin": [BCPrimitiveType.REAL],
     "cos": [BCPrimitiveType.REAL],
     "tan": [BCPrimitiveType.REAL],
-    "help": [BCPrimitiveType.STRING],
     "getchar": [],
     "random": [],
     "execute": [BCPrimitiveType.STRING],

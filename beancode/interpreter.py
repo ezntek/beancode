@@ -6,7 +6,6 @@ import subprocess
 
 from typing import Any, NoReturn
 
-from .bean_help import bean_help
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
@@ -649,18 +648,6 @@ class Interpreter:
                 case "tan":
                     [val, *_] = evargs
                     return BCValue.new_real(math.tan(val.get_real()))
-                case "help":
-                    [val, *_] = evargs
-                    query = val.get_string()
-                    s = bean_help(query)
-                    if s is None:
-                        self.error(
-                            f'No help information for query "{query}" was found.\n'
-                            + 'Type help("help") to get started.',
-                            stmt.pos,
-                        )
-
-                    return BCValue.new_string(s)
                 case "execute":
                     [cmd, *_] = evargs
                     out = str()
