@@ -551,8 +551,6 @@ class Optimizer:
                 case "tan":
                     [val, *_] = evargs
                     return BCValue.new_real(math.tan(val.get_real()))
-                case "help":
-                    return None  # runtime only
                 case "execute":
                     return None  # runtime only
                 case "putchar":
