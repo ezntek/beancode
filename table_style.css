@@ -6,10 +6,7 @@
 .bean-table td,
 .bean-table th {
     border: 1px solid;
-    padding-left: 0.6em;
-    padding-right: 0.6em;
-    padding-top: 0em;
-    padding-bottom: 0em;
+    padding: 0 0.7em;
     text-align: center;
 }
 .bean-table pre {
