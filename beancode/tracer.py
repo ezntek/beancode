@@ -5,38 +5,47 @@ from beancode.cfgparser import parse_config_from_file
 from .bean_ast import *
 
 TABLE_STYLE = """
-table {
+.bean-table {
     border-collapse: collapse;
 }
-tr, td, th {
+.bean-table tr,
+.bean-table td,
+.bean-table th {
     border: 1px solid;
     padding-left: 0.7em;
     padding-right: 0.7em;
     text-align: center;
 }
-caption {
+.bean-table pre {
+    font-size: 1.2em;
+}
+.bean-table caption {
     color: rgb(150, 150, 150);
-}
-.fls {
-    color: rgb(230, 41, 55); 
-}
-.tru {
-    color: rgb(0, 158, 47);
-}
-.int {
-    color: rgb(245, 193, 0); 
-}
-.dim {
-    color: rgb(130, 130, 130);
-}
-caption {
     caption-side: bottom;
 }
-pre {
-    font-size: 1.2em;
+.bean-table .fls {
+    color: rgb(230, 41, 55); 
+}
+.bean-table .tru {
+    color: rgb(0, 158, 47);
+}
+.bean-table .int {
+    color: rgb(245, 193, 0); 
+}
+.bean-table .dim {
+    color: rgb(130, 130, 130);
 }
 """
 
+NOSELECT_STYLE = """
+body {
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    pointer-events: none;
+    user-select: none !important;
+    -ms-user-select: none;
+}
+"""
 
 @dataclass
 class TracerConfig:
@@ -511,7 +520,7 @@ class Tracer:
 
     def _gen_html_table(self) -> str:
         res = list()
-        res.append("<table>\n")
+        res.append("<table class=\"bean-table\">\n")
 
         # generate header
         should_print_line_nums = self._should_print_line_numbers()
@@ -546,10 +555,7 @@ class Tracer:
 
         res.append(f"<title>{title}</title>\n")
 
-        noselect = str()
-        if not self.config.i_will_not_cheat:
-            noselect = "body { user-select: none; }"
-
+        noselect = "" if self.config.i_will_not_cheat else NOSELECT_STYLE
         res.append(f"<style>\n{TABLE_STYLE}\n{noselect}</style>\n")
         res.append("</head>\n")
 
