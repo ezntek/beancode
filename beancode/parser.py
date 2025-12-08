@@ -551,7 +551,9 @@ class Parser:
         if not expr:
             return
 
-        if self.check(TokenKind.IDENT) and is_case_consistent(s := self.peek().data.lower()):  # type: ignore
+        if self.check(TokenKind.IDENT) and is_case_consistent(
+            s := self.peek().data.lower()  # type: ignore
+        ):
             if s == "div":
                 raise BCError(
                     "DIV is not an infix operator!\nPlease use the DIV(a, b) library routine instead of a DIV b!",
@@ -830,8 +832,9 @@ class Parser:
 
         self.check_newline("variable declaration (DECLARE)")
 
-        return DeclareStatement(begin.pos, ident=idents, typ=typ, expr=expr, export=export)  # type: ignore
-
+        return DeclareStatement(
+            begin.pos, ident=idents, typ=typ, expr=expr, export=export # type: ignore
+        ) 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
         export = False

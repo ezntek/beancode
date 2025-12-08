@@ -82,8 +82,12 @@ class Interpreter:
         self.reset_all()
 
     @classmethod
-    def new(cls, block: list[Statement], func=False, proc=False, loop=False, tracer=None) -> "Interpreter":  # type: ignore
-        return cls(block, func=func, proc=proc, loop=loop, tracer=tracer, toplevel=False)  # type: ignore
+    def new(
+        cls, block: list[Statement], func=False, proc=False, loop=False, tracer=None
+    ) -> "Interpreter":  # type: ignore
+        return cls(
+            block, func=func, proc=proc, loop=loop, tracer=tracer, toplevel=False
+        )  # type: ignore
 
     def _make_new_interpreter(self, block: list[Statement]) -> "Interpreter":
         intp = self.new(block, loop=False, tracer=self.tracer)
@@ -468,7 +472,8 @@ class Interpreter:
 
                 if inner not in range(bounds[2], bounds[3] + 1):  # type: ignore
                     self.error(
-                        f'cannot access out of bounds array element "{tup[1]}"', ind.idx_inner.pos  # type: ignore
+                        f'cannot access out of bounds array element "{tup[1]}"',
+                        ind.idx_inner.pos,  # type: ignore
                     )
 
                 idx1 = outer - bounds[0]
@@ -530,12 +535,12 @@ class Interpreter:
 
                 if mismatch and new.is_null():
                     self.error(
-                        f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
+                        f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
                     )
 
                 if mismatch:
-                    err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                    err_base = f"expected {humanize_index(idx + 1)} argument to library routine {name.upper()} to be "
                     if isinstance(arg_type, tuple):
                         err_base += "either "
 
@@ -1603,7 +1608,9 @@ class Interpreter:
                     s.ident.pos,
                 )
             else:
-                val = BCValue(BCPrimitiveType.REAL, value=float(val.val), is_array=False)  # type: ignore
+                val = BCValue(
+                    BCPrimitiveType.REAL, value=float(val.val), is_array=False # type: ignore
+               )
         elif val.is_array:
             val = val.copy()
 
@@ -1647,16 +1654,28 @@ class Interpreter:
             ob, oe, ib, ie = bounds
 
             if ob < 0:
-                self.error("outer beginning value for array bound declaration cannot be <0", at.get_matrix_bounds()[0].pos)  # type: ignore
+                self.error(
+                    "outer beginning value for array bound declaration cannot be <0",
+                    at.get_matrix_bounds()[0].pos,
+                )  # type: ignore
 
             if oe < 0:
-                self.error("outer ending value for array bound declaration cannot be <0", at.get_matrix_bounds()[1].pos)  # type: ignore
+                self.error(
+                    "outer ending value for array bound declaration cannot be <0",
+                    at.get_matrix_bounds()[1].pos,
+                )  # type: ignore
 
             if ib < 0:
-                self.error("inner beginning value for array bound declaration cannot be <0", at.get_matrix_bounds()[2].pos)  # type: ignore
+                self.error(
+                    "inner beginning value for array bound declaration cannot be <0",
+                    at.get_matrix_bounds()[2].pos,
+                )  # type: ignore
 
             if ie < 0:
-                self.error("inner ending value for array bound declaration cannot be <0", at.get_matrix_bounds()[3].pos)  # type: ignore
+                self.error(
+                    "inner ending value for array bound declaration cannot be <0",
+                    at.get_matrix_bounds()[3].pos,
+                )  # type: ignore
 
             if ob > oe:
                 self.error(
@@ -1686,13 +1705,22 @@ class Interpreter:
             begin, end = bounds
 
             if begin < 0:
-                self.error("beginning value for array bound declaration cannot be <0", at.get_flat_bounds()[0].pos)  # type: ignore
+                self.error(
+                    "beginning value for array bound declaration cannot be <0",
+                    at.get_flat_bounds()[0].pos,
+                )  # type: ignore
 
             if end < 0:
-                self.error("ending value for array bound declaration cannot be <0", at.get_flat_bounds()[1].pos)  # type: ignore
+                self.error(
+                    "ending value for array bound declaration cannot be <0",
+                    at.get_flat_bounds()[1].pos,
+                )  # type: ignore
 
             if begin > end:
-                self.error("invalid range for array bound declaration", at.get_flat_bounds()[0].pos)  # type: ignore
+                self.error(
+                    "invalid range for array bound declaration",
+                    at.get_flat_bounds()[0].pos,
+                )  # type: ignore
 
             size = end - begin
             arr = [BCValue(t.inner) for _ in range(size + 1)]

@@ -427,12 +427,12 @@ class Optimizer:
 
                 if mismatch and new.is_null():
                     raise BCError(
-                        f"{humanize_index(idx+1)} argument in call to library routine {name.upper()} is NULL!",
+                        f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
                     )
 
                 if mismatch:
-                    err_base = f"expected {humanize_index(idx+1)} argument to library routine {name.upper()} to be "
+                    err_base = f"expected {humanize_index(idx + 1)} argument to library routine {name.upper()} to be "
                     if isinstance(arg_type, tuple):
                         err_base += "either "
 

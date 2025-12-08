@@ -183,7 +183,7 @@ def bean_format(pos: Pos, args: list[BCValue]) -> BCValue:
     for idx, itm in enumerate(args[1:]):
         if itm.is_uninitialized():
             raise BCError(
-                f"{humanize_index(idx+2)} argument in format argument list is NULL/uninitialized!",
+                f"{humanize_index(idx + 2)} argument in format argument list is NULL/uninitialized!",
                 pos,
             )
         if isinstance(itm.kind, BCArrayType):

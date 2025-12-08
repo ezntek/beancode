@@ -107,7 +107,12 @@ _RECT_T = BCArrayType.new_flat(BCPrimitiveType.INTEGER, (1, 4))
 
 
 def _color_to_bc_array(color: p.Color) -> BCValue:
-    flat = [BCValue.new_integer(color[0]), BCValue.new_integer(color[1]), BCValue.new_integer(color[2]), BCValue.new_integer(color[3])]  # type: ignore
+    flat = [
+        BCValue.new_integer(color[0]),
+        BCValue.new_integer(color[1]),
+        BCValue.new_integer(color[2]),
+        BCValue.new_integer(color[3]),
+    ]  # type: ignore
     return BCValue.new_array(BCArray.new_flat(_COLOR_T, flat))
 
 

@@ -1,6 +1,7 @@
 from .error import *
 from .lexer import Lexer
 from .parser import Parser
+from .optimizer import Optimizer
 from .interpreter import Interpreter
 from .cfgparser import parse_config_from_source
 from .tracer import Tracer, TracerConfig
@@ -129,7 +130,14 @@ def trace(
     tracer.open(output_path)
 
 
-def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tracer | None" = None, notify_when_done=False) -> "Interpreter | None":  # type: ignore
+def execute(
+    src: str,
+    filename="(execute)",
+    save_interpreter=False,
+    tracer: "Tracer | None" = None,
+    notify_when_done=False,
+    optimize=False,
+) -> "Interpreter | None":  # type: ignore
     lexer = Lexer(src)
 
     try:
@@ -148,9 +156,20 @@ def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tra
     except BCError as err:
         err.print(filename, src)
         if save_interpreter:
-            exit(1)
-        else:
             return
+        else:
+            exit(1)
+
+    if optimize:
+        try:
+            opt = Optimizer(program.stmts)
+            program.stmts = opt.visit_block(None)
+        except BCError as err:
+            err.print(filename, src)
+            if save_interpreter:
+                return
+            else:
+                exit(1)
 
     if tracer is None:
         i = Interpreter(program.stmts)
@@ -163,9 +182,9 @@ def execute(src: str, filename="(execute)", save_interpreter=False, tracer: "Tra
     except BCError as err:
         err.print(filename, src)
         if save_interpreter:
-            exit(1)
-        else:
             return
+        else:
+            exit(1)
 
     if notify_when_done:
         info("execution of script/code complete!")
