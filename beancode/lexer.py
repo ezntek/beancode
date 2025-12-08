@@ -96,9 +96,11 @@ class Lexer:
     row: int
     bol: int
     cur: int
+    found_shebang: bool
 
     def __init__(self, src: str) -> None:
         self.src = src
+        self.found_shebang = False
         self.reset()
 
     def reset(self):
@@ -149,17 +151,10 @@ class Lexer:
             return
 
         pair = self.src[self.cur : self.cur + 2]
-        if pair not in ("//", "/*"):
+        if pair not in {"//", "/*", "#!"}:
             return
 
-        if pair == "//":
-            self.cur += 2  # skip past comment marker
-
-            while self.in_bounds() and self.get_cur() != "\n":
-                self.cur += 1
-
-            self.trim_spaces()
-        elif pair == "/*":
+        if pair == "/*":
             self.cur += 2
 
             while self.in_bounds() and self.src[self.cur : self.cur + 2] != "*/":
@@ -170,6 +165,18 @@ class Lexer:
 
             # found */
             self.cur += 2
+        else:
+            if pair == "#!":
+                if self.found_shebang:
+                    raise BCError("cannot have more than one shebang in one source file!", self.pos_here(2))
+                self.found_shebang = True
+
+            self.cur += 2  # skip past comment marker
+
+            while self.in_bounds() and self.get_cur() != "\n":
+                self.cur += 1
+
+            self.trim_spaces()
 
         self.trim_spaces()
 

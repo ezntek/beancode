@@ -1585,11 +1585,6 @@ class Interpreter:
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
                 elif a.typ.is_flat() and a.typ.bounds != t.typ.bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
-
-                # NOTE: replace_inner strips the guts of another BCValue and puts it in its own;
-                # effectively an organ transplant, meaning that for the array to be copied, we
-                # have to copy it ourselves.
-                val = val.copy()
         else:  # elif isinstance(s.ident, ArrayIndex)
             target = self.visit_expr(s.ident)
 
@@ -1603,11 +1598,11 @@ class Interpreter:
                     s.ident.pos,
                 )
             else:
-                val = BCValue(BCPrimitiveType.REAL, value=float(val.val), is_array=False)  # type: ignore
-        elif val.is_array:
-            val = val.copy()
+                val = BCValue(
+                    BCPrimitiveType.REAL, value=float(val.val), is_array=False # type: ignore
+                )
 
-        target.replace_inner(val)
+        target.replace_inner(val.copy())
 
         self.trace(s.pos.row)
 
