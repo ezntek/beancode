@@ -1,0 +1,56 @@
+CONSTANT Max <- 1000
+
+DECLARE Array: ARRAY[1:Max] OF INTEGER
+
+PROCEDURE PrintArray
+    FOR I <- 1 TO Max
+        PRINT Array[I], ", "
+    NEXT I
+    OUTPUT ""
+ENDPROCEDURE
+
+// Populate the array
+FOR I <- 1 TO Max
+    Array[I] <- INTEGER(RANDOM() * 100000 + 1)
+NEXT I
+CALL PrintArray
+
+// Sort
+FUNCTION Partition(Low: INTEGER, High: INTEGER) RETURNS INTEGER
+    DECLARE Pivot, I, Temp: INTEGER
+    Pivot <- Array[High]
+    I <- Low - 1
+    Temp <- 0
+
+    FOR J <- Low TO High
+        IF Array[J] < Pivot
+          THEN
+            I <- I + 1
+            Temp <- Array[I]
+            Array[I] <- Array[J]
+            Array[J] <- Temp
+        ENDIF
+    NEXT J
+
+    Temp <- Array[I+1]
+    Array[I+1] <- Array[High]
+    Array[High] <- Temp
+
+    RETURN I + 1
+ENDFUNCTION
+
+PROCEDURE QuickSort(Low: INTEGER, High: INTEGER)
+    DECLARE Pivot: INTEGER
+    IF Low < High
+      THEN
+        Pivot <- Partition(Low, High)
+        CALL PrintArray
+        CALL QuickSort(Low, Pivot - 1)
+        CALL QuickSort(Pivot + 1, High)
+    ENDIF
+ENDPROCEDURE
+
+CALL QuickSort(1, Max)
+
+// Print
+CALL PrintArray
