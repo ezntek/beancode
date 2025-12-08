@@ -11,7 +11,7 @@ ENDPROCEDURE
 
 // Populate the array
 FOR I <- 1 TO Max
-    Array[I] <- INTEGER(RANDOM() * Max + 1)
+    Array[I] <- INTEGER(RANDOM() * 100000 + 1)
 NEXT I
 CALL PrintArray
 
