@@ -1,4 +1,4 @@
-CONSTANT Max <- 20000
+CONSTANT Max <- 25000
 
 FUNCTION IsPrime(Num: INTEGER) RETURNS BOOLEAN
     // Manually calculating the bound is faster!

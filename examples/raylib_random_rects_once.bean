@@ -1,6 +1,6 @@
 include_ffi "beanray"
 
-CONSTANT MaxRect <- 250
+CONSTANT MaxRect <- 400
 CONSTANT WinWidth <- 800
 CONSTANT WinHeight <- 600
 CONSTANT SizeVar <- 50
