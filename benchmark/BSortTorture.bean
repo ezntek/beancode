@@ -1,0 +1,40 @@
+CONSTANT Max <- 500
+CONSTANT Low <- 1
+CONSTANT High <- 100000
+
+DECLARE Array: ARRAY[1:Max] OF INTEGER
+
+PROCEDURE PrintArray
+    FOR I <- 1 TO Max
+        PRINT Array[I], ", "
+    NEXT I
+    OUTPUT ""
+ENDPROCEDURE
+
+// Populate the array
+FOR I <- 1 TO Max
+    Array[I] <- INTEGER(RANDOM() * (High - Low + 1) + Low)
+NEXT I
+CALL PrintArray
+
+// Sort
+DECLARE Last: INTEGER
+DECLARE Swapped: BOOLEAN
+Last <- Max
+REPEAT
+    Swapped <- FALSE
+    FOR I <- 1 TO Last - 1
+        IF Array[I] > Array[I+1]
+          THEN
+            Temp <- Array[I]
+            Array[I] <- Array[I+1]
+            Array[I+1] <- Temp
+            Swapped <- TRUE
+        ENDIF
+    NEXT I
+    CALL PrintArray
+    Last <- Last - 1
+UNTIL Last = 1 OR (NOT Swapped)  
+
+// Print
+CALL PrintArray

@@ -1491,8 +1491,7 @@ class Interpreter:
 
             intp.trace(stmt.end_pos.row, loop_trace=True)
 
-            # FIXME: barbaric
-            intp.variables = self.variables.copy()
+            intp.variables = dict(self.variables)
             if intp._returned:
                 proc, func = self.can_return()
 
@@ -1570,7 +1569,7 @@ class Interpreter:
                         s.pos,
                     )
 
-                target = Variable(val, False, export=False)
+                target = Variable(val.copy(), False, export=False)
                 self.variables[key] = target
 
             if self.variables[key].const:
