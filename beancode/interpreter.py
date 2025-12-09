@@ -650,11 +650,11 @@ class Interpreter:
                     return BCValue.new_real(math.tan(val.get_real()))
                 case "execute":
                     [cmd, *_] = evargs
-                    out = str()
+
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
                     except Exception as e:
-                        pass
+                        out = f"Error: {e}"
 
                     return BCValue.new_string(str(out))
                 case "putchar":

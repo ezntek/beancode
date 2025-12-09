@@ -2,7 +2,6 @@ import io
 import os
 import sys
 import argparse
-import gc
 from typing import NoReturn
 
 from .repl import Repl
