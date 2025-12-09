@@ -69,7 +69,7 @@ ENDPROCEDURE
 
 PROCEDURE loopbegin
     IF cells[ptr] = 0 THEN
-        WHILE substring(src, pc, 1) <> "]" DO
+        WHILE SUBSTRING(src, pc, 1) <> "]" DO
             pc <- pc + 1
         ENDWHILE
     ELSE
@@ -95,7 +95,7 @@ ENDPROCEDURE
 PROCEDURE debug
     IF dbg THEN
         OUTPUT ""
-        OUTPUT "(pc=", pc, " ptr=", ptr, " instr=", substring(src, pc, 1), " loopslen=", loopslen, ")"
+        OUTPUT "(pc=", pc, " ptr=", ptr, " instr=", SUBSTRING(src, pc, 1), " loopslen=", loopslen, ")"
     ENDIF
 ENDPROCEDURE
 
