@@ -319,7 +319,7 @@ class Repl:
             self.lx.row = oldrow + 1
 
             try:
-                inp = input("\033[0m.. ")
+                inp = input("\001\033[0m\033[1m\002..\001\033[0m\002 ")
             except KeyboardInterrupt:
                 print()
                 return (None, ContinuationResult.ERROR)
