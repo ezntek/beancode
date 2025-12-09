@@ -6,6 +6,7 @@ from .libroutines import *
 class Optimizer:
     # TODO: use
     constants: list[dict[str, BCValue]]
+    ignore_constants: list[list[str]]
     block: list[Statement]
     unwanted_items: list[list[int]]
     cur_stmt: int
@@ -16,12 +17,14 @@ class Optimizer:
         self.constants = list()
         self.unwanted_items = list()
         self.active_constants = set()
+        self.ignore_constants = list()
         self.cur_stmt = 0
 
     def _update_active_constants(self):
         self.active_constants = self.active_constants.union(
             *(d.keys() for d in self.constants)
         )
+        self.active_constants -= {x for row in self.ignore_constants for x in row}
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -682,7 +685,7 @@ class Optimizer:
         if stmt.step:
             stmt.step = self.visit_expr(stmt.step)
 
-        stmt.block = self.visit_block(stmt.block)
+        stmt.block = self.visit_block(stmt.block, ignore=[stmt.counter.ident])
 
     def visit_while_stmt(self, stmt: WhileStatement):
         stmt.cond = self.visit_expr(stmt.cond)
@@ -723,14 +726,14 @@ class Optimizer:
     def visit_procedure(self, stmt: ProcedureStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
-
-        stmt.block = self.visit_block(stmt.block)
+        
+        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
 
     def visit_function(self, stmt: FunctionStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
 
-        stmt.block = self.visit_block(stmt.block)
+        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         stmt.block = self.visit_block(stmt.block)
@@ -837,17 +840,20 @@ class Optimizer:
     def visit_program(self, program: Program):
         self.visit_block(program.stmts)
 
-    def visit_block(self, block: list[Statement] | None) -> list[Statement]:
+    def visit_block(self, block: list[Statement] | None, ignore: list[str] | None = None) -> list[Statement]:
         blk = block if block is not None else self.block
         cur = 0
         self.constants.append(dict())
         self.unwanted_items.append(list())
+        self.ignore_constants.append(ignore if ignore else list())
+        self._update_active_constants()
         while cur < len(blk):
             stmt = blk[cur]
             self.cur_stmt = cur
             self.visit_stmt(stmt)
             cur += 1
         self.constants.pop()
+        self.ignore_constants.pop()
         self._update_active_constants()
         res = [itm for i, itm in enumerate(blk) if i not in self.unwanted_items[-1]]
         self.unwanted_items.pop()
