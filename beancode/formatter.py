@@ -271,26 +271,73 @@ class Formatter:
         self.write(" <- ")
         self.visit_expr(stmt.value)
 
-    def visit_declare_stmt(self, stmt: Statement):
-        pass
+    def visit_declare_stmt(self, stmt: DeclareStatement):
+        self.write("DECLARE ")
+        for i, itm in enumerate(stmt.ident):
+            self.write(itm.ident)
+            if i != len(stmt.ident) - 1:
+                self.write(", ")
+        self.write(": ")
+        self.visit_type(stmt.typ)
 
     def visit_trace_stmt(self, stmt: Statement):
         pass
 
-    def visit_openfile_stmt(self, stmt: Statement):
+    def visit_fileid(self, file_id: Expr | str):
+        if isinstance(file_id, Grouping):
+            self.write("(")
+            self.visit_expr(file_id.inner)
+            self.write(")")
+        elif isinstance(file_id, Expr):
+            self.write(" ")
+            self.visit_expr(file_id)
+        else:
+            self.write(f" {file_id}")
+
+    def visit_openfile_stmt(self, stmt: OpenfileStatement):
+        self.write("OPENFILE")
+        self.visit_fileid(stmt.file_ident)
+        self.write(" FOR ")
+
+        seen = False
+        if stmt.mode[0]:
+            if not seen:
+                seen = True
+            else:
+                self.write(" AND ")
+            self.write("READ")
+        if stmt.mode[1]:
+            if not seen:
+                seen = True
+            else:
+                self.write(" AND ")
+            self.write("WRITE")
+        if stmt.mode[2]:
+            if not seen:
+                seen = True
+            else:
+                self.write(" AND ")
+            self.write("APPEND")
+
+
+    def visit_readfile_stmt(self, stmt: ReadfileStatement):
+        self.write("READFILE ")
+        self.visit_fileid(stmt.file_ident)
+        self.write(", ")
+        self.visit_lvalue(stmt.target)
+
+    def visit_writefile_stmt(self, stmt: WritefileStatement):
+        self.write("WRITEFILE ")
+        self.visit_fileid(stmt.file_ident)
+        self.write(", ")
+        self.visit_expr(stmt.src)
+
+    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
         pass
 
-    def visit_readfile_stmt(self, stmt: Statement):
-        pass
-
-    def visit_writefile_stmt(self, stmt: Statement):
-        pass
-
-    def visit_appendfile_stmt(self, stmt: Statement):
-        pass
-
-    def visit_closefile_stmt(self, stmt: Statement):
-        pass
+    def visit_closefile_stmt(self, stmt: ClosefileStatement):
+        self.write("CLOSEFILE")
+        self.visit_fileid(stmt.file_ident)
  
     def visit_stmt(self, stmt: Statement):
         match stmt:
