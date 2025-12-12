@@ -1,5 +1,3 @@
-import typing
-
 from dataclasses import dataclass
 
 from .bean_ast import TokenKind, BCPrimitiveType
@@ -11,7 +9,7 @@ from . import Pos, __version__, is_case_consistent, panic
 class Token:
     kind: TokenKind
     pos: Pos
-    data: str | BCPrimitiveType | typing.Literal["array"] | None = None
+    data: str | BCPrimitiveType | None = None
 
     def print(self, file=sys.stdout):
         match self.kind:
@@ -19,12 +17,12 @@ class Token:
                 s = f'"{self.data}"'
             case TokenKind.LITERAL_CHAR:
                 s = f"'{self.data}'"
-            case TokenKind.LITERAL_NUMBER | "ident":
+            case TokenKind.LITERAL_NUMBER:
                 s = self.data
             case TokenKind.TYPE:
-                s = f"<{str(self.data).upper()}>"
+                s = f"<{self.data}>"
             case _:
-                s = f"<{self.kind}>"
+                s = f"<{str(self.kind).upper()}>"
 
         print(f"token[{self.pos}]: {s}", file=file)
 
