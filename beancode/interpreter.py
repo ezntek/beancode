@@ -1735,9 +1735,6 @@ class Interpreter:
                 self.variables[key] = Variable(
                     BCValue(kind=s.typ), False, export=s.export
                 )
-                if s.expr is not None:
-                    expr = self.visit_expr(s.expr)
-                    self.variables[key].val = expr
         self.trace(s.pos.row)
 
     def visit_trace_stmt(self, stmt: TraceStatement):

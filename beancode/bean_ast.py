@@ -727,7 +727,6 @@ class DeclareStatement(Statement):
     ident: list[Identifier]
     typ: Type
     export: bool = False
-    expr: Expr | None = None
 
 
 @dataclass(slots=True)

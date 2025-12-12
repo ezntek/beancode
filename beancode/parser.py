@@ -797,40 +797,14 @@ class Parser:
             )
             idents.append(Identifier(ident.pos, str(ident.data)))
 
-        typ = None
-        expr = None
-
-        colon = self.peek()
-        if self.check(TokenKind.COLON):
-            self.consume()
-
-            typ = self.typ()
-            if not typ:
-                raise BCError("invalid type after DECLARE", colon.pos)
-
-        if self.check(TokenKind.ASSIGN):
-            tok = self.consume()
-            if len(idents) > 1:
-                raise BCError(
-                    "cannot have assignment in declaration of multiple variables",
-                    tok.pos,
-                )
-
-            expr = self.expr()
-            if not expr:
-                raise BCError(
-                    "invalid or no expression after assign in declare", tok.pos
-                )
-
-        if not typ and not expr:
-            raise BCError(
-                "must have either a type declaration, expression to assign as, or both",
-                colon.pos,
-            )
+        colon = self.consume_and_expect(TokenKind.COLON)
+        typ = self.typ()
+        if not typ:
+            raise BCError("invalid type after DECLARE", colon.pos)
 
         self.check_newline("variable declaration (DECLARE)")
 
-        return DeclareStatement(begin.pos, ident=idents, typ=typ, expr=expr, export=export)  # type: ignore
+        return DeclareStatement(begin.pos, idents, typ, export)  # type: ignore
 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
