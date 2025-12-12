@@ -620,6 +620,27 @@ class Operator(IntEnum):
     def __str__(self) -> str:
         return self.__repr__()
 
+    def as_symbol(self) -> str:
+        return {
+            Operator.ASSIGN: "<-",
+            Operator.EQUAL: "=",
+            Operator.LESS_THAN: "<",
+            Operator.GREATER_THAN: ">",
+            Operator.LESS_THAN_OR_EQUAL: "<=",
+            Operator.GREATER_THAN_OR_EQUAL: ">=",
+            Operator.NOT_EQUAL: "<>",
+            Operator.MUL: "*",
+            Operator.DIV: "/",
+            Operator.ADD: "+",
+            Operator.SUB: "-",
+            Operator.POW: "^",
+            Operator.AND: "AND",
+            Operator.OR: "OR",
+            Operator.NOT: "NOT",
+            Operator.FLOOR_DIV: "DIV",
+            Operator.MOD: "MOD",
+        }[self] 
+
     # should return a verb!
     def humanize(self) -> str:
         match self:
