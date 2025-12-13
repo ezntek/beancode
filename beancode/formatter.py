@@ -135,12 +135,12 @@ class Formatter:
             self.buf.pop()
         self.buf.append(s)
 
-    def write_block(self, block: list[Statement]):
+    def write_block(self, block: list[Statement], extra=0):
         for line in self.visit_block(block):
             if line.isspace():
                 self.write("\n")
             else:
-                self.write(" " * self.indent + line)
+                self.write(" " * (self.indent + extra) + line)
 
     def visit_if_stmt(self, stmt: IfStatement):
         # everything before us is normalized
@@ -157,8 +157,63 @@ class Formatter:
             self.write_block(stmt.else_block)
         self.write("ENDIF\n")
 
-    def visit_caseof_stmt(self, stmt: Statement):
-        pass
+    def visit_caseof_stmt(self, stmt: CaseofStatement):
+        saved_idx = self.cur
+        self.write("CASE OF ")
+        self.visit_expr(stmt.expr)
+        self.write("\n")
+        self.reduce_from(saved_idx)
+        # XXX: magic f---ery to get the indentation right
+        saved_cur = self.cur
+        saved_buf = self.buf
+        new_buf: list[str] = []
+        self.buf = new_buf
+        for i, branch in enumerate(stmt.branches):
+            self.cur = i
+            saved_idx = self.cur
+            if isinstance(branch, NewlineStatement):
+                if self.skip_newline:
+                    self.skip_newline = False
+                    self.write("")
+                else:
+                    self.write("\n")
+                continue
+
+            if isinstance(branch, Comment):
+                self.visit_comment(branch)
+                continue
+
+            self.visit_expr(branch.expr)
+            self.write(": ")
+            s = branch.stmt
+            if isinstance(s, IfStatement):
+                self.write("IF ")
+                self.visit_expr(s.cond)
+                self.write(" THEN\n")
+                self.reduce_from(saved_idx)
+                self.write_block(s.if_block)
+                if s.else_block:
+                    self.write("ELSE\n")
+                    self.write_block(s.else_block)
+                self.write("ENDIF\n")
+            else:
+                self.visit_stmt(s, raw=True)
+                self.write("\n")
+                self.reduce_from(saved_idx)
+        if stmt.otherwise:
+            saved_idx = self.cur
+            self.write("OTHERWISE ")
+            self.visit_stmt(stmt.otherwise, raw=True)
+            self.write("\n")
+            self.reduce_from(saved_idx)
+        self.buf = saved_buf
+        self.cur = saved_cur
+        for line in new_buf:
+            if line.isspace():
+                self.write("\n")
+            else:
+                self.write(" " * self.indent + line)
+        self.write("ENDCASE\n")
 
     def visit_for_stmt(self, stmt: ForStatement):
         saved_idx = self.cur
@@ -377,8 +432,9 @@ class Formatter:
             buf = ""
         self.write(" */")
  
-    def visit_stmt(self, stmt: Statement):
-        saved_idx = self.cur
+    def visit_stmt(self, stmt: Statement, raw=False):
+        if not raw:
+            saved_idx = self.cur
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
@@ -441,8 +497,9 @@ class Formatter:
                 return
             case CommentStatement():
                 self.visit_comment(stmt.comment)
-        self.write("\n")
-        self.reduce_from(saved_idx)
+        if not raw:
+            self.write("\n")
+            self.reduce_from(saved_idx) # type: ignore
 
     def visit_block(self, block: list[Statement] | None = None) -> list[str]:
         # XXX: heavy abuse of Python object pointer semantics here.

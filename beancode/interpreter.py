@@ -1362,6 +1362,9 @@ class Interpreter:
         value: BCValue = self.visit_expr(stmt.expr)
 
         for branch in stmt.branches:
+            if not isinstance(branch, CaseofBranch):
+                continue
+
             rhs = self.visit_expr(branch.expr)
             if value == rhs:
                 self.visit_stmt(branch.stmt)

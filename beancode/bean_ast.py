@@ -753,7 +753,8 @@ class CaseofBranch:
 @dataclass(slots=True)
 class CaseofStatement(Statement):
     expr: Expr
-    branches: list[CaseofBranch]
+    # extra possible nodes for a CST for the formatter
+    branches: list["CaseofBranch | NewlineStatement | Comment"]
     otherwise: "Statement | None"
 
 

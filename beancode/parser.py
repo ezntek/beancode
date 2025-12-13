@@ -948,9 +948,19 @@ class Parser:
 
         self.check_newline("after case of expression")
 
-        branches: list[CaseofBranch] = []
+        branches: list[CaseofBranch | NewlineStatement | Comment] = []
         otherwise: Statement | None = None
         while not self.check(TokenKind.ENDCASE):
+            (consumed, nlpos) = self.clean_newlines()
+            if self.preserve_trivia:
+                if consumed:
+                    branches.append(NewlineStatement(nlpos))
+                    continue
+
+                if self.check(TokenKind.COMMENT):
+                    branches.append(self.consume().data) # type: ignore
+                    continue
+
             is_otherwise = self.check(TokenKind.OTHERWISE)
             if not is_otherwise:
                 expr = self.expr()
@@ -971,7 +981,9 @@ class Parser:
                     )
 
             stmt = self.stmt()
-            self.consume_newlines()
+            (consumed, nlpos) = self.clean_newlines()
+            if consumed and self.preserve_trivia:
+                branches.append(NewlineStatement(nlpos))
 
             if not stmt:
                 raise BCError("expected statement for case of branch block")
