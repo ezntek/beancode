@@ -1253,24 +1253,23 @@ class Parser:
         if not begin:
             return
 
-        self.consume_and_expect(TokenKind.LEFT_PAREN, "after TRACE keyword")
+        vars = []
+        if self.check_and_consume(TokenKind.LEFT_PAREN):
+            while not self.check(TokenKind.RIGHT_PAREN):
+                ident = self.ident("in variable list in TRACE statement")
 
-        vars = list()
-        while not self.check(TokenKind.RIGHT_PAREN):
-            ident = self.ident("in variable list in TRACE statement")
+                vars.append(ident.ident)  # type: ignore
 
-            vars.append(ident.ident)  # type: ignore
+                if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
+                    raise BCError(
+                        "expected comma after procedure argument list", self.pos()
+                    )
+                elif self.check(TokenKind.COMMA):
+                    self.consume()
 
-            if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
-                raise BCError(
-                    "expected comma after procedure argument list", self.pos()
-                )
-            elif self.check(TokenKind.COMMA):
-                self.consume()
-
-        self.consume_and_expect(
-            TokenKind.RIGHT_PAREN, "after variable list in TRACE statement"
-        )
+            self.consume_and_expect(
+                TokenKind.RIGHT_PAREN, "after variable list in TRACE statement"
+            )
 
         file_name: str | None = None
         if self.check_and_consume(TokenKind.TO):

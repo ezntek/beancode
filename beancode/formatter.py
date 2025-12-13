@@ -285,8 +285,22 @@ class Formatter:
         self.write(": ")
         self.visit_type(stmt.typ)
 
-    def visit_trace_stmt(self, stmt: Statement):
-        pass
+    def visit_trace_stmt(self, stmt: TraceStatement):
+        saved_idx = self.cur
+        self.write("TRACE")
+        if stmt.vars:
+            self.write("(")
+            for i, var in enumerate(stmt.vars):
+                self.write(var)
+                if i != len(stmt.vars) - 1:
+                    self.write(", ")
+            self.write(")")
+        if stmt.file_name:
+            self.write(f" TO \"{stmt.file_name}\"")
+        self.write("\n")
+        self.reduce_from(saved_idx)
+        self.write_block(stmt.block)
+        self.write("ENDTRACE\n")
 
     def visit_fileid(self, file_id: Expr | str):
         if isinstance(file_id, Grouping):
@@ -336,9 +350,6 @@ class Formatter:
         self.visit_fileid(stmt.file_ident)
         self.write(", ")
         self.visit_expr(stmt.src)
-
-    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        pass
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         self.write("CLOSEFILE")
@@ -443,7 +454,7 @@ class Formatter:
         # create the new array
         new_buf = []
         self.buf = new_buf # spoof-o-matic
-        blk = block if block else self.block
+        blk = block if block != None else self.block
         for i, stmt in enumerate(blk):
             self.cur = i
             if isinstance(stmt, NewlineStatement) and i == len(blk) - 1:
