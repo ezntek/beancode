@@ -32,10 +32,12 @@ def _convert_escape_code(ch: str) -> str | None:
 class Parser:
     tokens: list[Token]
     cur: int
+    preserve_trivia: bool
 
-    def __init__(self, tokens: list[Token]) -> None:
+    def __init__(self, tokens: list[Token], preserve_trivia=False) -> None:
         self.cur = 0
         self.tokens = tokens
+        self.preserve_trivia = preserve_trivia
 
     def prev(self) -> Token:
         return self.tokens[self.cur - 1]
@@ -683,6 +685,8 @@ class Parser:
 
             exprs.append(new)
 
+        self.check_newline("OUTPUT")
+
         return OutputStatement(begin.pos, items=exprs, newline=newline)
 
     def input_stmt(self) -> Statement | None:
@@ -696,6 +700,8 @@ class Parser:
             ident = self.ident("after INPUT")
         else:
             ident = array_index  # type: ignore
+
+        self.check_newline("INPUT")
 
         return InputStatement(begin.pos, ident)
 
@@ -712,6 +718,8 @@ class Parser:
             raise BCError(
                 "invalid or no expression used as RETURN expression", begin.pos
             )
+        
+        self.check_newline("RETURN")
 
         return ReturnStatement(begin.pos, expr)
 
@@ -750,6 +758,8 @@ class Parser:
             self.consume_and_expect(
                 TokenKind.RIGHT_PAREN, "after arg list in procedure call"
             )
+        
+        self.check_newline("CALL")
 
         self.consume_newlines()
 
@@ -870,7 +880,7 @@ class Parser:
         if not ident:
             ident = self.ident("for left hand side of assignment")
 
-        self.consume()  # go past the arrow
+        self.consume_and_expect(TokenKind.ASSIGN)  # go past the arrow
 
         expr: Expr | None = self.expr()
         if not expr:
@@ -1234,6 +1244,8 @@ class Parser:
                 name.pos,
             )
 
+        self.check_newline("INCLUDE")
+
         return IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
 
     def trace_stmt(self) -> Statement | None:
@@ -1419,7 +1431,9 @@ class Parser:
         return (cleaned, last_pos)
 
     def stmt(self) -> Statement | None:
-        self.clean_newlines()
+        if self.check(TokenKind.COMMENT):
+            c = self.consume()
+            return CommentStatement(c.pos, c.data) # type: ignore
 
         constant = self.constant_stmt()
         if constant:
@@ -1527,11 +1541,16 @@ class Parser:
             else:
                 raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
 
-    def statement(self, preserve_trivia=False) -> Statement | None:
+    def statement(self) -> Statement | None:
+        if self.preserve_trivia: 
+            (cleaned, nlpos) = self.clean_newlines()
+            if cleaned:
+                return NewlineStatement(nlpos)
+
         s = self.stmt()
 
         if s:
-            if not preserve_trivia:
+            if not self.preserve_trivia:
                 self.clean_newlines()
             return s
         else:
@@ -1547,18 +1566,18 @@ class Parser:
     # trivia: comments, newlines
     # XXX: by trivia we just mean if newlines had to be cleaned (aka at least one blank NL)
     # and comments. We do not build a CST
-    def block(self, preserve_trivia=False) -> list[Statement]:
+    def block(self) -> list[Statement]:
         stmts = []
 
         while self.cur < len(self.tokens):
             (cleaned, nlpos) = self.clean_newlines()
-            if cleaned and preserve_trivia:
+            if cleaned and self.preserve_trivia:
                 stmts.append(NewlineStatement(nlpos))
 
             if self.cur >= len(self.tokens):
                 break
 
-            stmt = self.statement(preserve_trivia)
+            stmt = self.statement()
             if not stmt:  # this has to be an EOF
                 continue
             stmts.append(stmt)

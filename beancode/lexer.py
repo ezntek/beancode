@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .bean_ast import TokenKind, BCPrimitiveType
+from .bean_ast import TokenKind, BCPrimitiveType, Comment
 from .error import *
 from . import Pos, __version__, is_case_consistent, panic
 
@@ -9,7 +9,7 @@ from . import Pos, __version__, is_case_consistent, panic
 class Token:
     kind: TokenKind
     pos: Pos
-    data: str | BCPrimitiveType | None = None
+    data: str | BCPrimitiveType | Comment | None = None
 
     def print(self, file=sys.stdout):
         match self.kind:
@@ -95,10 +95,16 @@ class Lexer:
     bol: int
     cur: int
     found_shebang: bool
+    preserve_comments: bool
+    cur_comment: Comment | None
+    cur_comment_pos: Pos | None
 
-    def __init__(self, src: str) -> None:
+    def __init__(self, src: str, preserve_comments=False) -> None:
         self.src = src
         self.found_shebang = False
+        self.preserve_comments = preserve_comments
+        self.cur_comment = None
+        self.cur_comment_pos = None
         self.reset()
 
     def reset(self):
@@ -133,7 +139,7 @@ class Lexer:
         # catch % for error
         return ch in "%+-*/<>=^←"
 
-    def trim_spaces(self) -> None:
+    def trim_spaces(self) -> Comment | None:
         if not self.in_bounds():
             return
 
@@ -143,7 +149,7 @@ class Lexer:
 
         self.trim_comments()
 
-    def trim_comments(self) -> None:
+    def trim_comments(self) -> Comment | None:
         # if there are not 2 chars more in the stream (// and /*)
         if self.cur + 2 > len(self.src):
             return
@@ -152,10 +158,25 @@ class Lexer:
         if pair not in {"//", "/*", "#!"}:
             return
 
+        multiline = False
         if pair == "/*":
+            self.cur_comment_pos = self.pos_here(2)
+            multiline = True
             self.cur += 2
-
+            
+            buf = []
+            cur_begin = self.cur
             while self.in_bounds() and self.src[self.cur : self.cur + 2] != "*/":
+                if self.preserve_comments:
+                    if self.get_cur() == '\n':
+                        s = self.src[cur_begin:self.cur]
+                        buf.append(s)
+                        self.cur += 1
+                        cur_begin = self.cur
+                    else:
+                        self.cur += 1
+                    continue
+
                 if self.get_cur() == "\n":
                     self.bump_newline()
                 else:
@@ -163,18 +184,22 @@ class Lexer:
 
             # found */
             self.cur += 2
+            self.cur_comment = Comment(buf, multiline, shebang=False)
         else:
+            self.cur_comment_pos = self.pos_here(2)
+            shebang = False
             if pair == "#!":
                 if self.found_shebang:
                     raise BCError("cannot have more than one shebang in one source file!", self.pos_here(2))
                 self.found_shebang = True
+                shebang = True
 
             self.cur += 2  # skip past comment marker
-
+            begin = self.cur
             while self.in_bounds() and self.get_cur() != "\n":
                 self.cur += 1
-
-            self.trim_spaces()
+            data = [self.src[begin:self.cur]]
+            self.cur_comment = Comment(data, multiline=False, shebang=shebang)
 
         self.trim_spaces()
 
@@ -395,6 +420,12 @@ class Lexer:
         self.trim_spaces()
         if not self.in_bounds():
             return
+
+        if self.cur_comment and self.preserve_comments:
+            t = Token(TokenKind.COMMENT, self.cur_comment_pos, self.cur_comment) # type: ignore
+            self.cur_comment = None
+            self.cur_comment_pos = None
+            return t
 
         if self.get_cur() == "\n":
             t = Token(TokenKind.NEWLINE, self.pos_here(1))

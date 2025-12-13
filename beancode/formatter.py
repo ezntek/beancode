@@ -8,12 +8,14 @@ class Formatter:
     buf: list[str] # our string builder
     indent: int # number of spaces to indent by
     cur: int
+    skip_newline: bool
 
     def __init__(self, block: list[Statement], indent=4):
         self.indent = indent 
         self.buf = []
         self.block = block
         self.cur = 0
+        self.skip_newline = False
 
     def write(self, s: str):
         self.buf.append(s)
@@ -71,7 +73,7 @@ class Formatter:
         self.write("(")
         for i, itm in enumerate(expr.args):
             self.visit_expr(itm)
-            if i != len(expr.args):
+            if i != len(expr.args) - 1:
                 self.write(", ")
         self.write(")")
 
@@ -135,7 +137,10 @@ class Formatter:
 
     def write_block(self, block: list[Statement]):
         for line in self.visit_block(block):
-            self.write(" " * self.indent + line)
+            if line.isspace():
+                self.write("\n")
+            else:
+                self.write(" " * self.indent + line)
 
     def visit_if_stmt(self, stmt: IfStatement):
         # everything before us is normalized
@@ -254,7 +259,7 @@ class Formatter:
         self.write("(")
         for i, itm in enumerate(stmt.args):
             self.visit_expr(itm)
-            if i != len(stmt.args):
+            if i != len(stmt.args) - 1:
                 self.write(", ")
         self.write(")")
 
@@ -338,6 +343,28 @@ class Formatter:
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         self.write("CLOSEFILE")
         self.visit_fileid(stmt.file_ident)
+
+    def visit_comment(self, com: Comment):
+        if not com.multiline:
+            buf = "//"
+            if com.data:
+                s = com.data[0]
+                if s and s[0] != ' ':
+                    buf += " "
+                buf += s
+            self.write(buf)
+            self.skip_newline = True
+            return
+        buf = ""
+        for i, line in enumerate(com.data):
+            buf += "/*" if i == 0 else " *"
+            if line:
+                if line[0] != ' ':
+                    buf += " "
+                buf += line
+            self.write(buf + "\n")
+            buf = ""
+        self.write(" */")
  
     def visit_stmt(self, stmt: Statement):
         saved_idx = self.cur
@@ -398,7 +425,13 @@ class Formatter:
             case ExprStatement():
                 self.visit_expr(stmt.inner)
             case NewlineStatement():
-                pass
+                if self.skip_newline:
+                    self.skip_newline = False
+                else:
+                    self.write("\n")
+                return
+            case CommentStatement():
+                self.visit_comment(stmt.comment)
         self.write("\n")
         self.reduce_from(saved_idx)
 
@@ -415,6 +448,8 @@ class Formatter:
         blk = block if block else self.block
         for i, stmt in enumerate(blk):
             self.cur = i
+            if isinstance(stmt, NewlineStatement) and i == len(blk) - 1:
+                continue
             self.visit_stmt(stmt)
         # pretend that nothing happened
         self.buf = saved_buf

@@ -86,6 +86,7 @@ class TokenKind(IntEnum):
     NULL = 75
     IDENT = 76
     TYPE = 77
+    COMMENT = 78
 
     @classmethod
     def from_str_or_none(cls, s: str):
@@ -902,3 +903,13 @@ class CallStackEntry:
     rtype: Type | None
     func: bool = False
     proc: bool = False
+
+@dataclass(slots=True)
+class Comment:
+    data: list[str]
+    multiline: bool = False
+    shebang: bool = False
+
+@dataclass(slots=True)
+class CommentStatement(Statement):
+    comment: Comment
