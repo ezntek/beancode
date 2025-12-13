@@ -340,6 +340,7 @@ class Formatter:
         self.visit_fileid(stmt.file_ident)
  
     def visit_stmt(self, stmt: Statement):
+        saved_idx = self.cur
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
@@ -396,9 +397,10 @@ class Formatter:
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 self.visit_expr(stmt.inner)
-        s = "".join(self.buf) + "\n"
-        self.buf.clear()
-        self.write(s)
+            case NewlineStatement():
+                pass
+        self.write("\n")
+        self.reduce_from(saved_idx)
 
     def visit_block(self, block: list[Statement] | None = None) -> list[str]:
         # XXX: heavy abuse of Python object pointer semantics here.

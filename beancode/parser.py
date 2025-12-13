@@ -885,10 +885,10 @@ class Parser:
         return AssignStatement(ident.pos, ident, expr, is_ident=is_ident)  # type: ignore
 
     # multiline statements go here
-    def block(self, delim: TokenKind) -> list[Statement]:
+    def block_until(self, delim: TokenKind) -> list[Statement]:
         res = list()
         while not self.check(delim):
-            res.append(self.scan_one_statement())
+            res.append(self.statement())
         return res
 
     def if_stmt(self) -> Statement | None:
@@ -911,11 +911,11 @@ class Parser:
         else_stmts = []
 
         while not self.check_many(TokenKind.ELSE, TokenKind.ENDIF):
-            if_stmts.append(self.scan_one_statement())
+            if_stmts.append(self.statement())
 
         if self.check_and_consume(TokenKind.ELSE):
             self.clean_newlines()
-            else_stmts = self.block(TokenKind.ENDIF)
+            else_stmts = self.block_until(TokenKind.ENDIF)
 
         self.consume()  # byebye endif
 
@@ -990,7 +990,7 @@ class Parser:
         self.consume_and_expect(TokenKind.DO, "after while loop condition")
         self.clean_newlines()
 
-        stmts = self.block(TokenKind.ENDWHILE)
+        stmts = self.block_until(TokenKind.ENDWHILE)
         end = self.consume()
 
         return WhileStatement(begin.pos, end.pos, expr, stmts)
@@ -1024,7 +1024,7 @@ class Parser:
                 )
 
         self.clean_newlines()
-        stmts = self.block(TokenKind.NEXT)
+        stmts = self.block_until(TokenKind.NEXT)
         next = self.consume()
 
         next_counter = self.ident("after NEXT in for loop")
@@ -1052,7 +1052,7 @@ class Parser:
 
         self.clean_newlines()
 
-        stmts = self.block(TokenKind.UNTIL)
+        stmts = self.block_until(TokenKind.UNTIL)
         until = self.consume()
 
         expr = self.expr()
@@ -1130,7 +1130,7 @@ class Parser:
 
         self.consume_newlines()
 
-        stmts = self.block(TokenKind.ENDPROCEDURE)
+        stmts = self.block_until(TokenKind.ENDPROCEDURE)
 
         self.consume()
 
@@ -1195,7 +1195,7 @@ class Parser:
 
         self.consume_newlines()
 
-        stmts = self.block(TokenKind.ENDFUNCTION)
+        stmts = self.block_until(TokenKind.ENDFUNCTION)
         self.consume()
 
         return FunctionStatement(
@@ -1213,7 +1213,7 @@ class Parser:
             return
 
         self.clean_newlines()
-        stmts = self.block(TokenKind.ENDSCOPE)
+        stmts = self.block_until(TokenKind.ENDSCOPE)
         self.consume()
 
         return ScopeStatement(begin.pos, stmts)
@@ -1280,7 +1280,7 @@ class Parser:
             file_name = val.get_string()
 
         self.consume_newlines()
-        block = self.block(TokenKind.ENDTRACE)
+        block = self.block_until(TokenKind.ENDTRACE)
         self.consume()  # byebye ENDTRACE
 
         return TraceStatement(begin.pos, vars, file_name, block)
@@ -1407,11 +1407,16 @@ class Parser:
 
         return ClosefileStatement(begin.pos, fileid)
 
-    def clean_newlines(self):
+    def clean_newlines(self) -> tuple[bool, Pos]:
+        cleaned = False
+        last_pos = Pos(0, 0, 0) 
         while self.cur < len(self.tokens):
             if not self.check(TokenKind.NEWLINE):
                 break
-            self.consume()
+            if not cleaned:
+                cleaned = True
+            last_pos = self.consume().pos
+        return (cleaned, last_pos)
 
     def stmt(self) -> Statement | None:
         self.clean_newlines()
@@ -1522,11 +1527,12 @@ class Parser:
             else:
                 raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
 
-    def scan_one_statement(self) -> Statement | None:
+    def statement(self, preserve_trivia=False) -> Statement | None:
         s = self.stmt()
 
         if s:
-            self.clean_newlines()
+            if not preserve_trivia:
+                self.clean_newlines()
             return s
         else:
             if self.cur >= len(self.tokens):
@@ -1538,19 +1544,28 @@ class Parser:
     def reset(self):
         self.cur = 0
 
-    def program(self) -> Program:
+    # trivia: comments, newlines
+    # XXX: by trivia we just mean if newlines had to be cleaned (aka at least one blank NL)
+    # and comments. We do not build a CST
+    def block(self, preserve_trivia=False) -> list[Statement]:
         stmts = []
 
         while self.cur < len(self.tokens):
-            self.clean_newlines()
+            (cleaned, nlpos) = self.clean_newlines()
+            if cleaned and preserve_trivia:
+                stmts.append(NewlineStatement(nlpos))
+
             if self.cur >= len(self.tokens):
                 break
 
-            stmt = self.scan_one_statement()
+            stmt = self.statement(preserve_trivia)
             if not stmt:  # this has to be an EOF
                 continue
             stmts.append(stmt)
 
         self.cur = 0
+        return stmts
 
+    def program(self) -> Program:
+        stmts = self.block()
         return Program(stmts=stmts)

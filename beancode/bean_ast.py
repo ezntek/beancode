@@ -874,6 +874,9 @@ class ExprStatement(Statement):
     def from_expr(cls, e: Expr) -> "ExprStatement":
         return cls(e.pos, e)
 
+class NewlineStatement(Statement):
+    pass
+
 
 @dataclass(slots=True)
 class Program:

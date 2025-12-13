@@ -1903,6 +1903,7 @@ class Interpreter:
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 self.visit_expr(stmt.inner)
+            # ignore newline statement if ever given
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

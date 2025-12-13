@@ -29,7 +29,7 @@ def main():
         src = f.read()
 
     try:
-        blk = Parser(Lexer(src).tokenize()).program().stmts
+        blk = Parser(Lexer(src).tokenize()).block(True)
         f = Formatter(blk)
         res = "".join(f.visit_block())
     except BCError as e:
