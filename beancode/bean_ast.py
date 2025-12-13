@@ -46,47 +46,46 @@ class TokenKind(IntEnum):
     CLOSEFILE = 35
     READ = 36
     WRITE = 37
-    APPENDFILE = 38
-    APPEND = 39
-    INCLUDE = 40
-    INCLUDE_FFI = 41
-    EXPORT = 42
-    SCOPE = 43
-    ENDSCOPE = 44
-    PRINT = 45
-    TRACE = 46
-    ENDTRACE = 47
-    ASSIGN = 48
-    EQUAL = 49
-    LESS_THAN = 50
-    GREATER_THAN = 51
-    LESS_THAN_OR_EQUAL = 52
-    GREATER_THAN_OR_EQUAL = 53
-    NOT_EQUAL = 54
-    MUL = 55
-    DIV = 56
-    ADD = 57
-    SUB = 58
-    POW = 59
-    LEFT_PAREN = 60
-    RIGHT_PAREN = 61
-    LEFT_BRACKET = 62
-    RIGHT_BRACKET = 63
-    LEFT_CURLY = 64
-    RIGHT_CURLY = 65
-    COLON = 66
-    COMMA = 67
-    DOT = 68
-    NEWLINE = 69
-    LITERAL_STRING = 70
-    LITERAL_CHAR = 71
-    LITERAL_NUMBER = 72
-    TRUE = 73
-    FALSE = 74
-    NULL = 75
-    IDENT = 76
-    TYPE = 77
-    COMMENT = 78
+    APPEND = 38
+    INCLUDE = 39
+    INCLUDE_FFI = 40
+    EXPORT = 41
+    SCOPE = 42
+    ENDSCOPE = 43
+    PRINT = 44
+    TRACE = 45
+    ENDTRACE = 46
+    ASSIGN = 47
+    EQUAL = 48
+    LESS_THAN = 49
+    GREATER_THAN = 50
+    LESS_THAN_OR_EQUAL = 51
+    GREATER_THAN_OR_EQUAL = 52
+    NOT_EQUAL = 53
+    MUL = 54
+    DIV = 55
+    ADD = 56
+    SUB = 57
+    POW = 58
+    LEFT_PAREN = 59
+    RIGHT_PAREN = 60
+    LEFT_BRACKET = 61
+    RIGHT_BRACKET = 62
+    LEFT_CURLY = 63
+    RIGHT_CURLY = 64
+    COLON = 65
+    COMMA = 66
+    DOT = 67
+    NEWLINE = 68
+    LITERAL_STRING = 69
+    LITERAL_CHAR = 70
+    LITERAL_NUMBER = 71
+    TRUE = 72
+    FALSE = 73
+    NULL = 74
+    IDENT = 75
+    TYPE = 76
+    COMMENT = 77
 
     @classmethod
     def from_str_or_none(cls, s: str):
@@ -839,14 +838,6 @@ class WritefileStatement(Statement):
 @dataclass(slots=True)
 class ClosefileStatement(Statement):
     file_ident: Expr | str
-
-
-# extra statements
-@dataclass(slots=True)
-class AppendfileStatement(Statement):
-    # file identifier or path
-    file_ident: Expr | str
-    src: Expr
 
 
 @dataclass(slots=True)

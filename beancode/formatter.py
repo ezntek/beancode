@@ -418,8 +418,6 @@ class Formatter:
                 self.visit_readfile_stmt(stmt)
             case WritefileStatement():
                 self.visit_writefile_stmt(stmt)
-            case AppendfileStatement():
-                self.visit_appendfile_stmt(stmt)
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():

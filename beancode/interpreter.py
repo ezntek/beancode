@@ -1839,16 +1839,6 @@ class Interpreter:
         file.stream.write(contents)
         self.file_callbacks.write(contents)
 
-    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
-
-        if not file.mode[2]:
-            self.error("file not open for appending!", stmt.pos)
-
-        contents = str(self.visit_expr(stmt.src))
-        file.stream.write(contents)
-        self.file_callbacks.append(contents)
-
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
@@ -1897,8 +1887,6 @@ class Interpreter:
                 self.visit_readfile_stmt(stmt)
             case WritefileStatement():
                 self.visit_writefile_stmt(stmt)
-            case AppendfileStatement():
-                self.visit_appendfile_stmt(stmt)
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():

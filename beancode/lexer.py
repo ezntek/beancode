@@ -76,7 +76,6 @@ KEYWORDS = {
     "closefile",
     "read",
     "write",
-    "appendfile",
     "append",
     "trace",
     "endtrace",

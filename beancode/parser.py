@@ -1392,24 +1392,6 @@ class Parser:
 
         return WritefileStatement(begin.pos, fileid, val)
 
-    def appendfile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume(TokenKind.APPENDFILE)
-        if not begin:
-            return
-
-        fileid: Expr | str = self._file_id("APPENDFILE")
-
-        self.consume_and_expect(TokenKind.COMMA)
-
-        val = self.expr()
-        if not val:
-            raise BCError(
-                "invalid or no expression after comma in APPENDFILE statement",
-                self.pos(),
-            )
-
-        return AppendfileStatement(begin.pos, fileid, val)
-
     def closefile_stmt(self) -> Statement | None:
         begin = self.check_and_consume(TokenKind.CLOSEFILE)
         if not begin:
@@ -1482,10 +1464,6 @@ class Parser:
         writefile = self.writefile_stmt()
         if writefile:
             return writefile
-
-        appendfile = self.appendfile_stmt()
-        if appendfile:
-            return appendfile
 
         closefile = self.closefile_stmt()
         if closefile:
