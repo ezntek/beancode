@@ -1,0 +1,7 @@
+INCLUDE_FFI "demo_ffimod"
+
+OUTPUT Name
+OUTPUT "Age is ", Age
+CALL SayHello()
+CALL OneMore(5)
+OUTPUT "5 + 5 is ", GimmeFive() + 5

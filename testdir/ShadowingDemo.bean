@@ -1,0 +1,12 @@
+PROCEDURE Example1(i: INTEGER)
+    CONSTANT SomeConstant <- 4
+    IF i = 5
+      THEN
+        RETURN
+      ELSE
+        OUTPUT SomeConstant + i
+        CALL Example1(i + 1)
+    ENDIF
+ENDPROCEDURE
+
+CALL Example1(0)

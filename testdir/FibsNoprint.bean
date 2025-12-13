@@ -1,0 +1,16 @@
+DECLARE x: INTEGER
+DECLARE y: INTEGER
+DECLARE z: INTEGER
+DECLARE bound: INTEGER
+
+OUTPUT "fibs up to what"
+INPUT bound
+
+x <- 0
+y <- 1
+
+FOR i <- 1 TO bound
+    z <- x + y
+    y <- x
+    x <- z
+NEXT i

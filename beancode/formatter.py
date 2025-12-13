@@ -32,7 +32,7 @@ class Formatter:
                 self.visit_expr(bounds[2]) # type: ignore
                 self.write(":")
                 self.visit_expr(bounds[3]) # type: ignore
-            self.write(f"] OF {typ}")
+            self.write(f"] OF {typ.inner}")
         else:
             self.write(str(typ).upper())
 
@@ -432,25 +432,25 @@ class Formatter:
             buf = ""
         self.write(" */")
  
-    def visit_stmt(self, stmt: Statement, raw=False):
+    def visit_stmt(self, stmt: Statement, next=None, raw=False) -> bool:
         if not raw:
             saved_idx = self.cur
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
-                return
+                return False
             case CaseofStatement():
                 self.visit_caseof_stmt(stmt)
-                return
+                return False
             case ForStatement():
                 self.visit_for_stmt(stmt)
-                return
+                return False
             case WhileStatement():
                 self.visit_while_stmt(stmt)
-                return
+                return False
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
-                return
+                return False
             case OutputStatement():
                 self.visit_output_stmt(stmt)
             case InputStatement():
@@ -459,13 +459,13 @@ class Formatter:
                 self.visit_return_stmt(stmt)
             case ProcedureStatement():
                 self.visit_procedure(stmt)
-                return
+                return False
             case FunctionStatement():
                 self.visit_function(stmt)
-                return
+                return False
             case ScopeStatement():
                 self.visit_scope_stmt(stmt)
-                return
+                return False
             case IncludeStatement():
                 self.visit_include_stmt(stmt)
             case CallStatement():
@@ -478,7 +478,7 @@ class Formatter:
                 self.visit_declare_stmt(stmt)
             case TraceStatement():
                 self.visit_trace_stmt(stmt)
-                return
+                return False
             case OpenfileStatement():
                 self.visit_openfile_stmt(stmt)
             case ReadfileStatement():
@@ -494,12 +494,22 @@ class Formatter:
                     self.skip_newline = False
                 else:
                     self.write("\n")
-                return
+                return False
             case CommentStatement():
                 self.visit_comment(stmt.comment)
         if not raw:
+            rv = False
+
+            if isinstance(next, CommentStatement) and not next.comment.multiline and next.pos.row == stmt.pos.row:
+                self.write(" ")
+                self.visit_comment(next.comment)
+                rv = True
+
             self.write("\n")
             self.reduce_from(saved_idx) # type: ignore
+            return rv
+
+        return False
 
     def visit_block(self, block: list[Statement] | None = None) -> list[str]:
         # XXX: heavy abuse of Python object pointer semantics here.
@@ -512,11 +522,17 @@ class Formatter:
         new_buf = []
         self.buf = new_buf # spoof-o-matic
         blk = block if block != None else self.block
+        skip = False
         for i, stmt in enumerate(blk):
+            if skip:
+                skip = False
+                continue
             self.cur = i
             if isinstance(stmt, NewlineStatement) and i == len(blk) - 1:
                 continue
-            self.visit_stmt(stmt)
+            res = self.visit_stmt(stmt, next=blk[i + 1] if i != len(blk) - 1 else None)
+            if res and not skip:
+                skip = True
         # pretend that nothing happened
         self.buf = saved_buf
         self.cur = saved_cur

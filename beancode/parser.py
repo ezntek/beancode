@@ -134,8 +134,13 @@ class Parser:
         while self.cur < len(self.tokens) and self.peek().kind == TokenKind.NEWLINE:
             self.consume()
 
-    def check_newline(self, s: str):
-        self.consume_and_expect(TokenKind.NEWLINE, ctx=f"after {s}")
+    def expect_newline(self, s: str):
+        if self.check(TokenKind.NEWLINE):
+            self.consume()
+        elif self.check(TokenKind.COMMENT):
+            return
+        else:
+            self.consume_and_expect(TokenKind.NEWLINE, ctx=f"after {s}")
 
     def match(self, *typs: TokenKind) -> bool:
         for typ in typs:
@@ -685,7 +690,7 @@ class Parser:
 
             exprs.append(new)
 
-        self.check_newline("OUTPUT")
+        self.expect_newline("OUTPUT")
 
         return OutputStatement(begin.pos, items=exprs, newline=newline)
 
@@ -701,7 +706,7 @@ class Parser:
         else:
             ident = array_index  # type: ignore
 
-        self.check_newline("INPUT")
+        self.expect_newline("INPUT")
 
         return InputStatement(begin.pos, ident)
 
@@ -719,7 +724,7 @@ class Parser:
                 "invalid or no expression used as RETURN expression", begin.pos
             )
         
-        self.check_newline("RETURN")
+        self.expect_newline("RETURN")
 
         return ReturnStatement(begin.pos, expr)
 
@@ -759,7 +764,7 @@ class Parser:
                 TokenKind.RIGHT_PAREN, "after arg list in procedure call"
             )
         
-        self.check_newline("CALL")
+        self.expect_newline("CALL")
 
         self.consume_newlines()
 
@@ -812,7 +817,7 @@ class Parser:
         if not typ:
             raise BCError("invalid type after DECLARE", colon.pos)
 
-        self.check_newline("variable declaration (DECLARE)")
+        self.expect_newline("variable declaration (DECLARE)")
 
         return DeclareStatement(begin.pos, idents, typ, export)  # type: ignore
 
@@ -849,7 +854,7 @@ class Parser:
                 "invalid or no expression for constant declaration", self.pos()
             )
 
-        self.check_newline("constant declaration (CONSTANT)")
+        self.expect_newline("constant declaration (CONSTANT)")
 
         return ConstantStatement(
             begin.pos, Identifier(ident.pos, str(ident.data)), expr, export=export
@@ -886,7 +891,7 @@ class Parser:
         if not expr:
             raise BCError("expected expression after `<-` in assignment", p.pos)
 
-        self.check_newline("assignment")
+        self.expect_newline("assignment")
 
         is_ident = False
         if isinstance(ident, Identifier):
@@ -946,7 +951,7 @@ class Parser:
                 "found invalid or no expression for case of value", self.pos()
             )
 
-        self.check_newline("after case of expression")
+        self.expect_newline("after case of expression")
 
         branches: list[CaseofBranch | NewlineStatement | Comment] = []
         otherwise: Statement | None = None
@@ -1256,7 +1261,7 @@ class Parser:
                 name.pos,
             )
 
-        self.check_newline("INCLUDE")
+        self.expect_newline("INCLUDE")
 
         return IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
 

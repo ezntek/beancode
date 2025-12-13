@@ -1,0 +1,10 @@
+FUNCTION Factorial(Num: INTEGER) RETURNS INTEGER
+    IF Num <= 1
+      THEN
+        RETURN 1
+      ELSE
+        RETURN Num * Factorial(Num - 1)
+    ENDIF
+ENDFUNCTION
+
+OUTPUT Factorial(5)
