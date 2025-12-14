@@ -1130,11 +1130,9 @@ class Interpreter:
                 self.tracer_outputs.append(res)  # type: ignore
 
         if self.tracer and self.tracer.config.show_outputs:
-            print("(tracer output): " + res)
-            sys.stdout.flush()
+            print("(tracer output): " + res, flush=True)
         elif not self.tracer:
-            print(res, end=("\n" if stmt.newline else ""))
-            sys.stdout.flush()
+            print(res, end=("\n" if stmt.newline else ""), flush=True)
 
     def _guess_input_type(self, inp: str) -> BCValue:
         if is_real(inp):

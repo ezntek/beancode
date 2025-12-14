@@ -7,18 +7,19 @@ class Formatter:
     block: list[Statement]
     buf: list[str] # our string builder
     indent: int # number of spaces to indent by
-    cur: int
+    end: int
     skip_newline: bool
 
     def __init__(self, block: list[Statement], indent=4):
         self.indent = indent 
         self.buf = []
         self.block = block
-        self.cur = 0
+        self.end = 0
         self.skip_newline = False
 
     def write(self, s: str):
         self.buf.append(s)
+        self.end += 1
 
     def visit_type(self, typ: Type):
         if isinstance(typ, ArrayType):
@@ -134,6 +135,7 @@ class Formatter:
         for _ in range(orig_len - idx):
             self.buf.pop()
         self.buf.append(s)
+        self.end = idx + 1
 
     def write_block(self, block: list[Statement], extra=0):
         for line in self.visit_block(block):
@@ -144,11 +146,11 @@ class Formatter:
 
     def visit_if_stmt(self, stmt: IfStatement):
         # everything before us is normalized
-        saved_idx = self.cur
+        saved_end = self.end
         self.write("IF ")
         self.visit_expr(stmt.cond)
         self.write("\n")
-        self.reduce_from(saved_idx) # create one line
+        self.reduce_from(saved_end) # create one line
         s = " " * (self.indent // 2)
         self.write(f"{s}THEN\n")
         self.write_block(stmt.if_block)
@@ -158,19 +160,19 @@ class Formatter:
         self.write("ENDIF\n")
 
     def visit_caseof_stmt(self, stmt: CaseofStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write("CASE OF ")
         self.visit_expr(stmt.expr)
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
         # XXX: magic f---ery to get the indentation right
-        saved_cur = self.cur
+        saved_cur = self.end
         saved_buf = self.buf
         new_buf: list[str] = []
         self.buf = new_buf
         for i, branch in enumerate(stmt.branches):
-            self.cur = i
-            saved_idx = self.cur
+            self.end = i
+            saved_end = self.end
             if isinstance(branch, NewlineStatement):
                 if self.skip_newline:
                     self.skip_newline = False
@@ -181,6 +183,10 @@ class Formatter:
 
             if isinstance(branch, Comment):
                 self.visit_comment(branch)
+                if self.skip_newline:
+                    self.skip_newline = False
+                else:
+                    self.write("\n")
                 continue
 
             self.visit_expr(branch.expr)
@@ -190,7 +196,7 @@ class Formatter:
                 self.write("IF ")
                 self.visit_expr(s.cond)
                 self.write(" THEN\n")
-                self.reduce_from(saved_idx)
+                self.reduce_from(saved_end)
                 self.write_block(s.if_block)
                 if s.else_block:
                     self.write("ELSE\n")
@@ -199,15 +205,15 @@ class Formatter:
             else:
                 self.visit_stmt(s, raw=True)
                 self.write("\n")
-                self.reduce_from(saved_idx)
+                self.reduce_from(saved_end)
         if stmt.otherwise:
-            saved_idx = self.cur
+            saved_end = self.end
             self.write("OTHERWISE ")
             self.visit_stmt(stmt.otherwise, raw=True)
             self.write("\n")
-            self.reduce_from(saved_idx)
+            self.reduce_from(saved_end)
         self.buf = saved_buf
-        self.cur = saved_cur
+        self.end = saved_cur
         for line in new_buf:
             if line.isspace():
                 self.write("\n")
@@ -216,7 +222,7 @@ class Formatter:
         self.write("ENDCASE\n")
 
     def visit_for_stmt(self, stmt: ForStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write(f"FOR {stmt.counter.ident} <- ")
         self.visit_expr(stmt.begin)
         self.write(" TO ")
@@ -225,28 +231,28 @@ class Formatter:
             self.write("STEP")
             self.visit_expr(stmt.step)
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
         self.write_block(stmt.block)
         self.write(f"NEXT {stmt.counter.ident}\n")
 
     def visit_while_stmt(self, stmt: WhileStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write("WHILE ")
         self.visit_expr(stmt.cond)
         self.write(" DO\n")
-        self.reduce_from(saved_idx)
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
+        self.reduce_from(saved_end)
         self.write_block(stmt.block)
         self.write("ENDWHILE\n")
 
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         self.write("REPEAT\n")
         self.write_block(stmt.block)
-        saved_idx = self.cur
+        saved_end = self.end
         self.write("UNTIL ")
         self.visit_expr(stmt.cond)
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
 
     def visit_output_stmt(self, stmt: OutputStatement):
         self.write("OUTPUT ")
@@ -277,22 +283,22 @@ class Formatter:
         self.write(")")
 
     def visit_procedure(self, stmt: ProcedureStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write(f"PROCEDURE {stmt.name}")
         self.visit_argument_list(stmt.args)
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
         self.write_block(stmt.block)
         self.write("ENDPROCEDURE\n")
 
     def visit_function(self, stmt: FunctionStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write(f"FUNCTION {stmt.name}")
         self.visit_argument_list(stmt.args)
         self.write(" RETURNS ")
         self.visit_type(stmt.returns)
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
         self.write_block(stmt.block)
         self.write("ENDFUNCTION\n")
 
@@ -341,7 +347,7 @@ class Formatter:
         self.visit_type(stmt.typ)
 
     def visit_trace_stmt(self, stmt: TraceStatement):
-        saved_idx = self.cur
+        saved_end = self.end
         self.write("TRACE")
         if stmt.vars:
             self.write("(")
@@ -353,7 +359,7 @@ class Formatter:
         if stmt.file_name:
             self.write(f" TO \"{stmt.file_name}\"")
         self.write("\n")
-        self.reduce_from(saved_idx)
+        self.reduce_from(saved_end)
         self.write_block(stmt.block)
         self.write("ENDTRACE\n")
 
@@ -434,7 +440,7 @@ class Formatter:
  
     def visit_stmt(self, stmt: Statement, next=None, raw=False) -> bool:
         if not raw:
-            saved_idx = self.cur
+            saved_end = self.end
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
@@ -506,7 +512,7 @@ class Formatter:
                 rv = True
 
             self.write("\n")
-            self.reduce_from(saved_idx) # type: ignore
+            self.reduce_from(saved_end) # type: ignore
             return rv
 
         return False
@@ -516,18 +522,18 @@ class Formatter:
         # We create a new list every visit_block, and replace the pointer to the
         # active buffer in the formatter before we visit the block. after the fact,
         # we replace the previous buffer and return the new one ;)
-        saved_cur = self.cur
+        saved_end = self.end
         saved_buf = self.buf # pointer copy, to not lose it forever
         # create the new array
         new_buf = []
         self.buf = new_buf # spoof-o-matic
         blk = block if block != None else self.block
         skip = False
+        self.end = 0
         for i, stmt in enumerate(blk):
             if skip:
                 skip = False
                 continue
-            self.cur = i
             if isinstance(stmt, NewlineStatement) and i == len(blk) - 1:
                 continue
             res = self.visit_stmt(stmt, next=blk[i + 1] if i != len(blk) - 1 else None)
@@ -535,5 +541,5 @@ class Formatter:
                 skip = True
         # pretend that nothing happened
         self.buf = saved_buf
-        self.cur = saved_cur
+        self.end = saved_end
         return new_buf
