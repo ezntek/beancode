@@ -1,5 +1,5 @@
 #!/usr/bin/python3
 
-from beancode import __main__
-
-__main__.main()
+if __name__ == "__main__":
+    from beancode.cli.beancode import main
+    main()

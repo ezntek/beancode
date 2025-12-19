@@ -61,13 +61,13 @@ If you installed it globally:
 
 If you wish to run it in the project directory:
 
-`python -m beancode file.bean`
-
-You may also run
-
 `./main.py file.bean`
 
-if you are in the project directory.
+or
+
+`python -m beancode.cli.beancode file.bean`
+
+There is also a formatter available, go to [this section](#formatter) for details.
 
 ## The REPL
 
@@ -102,13 +102,34 @@ You can also start typing dot-commands, which do not control the beancode interp
  ```
  if `Counter` and `Value` are variables.
 
-Always consult the `.help` menu for more information.
-<<<<<<< HEAD
-=======
+
+## Formatter
+
+The formatter will format your beancode files nicely, sort out indentation issues and will capitalize keywords and library routines properly. It will also compress long newline sequences, and make comments look nicer. It will not touch your variable names.
+
+If you installed it globally, you can run it with:
+
+```
+beanfmt myfile.bean
+```
+
+which will **overwrite** your code. For more information, consult the help menu by passing `beanfmt -h`.
+
+If you want to run it in the project directory:
+
+```
+./format.py myfile.bean
+```
+
+or
+
+```
+python3 -m beancode.cli.beanfmt myfile.bean
+```
 
 ## Performance Improvements since 0.5
 
-Since this release was meant to boost the performance of beancode, I have done some benchmarking. This is due to the technological improvements made, by using more efficient data structures to represent the AST.
+Since version 0.6 (which was scrapped due to last minute plan changes) and this version were written in part to boost the performance of beancode, I have done some benchmarking. This is due to the technological improvements made, by using more efficient data structures to represent the AST.
 
 **NOTES:**
 
@@ -116,13 +137,12 @@ Since this release was meant to boost the performance of beancode, I have done s
 2. All values are in seconds.
 3. All values are taken on an Intel Core i7-14700KF with 32GB RAM on Arch Linux (CachyOS kernel), exact results may vary.
 
-| **Benchmark**                 | **0.5.3 (CPy)** | **0.6.0 (CPy)** | **Gains (CPy)** | **0.5.3 (PyPy)** | **0.6.0 (PyPy)** | **Gains (PyPy)** |
+| **Benchmark**                 | **0.5.3 (CPy)** | **0.7.0 (CPy)** | **Gains (CPy)** | **0.5.3 (PyPy)** | **0.7.0 (PyPy)** | **Gains (PyPy)** |
 |-------------------------------|-----------------|-----------------|-----------------|------------------|------------------|------------------|
 | BsortTorture 500 nums         | 4.051           | 2.344           | 1.73x           | 1.166            | 0.698            | 1.67x            |
 | QsortTorture 1000 nums        | 3.378           | 3.25            | 1.04x           | 1.434            | 1.283            | 1.12x            |
 | PrimeTorture 30000 max        | 2.429           | 1.558           | 1.56x           | 0.528            | 0.382            | 1.38x            |
 | raylib_random_rects 400 rects | 3.463           | 1.981           | 1.75x           | 1.406            | 0.737            | 1.91x            |
->>>>>>> 0.6
 
 ## Errata
 

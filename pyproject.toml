@@ -11,7 +11,8 @@ requires-python = ">=3.10,<4.0"
 dependencies = [ ]
 
 [project.scripts]
-beancode = "beancode.__main__:main"
+beancode = "beancode.cli.beancode:main"
+beanfmt = "beancode.cli.beanfmt:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

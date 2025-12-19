@@ -6,13 +6,13 @@ from typing import NoReturn
 
 from beancode.optimizer import Optimizer
 
-from .repl import Repl
+from beancode.repl import Repl
 
-from .interpreter import Interpreter
-from .lexer import *
-from .parser import Parser
-from .error import *
-from . import __version__
+from beancode.interpreter import Interpreter
+from beancode.lexer import *
+from beancode.parser import Parser
+from beancode.error import *
+from beancode import __version__
 
 
 def _error(s: str) -> NoReturn:
