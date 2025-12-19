@@ -43,6 +43,7 @@ LIBROUTINES: Libroutines = {
     # complicated stuff goes here
     "typeof": [None],
     "type": [None],
+    "clear": [],
     "format": None,
     "initarray": None,
 }

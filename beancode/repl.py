@@ -61,7 +61,8 @@ def setup_readline():
             open(histfile, "wb").close()
         atexit.register(readline.write_history_file, histfile)
     except ImportError:
-        warn("could not import readline, continuing without shell history")
+        if sys.platform not in {"emscripten", "wasi"}:
+            warn("could not import readline, continuing without shell history")
 
 
 class DotCommandResult(IntEnum):

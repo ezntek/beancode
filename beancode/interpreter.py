@@ -656,6 +656,9 @@ class Interpreter:
                 case "execute":
                     [cmd, *_] = evargs
 
+                    if sys.platform in {"wasi", "emscripten"}:
+                        raise BCError("EXECUTE is not supported in the web!", stmt.pos)
+
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
                     except Exception as e:
@@ -675,6 +678,9 @@ class Interpreter:
                     return BCValue.new_null()
                 case "flush":
                     sys.stdout.flush()
+                    return BCValue.new_null()
+                case "clear":
+                    print("\x1b[2J\x1b[H", end='', flush=True)
                     return BCValue.new_null()
         except BCError as e:
             e.pos = stmt.pos
