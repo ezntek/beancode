@@ -802,18 +802,35 @@ class Optimizer:
                         return stmt.else_block
                     else:
                         return []
+
+                if not stmt.if_block:
+                    if not stmt.else_block:
+                        return []
+                    else:
+                        stmt.cond = Negation(stmt.cond.pos, stmt.cond)
+                        stmt.if_block = stmt.else_block
             case CaseofStatement():
                 self.visit_caseof_stmt(stmt)
             case ForStatement():
                 self.visit_for_stmt(stmt)
+                if not stmt.block:
+                    return []
             case WhileStatement():
                 self.visit_while_stmt(stmt)
+
+                if not stmt.block:
+                    return []
+
                 if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
                     v = bool(stmt.cond.val.val)
                     if not v:
                         return [] # just remove the whole block
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
+
+                if not stmt.block:
+                    return []
+
                 if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
                     v = bool(stmt.cond.val.val)
                     if not v:
@@ -830,6 +847,8 @@ class Optimizer:
                 self.visit_function(stmt)
             case ScopeStatement():
                 self.visit_scope_stmt(stmt)
+                if not stmt.block:
+                    return []
             case IncludeStatement():
                 self.visit_include_stmt(stmt)
             case CallStatement():
@@ -842,6 +861,8 @@ class Optimizer:
                 self.visit_declare_stmt(stmt)
             case TraceStatement():
                 self.visit_trace_stmt(stmt)
+                if not stmt.block:
+                    return []
             case OpenfileStatement():
                 self.visit_openfile_stmt(stmt)
             case ReadfileStatement():
