@@ -137,7 +137,7 @@ def execute(
     tracer: "Tracer | None" = None,
     notify_when_done=False,
     optimize=False,
-) -> "Interpreter | None":  # type: ignore
+) -> "Interpreter | BCError":  # type: ignore
     lexer = Lexer(src)
 
     try:
@@ -147,7 +147,7 @@ def execute(
         if save_interpreter:
             exit(1)
         else:
-            return
+            return err
 
     parser = Parser(toks)
 
@@ -156,7 +156,7 @@ def execute(
     except BCError as err:
         err.print(filename, src)
         if save_interpreter:
-            return
+            return err
         else:
             exit(1)
 
@@ -167,7 +167,7 @@ def execute(
         except BCError as err:
             err.print(filename, src)
             if save_interpreter:
-                return
+                return err
             else:
                 exit(1)
 
@@ -182,7 +182,7 @@ def execute(
     except BCError as err:
         err.print(filename, src)
         if save_interpreter:
-            return
+            return err
         else:
             exit(1)
 

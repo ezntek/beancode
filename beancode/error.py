@@ -25,6 +25,14 @@ class BCError(Exception):
         self.msg = s
         super().__init__(s)
 
+    def to_dict(self) -> dict[str, str | int | None]:
+        return {
+            "msg": self.msg,
+            "row": self.pos.row if self.pos else None,
+            "col": self.pos.col if self.pos else None,
+            "span": self.pos.span if self.pos else None,
+        }
+
     def print(self, filename: str, file_content: str):
         if self.pos is None:
             print(self.msg, end="", file=sys.stderr)
