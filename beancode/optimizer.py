@@ -2,6 +2,15 @@ from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
 
+def block_empty(blk: list[Statement]):
+    if not blk:
+        return True
+
+    for itm in blk:
+        if not (isinstance(itm, CommentStatement) or isinstance(itm, NewlineStatement)):
+            return False
+
+    return True
 
 class Optimizer:
     # TODO: use
@@ -10,12 +19,14 @@ class Optimizer:
     block: list[Statement]
     cur_stmt: int
     active_constants: set[str]
+    elided_procedures: set[str] 
     remove_cur: bool
 
     def __init__(self, block: list[Statement]):
         self.block = block
         self.constants = list()
         self.active_constants = set()
+        self.elided_procedures = set()
         self.ignore_constants = list()
         self.cur_stmt = 0
         self.remove_cur = False
@@ -803,8 +814,8 @@ class Optimizer:
                     else:
                         return []
 
-                if not stmt.if_block:
-                    if not stmt.else_block:
+                if block_empty(stmt.if_block):
+                    if block_empty(stmt.else_block):
                         return []
                     else:
                         stmt.cond = Negation(stmt.cond.pos, stmt.cond)
@@ -813,12 +824,12 @@ class Optimizer:
                 self.visit_caseof_stmt(stmt)
             case ForStatement():
                 self.visit_for_stmt(stmt)
-                if not stmt.block:
+                if block_empty(stmt.block):
                     return []
             case WhileStatement():
                 self.visit_while_stmt(stmt)
 
-                if not stmt.block:
+                if block_empty(stmt.block):
                     return []
 
                 if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
@@ -828,7 +839,7 @@ class Optimizer:
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
 
-                if not stmt.block:
+                if block_empty(stmt.block):
                     return []
 
                 if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
@@ -843,16 +854,21 @@ class Optimizer:
                 self.visit_return_stmt(stmt)
             case ProcedureStatement():
                 self.visit_procedure(stmt)
+                if block_empty(stmt.block):
+                    self.elided_procedures.add(stmt.name)
+                    return []
             case FunctionStatement():
                 self.visit_function(stmt)
             case ScopeStatement():
                 self.visit_scope_stmt(stmt)
-                if not stmt.block:
+                if block_empty(stmt.block):
                     return []
             case IncludeStatement():
                 self.visit_include_stmt(stmt)
             case CallStatement():
                 self.visit_call(stmt)
+                if stmt.ident in self.elided_procedures:
+                    return []
             case AssignStatement():
                 self.visit_assign_stmt(stmt)
             case ConstantStatement():
@@ -861,7 +877,7 @@ class Optimizer:
                 self.visit_declare_stmt(stmt)
             case TraceStatement():
                 self.visit_trace_stmt(stmt)
-                if not stmt.block:
+                if block_empty(stmt.block):
                     return []
             case OpenfileStatement():
                 self.visit_openfile_stmt(stmt)
@@ -886,6 +902,7 @@ class Optimizer:
         cur = 0
         self.constants.append(dict())
         self.ignore_constants.append(ignore if ignore else list())
+        saved_elided_procedures = self.elided_procedures.copy()
         self._update_active_constants()
         new_block = []
         while cur < len(blk):
@@ -900,5 +917,6 @@ class Optimizer:
             cur += 1
         self.constants.pop()
         self.ignore_constants.pop()
+        self.elided_procedures = saved_elided_procedures
         self._update_active_constants()
         return new_block
