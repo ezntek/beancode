@@ -172,7 +172,6 @@ class Formatter:
                 self.write(" " * (self.indent + extra) + line)
 
     def visit_if_stmt(self, stmt: IfStatement):
-        # everything before us is normalized
         saved_end = self.end
         self.write("IF ")
         self.visit_expr(stmt.cond)
@@ -283,6 +282,9 @@ class Formatter:
 
     def visit_output_stmt(self, stmt: OutputStatement):
         self.write("OUTPUT ")
+        if not stmt.items:
+            self.write('""')
+            return
         for i, itm in enumerate(stmt.items):
             self.visit_expr(itm)
             if i != len(stmt.items) - 1:

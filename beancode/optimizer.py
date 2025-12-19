@@ -8,17 +8,17 @@ class Optimizer:
     constants: list[dict[str, BCValue]]
     ignore_constants: list[list[str]]
     block: list[Statement]
-    unwanted_items: list[list[int]]
     cur_stmt: int
     active_constants: set[str]
+    remove_cur: bool
 
     def __init__(self, block: list[Statement]):
         self.block = block
         self.constants = list()
-        self.unwanted_items = list()
         self.active_constants = set()
         self.ignore_constants = list()
         self.cur_stmt = 0
+        self.remove_cur = False
 
     def _update_active_constants(self):
         self.active_constants = self.active_constants.union(
@@ -717,7 +717,12 @@ class Optimizer:
         if cur_item != "":
             new_items.append(Literal(first_pos, BCValue.new_string(cur_item)))  # type: ignore
 
-        stmt.items = new_items
+        useless = set()
+        for i, itm in enumerate(new_items):
+            if isinstance(itm, Literal) and str(itm.val.val) == "":
+                useless.add(i)
+
+        stmt.items = [itm for i, itm in enumerate(new_items) if i not in useless]
 
     def visit_input_stmt(self, stmt: InputStatement):
         _ = stmt
@@ -759,7 +764,7 @@ class Optimizer:
             return
         self.constants[-1][stmt.ident.ident] = val
         self._update_active_constants()
-        self.unwanted_items[-1].append(self.cur_stmt)
+        self.remove_cur = True
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
         self.visit_type(stmt.typ)
@@ -785,18 +790,34 @@ class Optimizer:
         if isinstance(stmt.file_ident, Expr):
             stmt.file_ident = self.visit_expr(stmt.file_ident)
 
-    def visit_stmt(self, stmt: Statement):
+    def visit_stmt(self, stmt: Statement) -> list[Statement]:
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                    v = bool(stmt.cond.val.val)
+                    if v:
+                        return stmt.if_block
+                    elif not v and stmt.else_block:
+                        return stmt.else_block
+                    else:
+                        return []
             case CaseofStatement():
                 self.visit_caseof_stmt(stmt)
             case ForStatement():
                 self.visit_for_stmt(stmt)
             case WhileStatement():
                 self.visit_while_stmt(stmt)
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                    v = bool(stmt.cond.val.val)
+                    if not v:
+                        return [] # just remove the whole block
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                    v = bool(stmt.cond.val.val)
+                    if not v:
+                        return stmt.block # turn it into one block
             case OutputStatement():
                 self.visit_output_stmt(stmt)
             case InputStatement():
@@ -831,6 +852,10 @@ class Optimizer:
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 stmt.inner = self.visit_expr(stmt.inner)
+                if not isinstance(stmt.inner, FunctionCall):
+                    return []
+
+        return [stmt]
 
     def visit_program(self, program: Program):
         self.visit_block(program.stmts)
@@ -839,17 +864,20 @@ class Optimizer:
         blk = block if block is not None else self.block
         cur = 0
         self.constants.append(dict())
-        self.unwanted_items.append(list())
         self.ignore_constants.append(ignore if ignore else list())
         self._update_active_constants()
+        new_block = []
         while cur < len(blk):
             stmt = blk[cur]
             self.cur_stmt = cur
-            self.visit_stmt(stmt)
+            res = self.visit_stmt(stmt)
+            if self.remove_cur:
+                self.remove_cur = False
+            else:
+                for itm in res:
+                    new_block.append(itm)
             cur += 1
         self.constants.pop()
         self.ignore_constants.pop()
         self._update_active_constants()
-        res = [itm for i, itm in enumerate(blk) if i not in self.unwanted_items[-1]]
-        self.unwanted_items.pop()
-        return res
+        return new_block

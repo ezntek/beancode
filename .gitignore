@@ -1,3 +1,5 @@
+a.out
+*.asm
 testdir
 .*.py
 *_mini.py

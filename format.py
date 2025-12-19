@@ -11,7 +11,9 @@ from beancode.error import *
 from beancode.formatter import *
 from beancode.lexer import Lexer
 from beancode.parser import Parser
+from beancode.optimizer import Optimizer
 
+optimize = False
 
 def _error(s: str) -> NoReturn:
     error(s)
@@ -19,6 +21,7 @@ def _error(s: str) -> NoReturn:
 
 
 def format_file(args, name: str, file_content: str, file=sys.stdout):
+    global optimize
     lexer = Lexer(file_content, preserve_comments=True)
 
     try:
@@ -38,6 +41,9 @@ def format_file(args, name: str, file_content: str, file=sys.stdout):
 
     try:
         blk = parser.block()
+        if optimize:
+            opt = Optimizer(blk)
+            blk = opt.visit_block(None)
     except BCError as err:
         err.print(name, file_content)
         exit(1)
@@ -93,11 +99,15 @@ def main():
     og.add_argument("-o", "--output", type=str, help="output path of file")
     og.add_argument("--stdout", action="store_true", help="print output to stdout")
     og.add_argument("--in-place", action="store_true", help="format in place")
+    parser.add_argument("-O", "--optimize", action="store_true", help="format and optimize code at the same time")
     parser.add_argument(
         "--debug", action="store_true", help="print debugging information"
     )
     parser.add_argument("file", type=str)
     args = parser.parse_args()
+
+    global optimize
+    optimize = args.optimize
 
     in_path = Path(args.file)
     if not in_path.exists():
