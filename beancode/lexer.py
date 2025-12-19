@@ -20,9 +20,11 @@ class Token:
             case TokenKind.LITERAL_NUMBER:
                 s = self.data
             case TokenKind.TYPE:
-                s = f"<{self.data}>"
+                s = f"<{str(self.data).upper()}>"
+            case TokenKind.IDENT:
+                s = f"{{{str(self.data)}}}"
             case _:
-                s = f"<{str(self.kind).upper()}>"
+                s = f"<{self.kind}>"
 
         print(f"token[{self.pos}]: {s}", file=file)
 

@@ -89,10 +89,10 @@ def real_main(args: argparse.Namespace):
         exit(1)
 
     if args.debug:
-        print("\033[2m=== TOKENS ===\033[0m", file=sys.stderr)
+        print("=== TOKENS ===", file=sys.stderr)
         for tok in toks:
             tok.print(file=sys.stderr)
-        print("\033[2m==============\033[0m", file=sys.stderr)
+        print("==============", file=sys.stderr)
         sys.stderr.flush()
 
     parser = Parser(toks)
@@ -104,11 +104,11 @@ def real_main(args: argparse.Namespace):
         exit(1)
 
     if args.debug:
-        print("\033[2m=== AST ===\033[0m", file=sys.stderr)
+        print("=== AST ===", file=sys.stderr)
         for stmt in program.stmts:
             print(stmt, file=sys.stderr)
-            print()
-        print("\033[0m\033[2m===========\033[0m", file=sys.stderr)
+            print(file=sys.stderr)
+        print("===========", file=sys.stderr)
         sys.stderr.flush()
 
     if args.no_run:

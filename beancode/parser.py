@@ -989,7 +989,7 @@ class Parser:
             (consumed, nlpos) = self.clean_newlines()
             if consumed and self.preserve_trivia:
                 branches.append(NewlineStatement(nlpos))
-
+                
             if not stmt:
                 raise BCError("expected statement for case of branch block")
 
@@ -1520,7 +1520,10 @@ class Parser:
         cur = self.peek()
         expr = self.expr()
         if expr:
-            return ExprStatement.from_expr(expr)
+            exp = ExprStatement.from_expr(expr)
+            if self.check(TokenKind.NEWLINE):
+                self.consume_and_expect(TokenKind.NEWLINE)
+            return exp
         else:
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
             if cur.kind == TokenKind.NEXT:
