@@ -690,8 +690,11 @@ class Optimizer:
 
     def visit_caseof_stmt(self, stmt: CaseofStatement):
         for b in stmt.branches:
+            if not isinstance(b, CaseofStatement):
+                continue
+
             b.expr = self.visit_expr(b.expr)
-            self.visit_stmt(b.stmt)
+            self.visit_stmt(b.stmt) # type: ignore
 
     def visit_for_stmt(self, stmt: ForStatement):
         stmt.begin = self.visit_expr(stmt.begin)
@@ -792,12 +795,6 @@ class Optimizer:
 
         stmt.src = self.visit_expr(stmt.src)
 
-    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        if isinstance(stmt.file_ident, Expr):
-            stmt.file_ident = self.visit_expr(stmt.file_ident)
-
-        stmt.src = self.visit_expr(stmt.src)
-
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         if isinstance(stmt.file_ident, Expr):
             stmt.file_ident = self.visit_expr(stmt.file_ident)
@@ -844,8 +841,6 @@ class Optimizer:
                 self.visit_readfile_stmt(stmt)
             case WritefileStatement():
                 self.visit_writefile_stmt(stmt)
-            case AppendfileStatement():
-                self.visit_appendfile_stmt(stmt)
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():

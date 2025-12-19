@@ -1,17 +1,11 @@
 # beancode
 
-## WARNING
+This is a fully syllabus-compliant (optimizing) interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
+
+## WARNING!
 
 This is the development branch of beancode, where breaking changes may be made each commit. To access source history
 for a specific version, please go to the respective branch, like `0.6`.
-
----
-
-This is a fully syllabus-compliant (optimizing) interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
-
-***IMPORTANT:*** I do not guarantee this software to be bug-free; most major bugs have been patched by now, and the interpreter has been tested against various examples and IGCSE Markschemes. Version 0.3.0 and up should be relatively stable, but if you find bugs, please report them and I will fix them promptly. **consider this software (all `0.x` versions) unstable and alpha-quality, breaking changes may happen at any time.**
-
-Once I deem it stable enough, I will tag `v1.0.0`.
 
 ## Installation
 
@@ -109,6 +103,26 @@ You can also start typing dot-commands, which do not control the beancode interp
  if `Counter` and `Value` are variables.
 
 Always consult the `.help` menu for more information.
+<<<<<<< HEAD
+=======
+
+## Performance Improvements since 0.5
+
+Since this release was meant to boost the performance of beancode, I have done some benchmarking. This is due to the technological improvements made, by using more efficient data structures to represent the AST.
+
+**NOTES:**
+
+1. CPy refers to CPython 3.14.0, PyPy refers to PyPy (version 7.3.20) 3.11.13**
+2. All values are in seconds.
+3. All values are taken on an Intel Core i7-14700KF with 32GB RAM on Arch Linux (CachyOS kernel), exact results may vary.
+
+| **Benchmark**                 | **0.5.3 (CPy)** | **0.6.0 (CPy)** | **Gains (CPy)** | **0.5.3 (PyPy)** | **0.6.0 (PyPy)** | **Gains (PyPy)** |
+|-------------------------------|-----------------|-----------------|-----------------|------------------|------------------|------------------|
+| BsortTorture 500 nums         | 4.051           | 2.344           | 1.73x           | 1.166            | 0.698            | 1.67x            |
+| QsortTorture 1000 nums        | 3.378           | 3.25            | 1.04x           | 1.434            | 1.283            | 1.12x            |
+| PrimeTorture 30000 max        | 2.429           | 1.558           | 1.56x           | 0.528            | 0.382            | 1.38x            |
+| raylib_random_rects 400 rects | 3.463           | 1.981           | 1.75x           | 1.406            | 0.737            | 1.91x            |
+>>>>>>> 0.6
 
 ## Errata
 

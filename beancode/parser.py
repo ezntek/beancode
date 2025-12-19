@@ -32,10 +32,12 @@ def _convert_escape_code(ch: str) -> str | None:
 class Parser:
     tokens: list[Token]
     cur: int
+    preserve_trivia: bool
 
-    def __init__(self, tokens: list[Token]) -> None:
+    def __init__(self, tokens: list[Token], preserve_trivia=False) -> None:
         self.cur = 0
         self.tokens = tokens
+        self.preserve_trivia = preserve_trivia
 
     def prev(self) -> Token:
         return self.tokens[self.cur - 1]
@@ -132,8 +134,13 @@ class Parser:
         while self.cur < len(self.tokens) and self.peek().kind == TokenKind.NEWLINE:
             self.consume()
 
-    def check_newline(self, s: str):
-        self.consume_and_expect(TokenKind.NEWLINE, ctx=f"after {s}")
+    def expect_newline(self, s: str):
+        if self.check(TokenKind.NEWLINE):
+            self.consume()
+        elif self.check(TokenKind.COMMENT):
+            return
+        else:
+            self.consume_and_expect(TokenKind.NEWLINE, ctx=f"after {s}")
 
     def match(self, *typs: TokenKind) -> bool:
         for typ in typs:
@@ -685,6 +692,8 @@ class Parser:
 
             exprs.append(new)
 
+        self.expect_newline("OUTPUT")
+
         return OutputStatement(begin.pos, items=exprs, newline=newline)
 
     def input_stmt(self) -> Statement | None:
@@ -698,6 +707,8 @@ class Parser:
             ident = self.ident("after INPUT")
         else:
             ident = array_index  # type: ignore
+
+        self.expect_newline("INPUT")
 
         return InputStatement(begin.pos, ident)
 
@@ -714,6 +725,8 @@ class Parser:
             raise BCError(
                 "invalid or no expression used as RETURN expression", begin.pos
             )
+
+        self.expect_newline("RETURN")
 
         return ReturnStatement(begin.pos, expr)
 
@@ -752,6 +765,8 @@ class Parser:
             self.consume_and_expect(
                 TokenKind.RIGHT_PAREN, "after arg list in procedure call"
             )
+
+        self.expect_newline("CALL")
 
         self.consume_newlines()
 
@@ -799,42 +814,15 @@ class Parser:
             )
             idents.append(Identifier(ident.pos, str(ident.data)))
 
-        typ = None
-        expr = None
+        colon = self.consume_and_expect(TokenKind.COLON)
+        typ = self.typ()
+        if not typ:
+            raise BCError("invalid type after DECLARE", colon.pos)
 
-        colon = self.peek()
-        if self.check(TokenKind.COLON):
-            self.consume()
+        self.expect_newline("variable declaration (DECLARE)")
 
-            typ = self.typ()
-            if not typ:
-                raise BCError("invalid type after DECLARE", colon.pos)
+        return DeclareStatement(begin.pos, idents, typ, export)  # type: ignore
 
-        if self.check(TokenKind.ASSIGN):
-            tok = self.consume()
-            if len(idents) > 1:
-                raise BCError(
-                    "cannot have assignment in declaration of multiple variables",
-                    tok.pos,
-                )
-
-            expr = self.expr()
-            if not expr:
-                raise BCError(
-                    "invalid or no expression after assign in declare", tok.pos
-                )
-
-        if not typ and not expr:
-            raise BCError(
-                "must have either a type declaration, expression to assign as, or both",
-                colon.pos,
-            )
-
-        self.check_newline("variable declaration (DECLARE)")
-
-        return DeclareStatement(
-            begin.pos, ident=idents, typ=typ, expr=expr, export=export # type: ignore
-        ) 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
         export = False
@@ -868,7 +856,7 @@ class Parser:
                 "invalid or no expression for constant declaration", self.pos()
             )
 
-        self.check_newline("constant declaration (CONSTANT)")
+        self.expect_newline("constant declaration (CONSTANT)")
 
         return ConstantStatement(
             begin.pos, Identifier(ident.pos, str(ident.data)), expr, export=export
@@ -899,13 +887,13 @@ class Parser:
         if not ident:
             ident = self.ident("for left hand side of assignment")
 
-        self.consume()  # go past the arrow
+        self.consume_and_expect(TokenKind.ASSIGN)  # go past the arrow
 
         expr: Expr | None = self.expr()
         if not expr:
             raise BCError("expected expression after `<-` in assignment", p.pos)
 
-        self.check_newline("assignment")
+        self.expect_newline("assignment")
 
         is_ident = False
         if isinstance(ident, Identifier):
@@ -914,10 +902,10 @@ class Parser:
         return AssignStatement(ident.pos, ident, expr, is_ident=is_ident)  # type: ignore
 
     # multiline statements go here
-    def block(self, delim: TokenKind) -> list[Statement]:
+    def block_until(self, delim: TokenKind) -> list[Statement]:
         res = list()
         while not self.check(delim):
-            res.append(self.scan_one_statement())
+            res.append(self.statement())
         return res
 
     def if_stmt(self) -> Statement | None:
@@ -940,11 +928,11 @@ class Parser:
         else_stmts = []
 
         while not self.check_many(TokenKind.ELSE, TokenKind.ENDIF):
-            if_stmts.append(self.scan_one_statement())
+            if_stmts.append(self.statement())
 
         if self.check_and_consume(TokenKind.ELSE):
             self.clean_newlines()
-            else_stmts = self.block(TokenKind.ENDIF)
+            else_stmts = self.block_until(TokenKind.ENDIF)
 
         self.consume()  # byebye endif
 
@@ -965,11 +953,21 @@ class Parser:
                 "found invalid or no expression for case of value", self.pos()
             )
 
-        self.check_newline("after case of expression")
+        self.expect_newline("after case of expression")
 
-        branches: list[CaseofBranch] = []
+        branches: list[CaseofBranch | NewlineStatement | Comment] = []
         otherwise: Statement | None = None
         while not self.check(TokenKind.ENDCASE):
+            (consumed, nlpos) = self.clean_newlines()
+            if self.preserve_trivia:
+                if consumed:
+                    branches.append(NewlineStatement(nlpos))
+                    continue
+
+                if self.check(TokenKind.COMMENT):
+                    branches.append(self.consume().data)  # type: ignore
+                    continue
+
             is_otherwise = self.check(TokenKind.OTHERWISE)
             if not is_otherwise:
                 expr = self.expr()
@@ -990,7 +988,9 @@ class Parser:
                     )
 
             stmt = self.stmt()
-            self.consume_newlines()
+            (consumed, nlpos) = self.clean_newlines()
+            if consumed and self.preserve_trivia:
+                branches.append(NewlineStatement(nlpos))
 
             if not stmt:
                 raise BCError("expected statement for case of branch block")
@@ -1019,7 +1019,7 @@ class Parser:
         self.consume_and_expect(TokenKind.DO, "after while loop condition")
         self.clean_newlines()
 
-        stmts = self.block(TokenKind.ENDWHILE)
+        stmts = self.block_until(TokenKind.ENDWHILE)
         end = self.consume()
 
         return WhileStatement(begin.pos, end.pos, expr, stmts)
@@ -1053,7 +1053,7 @@ class Parser:
                 )
 
         self.clean_newlines()
-        stmts = self.block(TokenKind.NEXT)
+        stmts = self.block_until(TokenKind.NEXT)
         next = self.consume()
 
         next_counter = self.ident("after NEXT in for loop")
@@ -1081,7 +1081,7 @@ class Parser:
 
         self.clean_newlines()
 
-        stmts = self.block(TokenKind.UNTIL)
+        stmts = self.block_until(TokenKind.UNTIL)
         until = self.consume()
 
         expr = self.expr()
@@ -1159,7 +1159,7 @@ class Parser:
 
         self.consume_newlines()
 
-        stmts = self.block(TokenKind.ENDPROCEDURE)
+        stmts = self.block_until(TokenKind.ENDPROCEDURE)
 
         self.consume()
 
@@ -1224,7 +1224,7 @@ class Parser:
 
         self.consume_newlines()
 
-        stmts = self.block(TokenKind.ENDFUNCTION)
+        stmts = self.block_until(TokenKind.ENDFUNCTION)
         self.consume()
 
         return FunctionStatement(
@@ -1242,7 +1242,7 @@ class Parser:
             return
 
         self.clean_newlines()
-        stmts = self.block(TokenKind.ENDSCOPE)
+        stmts = self.block_until(TokenKind.ENDSCOPE)
         self.consume()
 
         return ScopeStatement(begin.pos, stmts)
@@ -1263,6 +1263,8 @@ class Parser:
                 name.pos,
             )
 
+        self.expect_newline("INCLUDE")
+
         return IncludeStatement(include.pos, str(name.data), ffi=ffi)  # type: ignore
 
     def trace_stmt(self) -> Statement | None:
@@ -1270,24 +1272,23 @@ class Parser:
         if not begin:
             return
 
-        self.consume_and_expect(TokenKind.LEFT_PAREN, "after TRACE keyword")
+        vars = []
+        if self.check_and_consume(TokenKind.LEFT_PAREN):
+            while not self.check(TokenKind.RIGHT_PAREN):
+                ident = self.ident("in variable list in TRACE statement")
 
-        vars = list()
-        while not self.check(TokenKind.RIGHT_PAREN):
-            ident = self.ident("in variable list in TRACE statement")
+                vars.append(ident.ident)  # type: ignore
 
-            vars.append(ident.ident)  # type: ignore
+                if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
+                    raise BCError(
+                        "expected comma after procedure argument list", self.pos()
+                    )
+                elif self.check(TokenKind.COMMA):
+                    self.consume()
 
-            if not self.check_many(TokenKind.COMMA, TokenKind.RIGHT_PAREN):
-                raise BCError(
-                    "expected comma after procedure argument list", self.pos()
-                )
-            elif self.check(TokenKind.COMMA):
-                self.consume()
-
-        self.consume_and_expect(
-            TokenKind.RIGHT_PAREN, "after variable list in TRACE statement"
-        )
+            self.consume_and_expect(
+                TokenKind.RIGHT_PAREN, "after variable list in TRACE statement"
+            )
 
         file_name: str | None = None
         if self.check_and_consume(TokenKind.TO):
@@ -1309,7 +1310,7 @@ class Parser:
             file_name = val.get_string()
 
         self.consume_newlines()
-        block = self.block(TokenKind.ENDTRACE)
+        block = self.block_until(TokenKind.ENDTRACE)
         self.consume()  # byebye ENDTRACE
 
         return TraceStatement(begin.pos, vars, file_name, block)
@@ -1409,24 +1410,6 @@ class Parser:
 
         return WritefileStatement(begin.pos, fileid, val)
 
-    def appendfile_stmt(self) -> Statement | None:
-        begin = self.check_and_consume(TokenKind.APPENDFILE)
-        if not begin:
-            return
-
-        fileid: Expr | str = self._file_id("APPENDFILE")
-
-        self.consume_and_expect(TokenKind.COMMA)
-
-        val = self.expr()
-        if not val:
-            raise BCError(
-                "invalid or no expression after comma in APPENDFILE statement",
-                self.pos(),
-            )
-
-        return AppendfileStatement(begin.pos, fileid, val)
-
     def closefile_stmt(self) -> Statement | None:
         begin = self.check_and_consume(TokenKind.CLOSEFILE)
         if not begin:
@@ -1436,14 +1419,21 @@ class Parser:
 
         return ClosefileStatement(begin.pos, fileid)
 
-    def clean_newlines(self):
+    def clean_newlines(self) -> tuple[bool, Pos]:
+        cleaned = False
+        last_pos = Pos(0, 0, 0)
         while self.cur < len(self.tokens):
             if not self.check(TokenKind.NEWLINE):
                 break
-            self.consume()
+            if not cleaned:
+                cleaned = True
+            last_pos = self.consume().pos
+        return (cleaned, last_pos)
 
     def stmt(self) -> Statement | None:
-        self.clean_newlines()
+        if self.check(TokenKind.COMMENT):
+            c = self.consume()
+            return CommentStatement(c.pos, c.data)  # type: ignore
 
         constant = self.constant_stmt()
         if constant:
@@ -1493,10 +1483,6 @@ class Parser:
         if writefile:
             return writefile
 
-        appendfile = self.appendfile_stmt()
-        if appendfile:
-            return appendfile
-
         closefile = self.closefile_stmt()
         if closefile:
             return closefile
@@ -1536,7 +1522,10 @@ class Parser:
         cur = self.peek()
         expr = self.expr()
         if expr:
-            return ExprStatement.from_expr(expr)
+            exp = ExprStatement.from_expr(expr)
+            if self.check(TokenKind.NEWLINE):
+                self.consume_and_expect(TokenKind.NEWLINE)
+            return exp
         else:
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
             if cur.kind == TokenKind.NEXT:
@@ -1551,11 +1540,17 @@ class Parser:
             else:
                 raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
 
-    def scan_one_statement(self) -> Statement | None:
+    def statement(self) -> Statement | None:
+        if self.preserve_trivia:
+            (cleaned, nlpos) = self.clean_newlines()
+            if cleaned:
+                return NewlineStatement(nlpos)
+
         s = self.stmt()
 
         if s:
-            self.clean_newlines()
+            if not self.preserve_trivia:
+                self.clean_newlines()
             return s
         else:
             if self.cur >= len(self.tokens):
@@ -1567,19 +1562,28 @@ class Parser:
     def reset(self):
         self.cur = 0
 
-    def program(self) -> Program:
+    # trivia: comments, newlines
+    # XXX: by trivia we just mean if newlines had to be cleaned (aka at least one blank NL)
+    # and comments. We do not build a CST
+    def block(self) -> list[Statement]:
         stmts = []
 
         while self.cur < len(self.tokens):
-            self.clean_newlines()
+            (cleaned, nlpos) = self.clean_newlines()
+            if cleaned and self.preserve_trivia:
+                stmts.append(NewlineStatement(nlpos))
+
             if self.cur >= len(self.tokens):
                 break
 
-            stmt = self.scan_one_statement()
+            stmt = self.statement()
             if not stmt:  # this has to be an EOF
                 continue
             stmts.append(stmt)
 
         self.cur = 0
+        return stmts
 
+    def program(self) -> Program:
+        stmts = self.block()
         return Program(stmts=stmts)

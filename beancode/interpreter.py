@@ -655,11 +655,11 @@ class Interpreter:
                     return BCValue.new_real(math.tan(val.get_real()))
                 case "execute":
                     [cmd, *_] = evargs
-                    out = str()
+
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
                     except Exception as e:
-                        pass
+                        out = f"Error: {e}"
 
                     return BCValue.new_string(str(out))
                 case "putchar":
@@ -1135,11 +1135,9 @@ class Interpreter:
                 self.tracer_outputs.append(res)  # type: ignore
 
         if self.tracer and self.tracer.config.show_outputs:
-            print("(tracer output): " + res)
-            sys.stdout.flush()
+            print("(tracer output): " + res, flush=True)
         elif not self.tracer:
-            print(res, end=("\n" if stmt.newline else ""))
-            sys.stdout.flush()
+            print(res, end=("\n" if stmt.newline else ""), flush=True)
 
     def _guess_input_type(self, inp: str) -> BCValue:
         if is_real(inp):
@@ -1367,6 +1365,9 @@ class Interpreter:
         value: BCValue = self.visit_expr(stmt.expr)
 
         for branch in stmt.branches:
+            if not isinstance(branch, CaseofBranch):
+                continue
+
             rhs = self.visit_expr(branch.expr)
             if value == rhs:
                 self.visit_stmt(branch.stmt)
@@ -1496,8 +1497,7 @@ class Interpreter:
 
             intp.trace(stmt.end_pos.row, loop_trace=True)
 
-            # FIXME: barbaric
-            intp.variables = self.variables.copy()
+            intp.variables = dict(self.variables)
             if intp._returned:
                 proc, func = self.can_return()
 
@@ -1575,7 +1575,7 @@ class Interpreter:
                         s.pos,
                     )
 
-                target = Variable(val, False, export=False)
+                target = Variable(val.copy(), False, export=False)
                 self.variables[key] = target
 
             if self.variables[key].const:
@@ -1604,8 +1604,8 @@ class Interpreter:
                 )
             else:
                 val = BCValue(
-                    BCPrimitiveType.REAL, value=float(val.val), is_array=False # type: ignore
-               )
+                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
+                )
 
         target.replace_inner(val.copy())
 
@@ -1762,9 +1762,6 @@ class Interpreter:
                 self.variables[key] = Variable(
                     BCValue(kind=s.typ), False, export=s.export
                 )
-                if s.expr is not None:
-                    expr = self.visit_expr(s.expr)
-                    self.variables[key].val = expr
         self.trace(s.pos.row)
 
     def visit_trace_stmt(self, stmt: TraceStatement):
@@ -1869,16 +1866,6 @@ class Interpreter:
         file.stream.write(contents)
         self.file_callbacks.write(contents)
 
-    def visit_appendfile_stmt(self, stmt: AppendfileStatement):
-        _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
-
-        if not file.mode[2]:
-            self.error("file not open for appending!", stmt.pos)
-
-        contents = str(self.visit_expr(stmt.src))
-        file.stream.write(contents)
-        self.file_callbacks.append(contents)
-
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
@@ -1927,12 +1914,11 @@ class Interpreter:
                 self.visit_readfile_stmt(stmt)
             case WritefileStatement():
                 self.visit_writefile_stmt(stmt)
-            case AppendfileStatement():
-                self.visit_appendfile_stmt(stmt)
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 self.visit_expr(stmt.inner)
+            # ignore newline statement if ever given
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block

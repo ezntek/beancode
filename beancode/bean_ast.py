@@ -46,46 +46,46 @@ class TokenKind(IntEnum):
     CLOSEFILE = 35
     READ = 36
     WRITE = 37
-    APPENDFILE = 38
-    APPEND = 39
-    INCLUDE = 40
-    INCLUDE_FFI = 41
-    EXPORT = 42
-    SCOPE = 43
-    ENDSCOPE = 44
-    PRINT = 45
-    TRACE = 46
-    ENDTRACE = 47
-    ASSIGN = 48
-    EQUAL = 49
-    LESS_THAN = 50
-    GREATER_THAN = 51
-    LESS_THAN_OR_EQUAL = 52
-    GREATER_THAN_OR_EQUAL = 53
-    NOT_EQUAL = 54
-    MUL = 55
-    DIV = 56
-    ADD = 57
-    SUB = 58
-    POW = 59
-    LEFT_PAREN = 60
-    RIGHT_PAREN = 61
-    LEFT_BRACKET = 62
-    RIGHT_BRACKET = 63
-    LEFT_CURLY = 64
-    RIGHT_CURLY = 65
-    COLON = 66
-    COMMA = 67
-    DOT = 68
-    NEWLINE = 69
-    LITERAL_STRING = 70
-    LITERAL_CHAR = 71
-    LITERAL_NUMBER = 72
-    TRUE = 73
-    FALSE = 74
-    NULL = 75
-    IDENT = 76
-    TYPE = 77
+    APPEND = 38
+    INCLUDE = 39
+    INCLUDE_FFI = 40
+    EXPORT = 41
+    SCOPE = 42
+    ENDSCOPE = 43
+    PRINT = 44
+    TRACE = 45
+    ENDTRACE = 46
+    ASSIGN = 47
+    EQUAL = 48
+    LESS_THAN = 49
+    GREATER_THAN = 50
+    LESS_THAN_OR_EQUAL = 51
+    GREATER_THAN_OR_EQUAL = 52
+    NOT_EQUAL = 53
+    MUL = 54
+    DIV = 55
+    ADD = 56
+    SUB = 57
+    POW = 58
+    LEFT_PAREN = 59
+    RIGHT_PAREN = 60
+    LEFT_BRACKET = 61
+    RIGHT_BRACKET = 62
+    LEFT_CURLY = 63
+    RIGHT_CURLY = 64
+    COLON = 65
+    COMMA = 66
+    DOT = 67
+    NEWLINE = 68
+    LITERAL_STRING = 69
+    LITERAL_CHAR = 70
+    LITERAL_NUMBER = 71
+    TRUE = 72
+    FALSE = 73
+    NULL = 74
+    IDENT = 75
+    TYPE = 76
+    COMMENT = 77
 
     @classmethod
     def from_str_or_none(cls, s: str):
@@ -620,6 +620,27 @@ class Operator(IntEnum):
     def __str__(self) -> str:
         return self.__repr__()
 
+    def as_symbol(self) -> str:
+        return {
+            Operator.ASSIGN: "<-",
+            Operator.EQUAL: "=",
+            Operator.LESS_THAN: "<",
+            Operator.GREATER_THAN: ">",
+            Operator.LESS_THAN_OR_EQUAL: "<=",
+            Operator.GREATER_THAN_OR_EQUAL: ">=",
+            Operator.NOT_EQUAL: "<>",
+            Operator.MUL: "*",
+            Operator.DIV: "/",
+            Operator.ADD: "+",
+            Operator.SUB: "-",
+            Operator.POW: "^",
+            Operator.AND: "AND",
+            Operator.OR: "OR",
+            Operator.NOT: "NOT",
+            Operator.FLOOR_DIV: "DIV",
+            Operator.MOD: "MOD",
+        }[self]
+
     # should return a verb!
     def humanize(self) -> str:
         match self:
@@ -706,7 +727,6 @@ class DeclareStatement(Statement):
     ident: list[Identifier]
     typ: Type
     export: bool = False
-    expr: Expr | None = None
 
 
 @dataclass(slots=True)
@@ -733,7 +753,8 @@ class CaseofBranch:
 @dataclass(slots=True)
 class CaseofStatement(Statement):
     expr: Expr
-    branches: list[CaseofBranch]
+    # extra possible nodes for a CST for the formatter
+    branches: list["CaseofBranch | NewlineStatement | Comment"]
     otherwise: "Statement | None"
 
 
@@ -820,14 +841,6 @@ class ClosefileStatement(Statement):
     file_ident: Expr | str
 
 
-# extra statements
-@dataclass(slots=True)
-class AppendfileStatement(Statement):
-    # file identifier or path
-    file_ident: Expr | str
-    src: Expr
-
-
 @dataclass(slots=True)
 class ScopeStatement(Statement):
     block: list["Statement"]
@@ -855,6 +868,10 @@ class ExprStatement(Statement):
         return cls(e.pos, e)
 
 
+class NewlineStatement(Statement):
+    pass
+
+
 @dataclass(slots=True)
 class Program:
     stmts: list[Statement]
@@ -879,3 +896,15 @@ class CallStackEntry:
     rtype: Type | None
     func: bool = False
     proc: bool = False
+
+
+@dataclass(slots=True)
+class Comment:
+    data: list[str]
+    multiline: bool = False
+    shebang: bool = False
+
+
+@dataclass(slots=True)
+class CommentStatement(Statement):
+    comment: Comment
