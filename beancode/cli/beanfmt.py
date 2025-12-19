@@ -95,9 +95,8 @@ def _format_many(args, in_path: Path):
 
 def main():
     parser = argparse.ArgumentParser()
-    og = parser.add_mutually_exclusive_group(required=True)
-    og.add_argument("-o", "--output", type=str, help="output path of file")
-    og.add_argument("--stdout", action="store_true", help="print output to stdout")
+    parser.add_argument("-o", "--output", type=str, help="output path of file")
+    parser.add_argument("--stdout", action="store_true", help="print output to stdout")
     parser.add_argument("-O", "--optimize", action="store_true", help="format and optimize code at the same time")
     parser.add_argument(
         "--debug", action="store_true", help="print debugging information"

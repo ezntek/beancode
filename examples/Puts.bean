@@ -1,12 +1,12 @@
 // with the nonstandard library routine putchar, we can implement a basic C-like puts.
+PROCEDURE puts(txt: STRING)
+    DECLARE cur: CHAR
+    FOR i <- 1 TO LENGTH(txt)
+        cur <- SUBSTRING(txt, i, 1)
+        PUTCHAR(cur)
+    NEXT i
 
-procedure puts(txt: string)
-    declare cur: char
-    for i <- 1 to length(txt)
-        cur <- substring(txt, i, 1)
-        putchar(cur)
-    next i
-    putchar('\n')
-endprocedure
+    PUTCHAR('\n')
+ENDPROCEDURE
 
-call puts("hello, world!")
+CALL puts("hello, world!")

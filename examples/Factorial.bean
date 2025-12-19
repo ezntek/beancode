@@ -1,9 +1,10 @@
-function factorial(num: integer) returns integer
-    if num <= 1 then
-        return 1
-    else
-        return num * factorial(num - 1)
-    endif
-endfunction
+FUNCTION factorial(num: INTEGER) RETURNS INTEGER
+    IF num <= 1
+      THEN
+        RETURN 1
+      ELSE
+        RETURN num * factorial(num - 1)
+    ENDIF
+ENDFUNCTION
 
-output factorial(5)
+OUTPUT factorial(5)

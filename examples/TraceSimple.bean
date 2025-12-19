@@ -1,4 +1,4 @@
-PROCEDURE Simple()
+PROCEDURE Simple
     DECLARE Num: INTEGER
     DECLARE Done: BOOLEAN
 

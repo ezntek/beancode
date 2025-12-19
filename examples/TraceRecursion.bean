@@ -3,10 +3,11 @@ FUNCTION Factorial(Num: INTEGER) RETURNS INTEGER
     DECLARE Result: INTEGER
 
     BaseCase <- (Num = 1)
-    IF BaseCase THEN
+    IF BaseCase
+      THEN
         Result <- 1
         RETURN Result
-    ELSE
+      ELSE
         Result <- Num * Factorial(Num - 1)
         RETURN Result
     ENDIF

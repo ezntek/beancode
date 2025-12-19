@@ -1,5 +1,4 @@
 // you can typecast variables as follows:
-
 DECLARE Age: STRING
 Age <- STRING("16")
 
@@ -11,5 +10,5 @@ INPUT Price
 // calculate a discount
 DECLARE PriceDiscount: REAL
 PriceDiscount <- REAL(Price)
-PriceDiscount <- PriceDiscount * (9/10)
+PriceDiscount <- PriceDiscount * (9 / 10)
 OUTPUT "The price after a 90% discount is, ", ROUND(PriceDiscount, 2)

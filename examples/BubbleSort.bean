@@ -1,18 +1,19 @@
-PROCEDURE BubbleSort(Array: ARRAY[1:End] of INTEGER, End: INTEGER)
+PROCEDURE BubbleSort(Array: ARRAY[1:End] OF INTEGER, End: INTEGER)
     DECLARE Temp: INTEGER
 
     FOR i <- 1 TO End - 1
         FOR j <- 1 TO End - i
-            IF Array[j] > Array[j+1] THEN
+            IF Array[j] > Array[j + 1]
+              THEN
                 Temp <- Array[j]
-                Array[j] <- Array[j+1]
-                Array[j+1] <- Temp
+                Array[j] <- Array[j + 1]
+                Array[j + 1] <- Temp
             ENDIF
         NEXT j
     NEXT i
 ENDPROCEDURE
 
-PROCEDURE PrintArray(Array: ARRAY[1:End] of INTEGER, End: INTEGER)
+PROCEDURE PrintArray(Array: ARRAY[1:End] OF INTEGER, End: INTEGER)
     DECLARE Temp: STRING
     Temp <- ""
     FOR i <- 1 TO End
@@ -22,10 +23,11 @@ PROCEDURE PrintArray(Array: ARRAY[1:End] of INTEGER, End: INTEGER)
             Temp <- Temp + ", "
         ENDIF
     NEXT i
+
     OUTPUT Temp
 ENDPROCEDURE
 
-DECLARE Nums: ARRAY[1:10] of INTEGER
+DECLARE Nums: ARRAY[1:10] OF INTEGER
 Nums[1] <- 8
 Nums[2] <- 9
 Nums[3] <- 7
@@ -39,9 +41,6 @@ Nums[10] <- 1
 
 OUTPUT "Before Sorting: "
 CALL PrintArray(Nums, 10)
-
 CALL BubbleSort(Nums, 10)
-
 OUTPUT "After Sorting: "
 CALL PrintArray(Nums, 10)
-

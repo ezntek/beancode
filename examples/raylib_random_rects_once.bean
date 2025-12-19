@@ -1,4 +1,4 @@
-include_ffi "beanray"
+INCLUDE_FFI "beanray"
 
 CONSTANT MaxRect <- 400
 CONSTANT WinWidth <- 800
@@ -21,7 +21,7 @@ FUNCTION RandomBetween(Low: INTEGER, High: INTEGER) RETURNS INTEGER
     RETURN Result
 ENDFUNCTION
 
-PROCEDURE DisplayRects()
+PROCEDURE DisplayRects
     DECLARE Color: ARRAY[1:4] OF INTEGER
     FOR Counter <- 1 TO LastId
         Color[1] <- RectC[Counter,1]
@@ -32,18 +32,17 @@ PROCEDURE DisplayRects()
     NEXT Counter
 ENDPROCEDURE
 
-PROCEDURE GenerateRect()
+PROCEDURE GenerateRect
     RectX[LastId] <- RandomBetween(0, WinWidth)
     RectY[LastId] <- RandomBetween(0, WinHeight)
     RectW[LastId] <- BaseSize + RandomBetween(0, SizeVar)
     RectH[LastId] <- BaseSize + RandomBetween(0, SizeVar)
     RectC[LastId,1] <- RandomBetween(0, 255)
-    RectC[LastId,2] <- RandomBetween(0, 255)  
-    RectC[LastId,3] <- RandomBetween(0, 255)  
+    RectC[LastId,2] <- RandomBetween(0, 255)
+    RectC[LastId,3] <- RandomBetween(0, 255)
 ENDPROCEDURE
 
 CALL InitWindow(WinWidth, WinHeight, "Raylib Random Rectangles (Pseudocode)")
-
 DECLARE Break: BOOLEAN
 Break <- FALSE
 WHILE NOT Break AND NOT WindowShouldClose() DO
@@ -53,7 +52,6 @@ WHILE NOT Break AND NOT WindowShouldClose() DO
     CALL DisplayRects
     CALL DrawFPS(20, 20)
     CALL EndDrawing
-    
     LastId <- LastId + 1
     IF LastId > MaxRect
       THEN

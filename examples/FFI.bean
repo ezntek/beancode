@@ -1,7 +1,7 @@
-include_ffi "demo_ffimod"
+INCLUDE_FFI "demo_ffimod"
 
-output Name
-output "Age is ", Age
-call SayHello
-call OneMore(5)
-output "5 + 5 is ", GimmeFive() + 5
+OUTPUT Name
+OUTPUT "Age is ", Age
+CALL SayHello
+CALL OneMore(5)
+OUTPUT "5 + 5 is ", GimmeFive() + 5

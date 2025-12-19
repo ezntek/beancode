@@ -1,17 +1,17 @@
-declare x: integer
-declare y: integer
-declare z: integer
+DECLARE x: INTEGER
+DECLARE y: INTEGER
+DECLARE z: INTEGER
 
-declare nFibs: integer
-output "how many fibs"
-input nFibs
+DECLARE nFibs: INTEGER
+OUTPUT "how many fibs"
+INPUT nFibs
 
 x <- 0
 y <- 1
 
-for i <- 1 to nFibs
+FOR i <- 1 TO nFibs
     z <- x + y
-    output z
+    OUTPUT z
     y <- x
     x <- z
-next i 
+NEXT i

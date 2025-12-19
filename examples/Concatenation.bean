@@ -1,10 +1,10 @@
 // string concatenation demo
-declare s: string
+DECLARE s: STRING
 
 s <- "Hallo, Welt"
-output s + '.'
+OUTPUT s + '.'
 
-declare phrase: string
+DECLARE phrase: STRING
 phrase <- "I like"
 phrase <- phrase + " tea"
-output phrase
+OUTPUT phrase

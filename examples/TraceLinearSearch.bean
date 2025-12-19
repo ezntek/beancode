@@ -1,4 +1,4 @@
-TRACE (Array, Found, Target, Counter) TO "linear_search.html"
+TRACE(Array, Found, Target, Counter) TO "linear_search.html"
     DECLARE Found: BOOLEAN
     DECLARE Array: ARRAY[1:10] OF INTEGER
     DECLARE Target, Counter: INTEGER
@@ -14,6 +14,7 @@ TRACE (Array, Found, Target, Counter) TO "linear_search.html"
           THEN
             Found <- TRUE
         ENDIF
+
         Counter <- Counter + 1
     UNTIL Counter > 10 OR Found
 
