@@ -3,18 +3,8 @@ from .bean_ast import *
 from .libroutines import *
 
 
-@dataclass
-class OptimizerConfig:
-    inline_constants = True
-    fold_constant_expressions = True
-    simplify_math = True
-    inline_library_routines = True  # TODO: implement
-    inline_functions = True  # TODO: implement
-
-
 class Optimizer:
     # TODO: use
-    config: OptimizerConfig
     constants: list[dict[str, BCValue]]
     ignore_constants: list[list[str]]
     block: list[Statement]
@@ -22,17 +12,13 @@ class Optimizer:
     cur_stmt: int
     active_constants: set[str]
 
-    def __init__(self, block: list[Statement], config: OptimizerConfig | None = None):
+    def __init__(self, block: list[Statement]):
         self.block = block
         self.constants = list()
         self.unwanted_items = list()
         self.active_constants = set()
         self.ignore_constants = list()
         self.cur_stmt = 0
-        if config:
-            self.config = config
-        else:
-            self.config = OptimizerConfig()
 
     def _update_active_constants(self):
         self.active_constants = self.active_constants.union(

@@ -4,6 +4,8 @@ import sys
 import argparse
 from typing import NoReturn
 
+from beancode.optimizer import Optimizer
+
 from .repl import Repl
 
 from .interpreter import Interpreter
@@ -25,6 +27,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "-N", "--no-run", action="store_true", help="only print the program's AST"
+    )
+    parser.add_argument(
+        "-O",
+        "--optimize",
+        action="store_true",
+        help="optimize the program before running",
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"beancode version {__version__}"
@@ -102,6 +110,14 @@ def real_main(args: argparse.Namespace):
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)
+
+    if args.optimize:
+        try:
+            opt = Optimizer(program.stmts)
+            program.stmts = opt.visit_block(None)
+        except BCError as err:
+            err.print(args.file, file_content)
+            exit(1)
 
     if args.debug:
         print("=== AST ===", file=sys.stderr)
