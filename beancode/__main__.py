@@ -7,7 +7,7 @@ from typing import NoReturn
 from .repl import Repl
 
 from .interpreter import Interpreter
-from.lexer import *
+from .lexer import *
 from .parser import Parser
 from .error import *
 from . import __version__

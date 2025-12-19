@@ -164,13 +164,13 @@ class Lexer:
             self.cur_comment_pos = self.pos_here(2)
             multiline = True
             self.cur += 2
-            
+
             buf = []
             cur_begin = self.cur
             while self.in_bounds() and self.src[self.cur : self.cur + 2] != "*/":
                 if self.preserve_comments:
-                    if self.get_cur() == '\n':
-                        s = self.src[cur_begin:self.cur]
+                    if self.get_cur() == "\n":
+                        s = self.src[cur_begin : self.cur]
                         buf.append(s)
                         self.cur += 1
                         cur_begin = self.cur
@@ -191,7 +191,10 @@ class Lexer:
             shebang = False
             if pair == "#!":
                 if self.found_shebang:
-                    raise BCError("cannot have more than one shebang in one source file!", self.pos_here(2))
+                    raise BCError(
+                        "cannot have more than one shebang in one source file!",
+                        self.pos_here(2),
+                    )
                 self.found_shebang = True
                 shebang = True
 
@@ -199,7 +202,7 @@ class Lexer:
             begin = self.cur
             while self.in_bounds() and self.get_cur() != "\n":
                 self.cur += 1
-            data = [self.src[begin:self.cur]]
+            data = [self.src[begin : self.cur]]
             self.cur_comment = Comment(data, multiline=False, shebang=shebang)
 
         self.trim_spaces()
@@ -423,7 +426,7 @@ class Lexer:
             return
 
         if self.cur_comment and self.preserve_comments:
-            t = Token(TokenKind.COMMENT, self.cur_comment_pos, self.cur_comment) # type: ignore
+            t = Token(TokenKind.COMMENT, self.cur_comment_pos, self.cur_comment)  # type: ignore
             self.cur_comment = None
             self.cur_comment_pos = None
             return t

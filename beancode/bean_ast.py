@@ -639,7 +639,7 @@ class Operator(IntEnum):
             Operator.NOT: "NOT",
             Operator.FLOOR_DIV: "DIV",
             Operator.MOD: "MOD",
-        }[self] 
+        }[self]
 
     # should return a verb!
     def humanize(self) -> str:
@@ -867,6 +867,7 @@ class ExprStatement(Statement):
     def from_expr(cls, e: Expr) -> "ExprStatement":
         return cls(e.pos, e)
 
+
 class NewlineStatement(Statement):
     pass
 
@@ -896,11 +897,13 @@ class CallStackEntry:
     func: bool = False
     proc: bool = False
 
+
 @dataclass(slots=True)
 class Comment:
     data: list[str]
     multiline: bool = False
     shebang: bool = False
+
 
 @dataclass(slots=True)
 class CommentStatement(Statement):

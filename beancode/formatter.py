@@ -1,6 +1,7 @@
 from beancode.libroutines import LIBROUTINES
 from .bean_ast import *
 
+
 def _reverse_escape_code(ch: str) -> str:
     match ch:
         case "\n":
@@ -24,15 +25,16 @@ def _reverse_escape_code(ch: str) -> str:
         case _:
             return ch
 
+
 class Formatter:
     block: list[Statement]
-    buf: list[str] # our string builder
-    indent: int # number of spaces to indent by
+    buf: list[str]  # our string builder
+    indent: int  # number of spaces to indent by
     end: int
     skip_newline: bool
 
     def __init__(self, block: list[Statement], indent=4):
-        self.indent = indent 
+        self.indent = indent
         self.buf = []
         self.block = block
         self.end = 0
@@ -51,9 +53,9 @@ class Formatter:
             self.visit_expr(bounds[1])
             if typ.is_matrix():
                 self.write(",")
-                self.visit_expr(bounds[2]) # type: ignore
+                self.visit_expr(bounds[2])  # type: ignore
                 self.write(":")
-                self.visit_expr(bounds[3]) # type: ignore
+                self.visit_expr(bounds[3])  # type: ignore
             self.write(f"] OF {typ.inner}")
         else:
             self.write(str(typ).upper())
@@ -175,7 +177,7 @@ class Formatter:
         self.write("IF ")
         self.visit_expr(stmt.cond)
         self.write("\n")
-        self.reduce_from(saved_end) # create one line
+        self.reduce_from(saved_end)  # create one line
         s = " " * (self.indent // 2)
         self.write(f"{s}THEN\n")
         self.write_block(stmt.if_block)
@@ -382,7 +384,7 @@ class Formatter:
                     self.write(", ")
             self.write(")")
         if stmt.file_name:
-            self.write(f" TO \"{stmt.file_name}\"")
+            self.write(f' TO "{stmt.file_name}"')
         self.write("\n")
         self.reduce_from(saved_end)
         self.write_block(stmt.block)
@@ -424,7 +426,6 @@ class Formatter:
                 self.write(" AND ")
             self.write("APPEND")
 
-
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
         self.write("READFILE ")
         self.visit_fileid(stmt.file_ident)
@@ -446,7 +447,7 @@ class Formatter:
             buf = "//"
             if com.data:
                 s = com.data[0]
-                if s and s[0] != ' ':
+                if s and s[0] != " ":
                     buf += " "
                 buf += s
             self.write(buf)
@@ -457,20 +458,20 @@ class Formatter:
             new = line
             if i == 0:
                 buf += "/*"
-            elif line.lstrip()[:1] != '*':
+            elif line.lstrip()[:1] != "*":
                 buf += " *"
             else:
                 i = line.rfind("*")
-                new = line[i+1:]
+                new = line[i + 1 :]
                 buf += " *"
             if line:
-                if line[0] != ' ':
+                if line[0] != " ":
                     buf += " "
                 buf += new
             self.write(buf + "\n")
             buf = ""
         self.write(" */")
- 
+
     def visit_stmt(self, stmt: Statement, next=None, raw=False) -> bool:
         if not raw:
             saved_end = self.end
@@ -539,13 +540,17 @@ class Formatter:
         if not raw:
             rv = False
 
-            if isinstance(next, CommentStatement) and not next.comment.multiline and next.pos.row == stmt.pos.row:
+            if (
+                isinstance(next, CommentStatement)
+                and not next.comment.multiline
+                and next.pos.row == stmt.pos.row
+            ):
                 self.write(" ")
                 self.visit_comment(next.comment)
                 rv = True
 
             self.write("\n")
-            self.reduce_from(saved_end) # type: ignore
+            self.reduce_from(saved_end)  # type: ignore
             return rv
 
         return False
@@ -556,10 +561,10 @@ class Formatter:
         # active buffer in the formatter before we visit the block. after the fact,
         # we replace the previous buffer and return the new one ;)
         saved_end = self.end
-        saved_buf = self.buf # pointer copy, to not lose it forever
+        saved_buf = self.buf  # pointer copy, to not lose it forever
         # create the new array
         new_buf = []
-        self.buf = new_buf # spoof-o-matic
+        self.buf = new_buf  # spoof-o-matic
         blk = block if block != None else self.block
         skip = False
         self.end = 0

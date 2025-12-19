@@ -723,7 +723,7 @@ class Parser:
             raise BCError(
                 "invalid or no expression used as RETURN expression", begin.pos
             )
-        
+
         self.expect_newline("RETURN")
 
         return ReturnStatement(begin.pos, expr)
@@ -763,7 +763,7 @@ class Parser:
             self.consume_and_expect(
                 TokenKind.RIGHT_PAREN, "after arg list in procedure call"
             )
-        
+
         self.expect_newline("CALL")
 
         self.consume_newlines()
@@ -963,7 +963,7 @@ class Parser:
                     continue
 
                 if self.check(TokenKind.COMMENT):
-                    branches.append(self.consume().data) # type: ignore
+                    branches.append(self.consume().data)  # type: ignore
                     continue
 
             is_otherwise = self.check(TokenKind.OTHERWISE)
@@ -989,7 +989,7 @@ class Parser:
             (consumed, nlpos) = self.clean_newlines()
             if consumed and self.preserve_trivia:
                 branches.append(NewlineStatement(nlpos))
-                
+
             if not stmt:
                 raise BCError("expected statement for case of branch block")
 
@@ -1419,7 +1419,7 @@ class Parser:
 
     def clean_newlines(self) -> tuple[bool, Pos]:
         cleaned = False
-        last_pos = Pos(0, 0, 0) 
+        last_pos = Pos(0, 0, 0)
         while self.cur < len(self.tokens):
             if not self.check(TokenKind.NEWLINE):
                 break
@@ -1431,7 +1431,7 @@ class Parser:
     def stmt(self) -> Statement | None:
         if self.check(TokenKind.COMMENT):
             c = self.consume()
-            return CommentStatement(c.pos, c.data) # type: ignore
+            return CommentStatement(c.pos, c.data)  # type: ignore
 
         constant = self.constant_stmt()
         if constant:
@@ -1539,7 +1539,7 @@ class Parser:
                 raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
 
     def statement(self) -> Statement | None:
-        if self.preserve_trivia: 
+        if self.preserve_trivia:
             (cleaned, nlpos) = self.clean_newlines()
             if cleaned:
                 return NewlineStatement(nlpos)

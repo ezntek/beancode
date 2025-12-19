@@ -17,6 +17,7 @@ def _error(s: str) -> NoReturn:
     error(s)
     sys.exit(1)
 
+
 def format_file(args, name: str, file_content: str, file=sys.stdout):
     lexer = Lexer(file_content, preserve_comments=True)
 
@@ -58,12 +59,14 @@ def format_file(args, name: str, file_content: str, file=sys.stdout):
 
     file.write(res)
 
+
 def format_in_place(args, src: str, path: str, f):
     out = StringIO()
     format_file(args, path, src, file=out)
     f.truncate(0)
     f.write(out.getvalue())
     print(f"Formatted {path}", file=sys.stderr)
+
 
 def format_one(args, in_path: Path, out_path: Path | None, stdout=False):
     src = in_path.read_text()
@@ -77,23 +80,19 @@ def format_one(args, in_path: Path, out_path: Path | None, stdout=False):
         with in_path.open(mode="r+") as f:
             format_in_place(args, src, str(in_path), f)
 
+
 def format_many(args, in_path: Path):
     for file in in_path.iterdir():
         with file.open(mode="r+") as f:
             format_in_place(args, file.read_text(), str(file), f)
 
+
 def main():
     parser = argparse.ArgumentParser()
     og = parser.add_mutually_exclusive_group(required=True)
-    og.add_argument(
-        "-o", "--output", type=str, help="output path of file"
-    )
-    og.add_argument(
-        "--stdout", action="store_true", help="print output to stdout"
-    )
-    og.add_argument(
-        "--in-place", action="store_true", help="format in place"
-    )
+    og.add_argument("-o", "--output", type=str, help="output path of file")
+    og.add_argument("--stdout", action="store_true", help="print output to stdout")
+    og.add_argument("--in-place", action="store_true", help="format in place")
     parser.add_argument(
         "--debug", action="store_true", help="print debugging information"
     )
@@ -123,6 +122,7 @@ def main():
                 _error("you must pass --in-place to format a directory!")
 
         format_one(args, in_path, out_path, stdout)
+
 
 if __name__ == "__main__":
     main()
