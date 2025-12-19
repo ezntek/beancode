@@ -57,15 +57,28 @@ Either way, it is still recommended to use `pipx`, as all the hard work of isola
 
 If you installed it globally:
 
-`beancode file.bean`
+```
+beancode file.bean
+```
 
 If you wish to run it in the project directory:
 
-`./main.py file.bean`
+```
+./main.py file.bean
+```
 
 or
 
-`python -m beancode.cli.beancode file.bean`
+```
+python -m beancode.cli.beancode file.bean
+```
+
+To optimize your source file before actually executing it, pass `--optimize` or `-O` into the program, like so:
+
+```
+beancode --optimize mybigscript.bean
+beancode -O mybigscript.bean
+```
 
 There is also a formatter available, go to [this section](#formatter) for details.
 
@@ -74,13 +87,13 @@ There is also a formatter available, go to [this section](#formatter) for detail
 The REPL (or Read-Eval-Print-Loop) allows you to write beancode directly in your terminal. Run beancode (with the above instructions) without any arguments (i.e. just the command), and you will be dropped into this prompt:
 
 ```
-=== welcome to beancode 0.6.0 ==
+=== welcome to beancode 0.7.0 ==
 Using Python 3.13.7 (main, Sep  9 2025, 16:20:24) [GCC 15.2.1 20250813]
 type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
 >> 
 ```
 
-You can immediately begin typing Pseudocode, and all errors will be reported to you. If you want to run a beancode script, you can just `INCLUDE "MyScript.bean"` to execute it, and then immediately return to the REPL. You can also type `.runfile myscript.bean`
+You can immediately begin typing Pseudocode, and all errors will be reported to you. If you want to run a beancode script, you can just `INCLUDE "MyScript.bean"` to execute it, and then immediately return to the REPL. You can also type `.runfile myscript.bean` to do the same thing.
 
 You can also start typing dot-commands, which do not control the beancode interpreter, but controls the wrapper around it that provides you with REPL functionality. You can see the list of commands with `.help`, and detailed help is listed below:
 
