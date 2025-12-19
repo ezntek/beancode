@@ -73,8 +73,8 @@ class Formatter:
             self.write(expr.op.as_symbol())
             self.write("(")
             self.visit_expr(expr.lhs)
-            self.write(",")
-            self.visit_expr(expr.lhs)
+            self.write(", ")
+            self.visit_expr(expr.rhs)
             self.write(")")
         else:
             self.visit_expr(expr.lhs)

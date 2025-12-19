@@ -116,7 +116,7 @@ def main():
 
     if in_path.is_dir():
         _format_many(args, in_path)
-    elif not args.output:
+    elif not (args.output or args.stdout):
         _format_one(args, in_path, None)
     else:
         stdout = False

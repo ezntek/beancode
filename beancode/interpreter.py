@@ -364,12 +364,7 @@ class Interpreter:
                 if rhs.val == 0:
                     self.error("cannot divide by zero!", expr.rhs.pos)
 
-                res = lhs.val / rhs.val  # type: ignore
-                return (
-                    BCValue(BCPrimitiveType.INTEGER, res)
-                    if type(res) is int
-                    else BCValue(BCPrimitiveType.REAL, res)
-                )
+                return BCValue(BCPrimitiveType.REAL, lhs.val / rhs.val) # type: ignore
             case Operator.ADD:
                 if (
                     lhs.kind == BCPrimitiveType.BOOLEAN
