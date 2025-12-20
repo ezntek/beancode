@@ -281,7 +281,11 @@ class Formatter:
         self.reduce_from(saved_end)
 
     def visit_output_stmt(self, stmt: OutputStatement):
-        self.write("OUTPUT ")
+        if stmt.newline:
+            self.write("OUTPUT ")
+        else:
+            self.write("PRINT ")
+
         if not stmt.items:
             self.write('""')
             return
