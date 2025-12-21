@@ -652,7 +652,7 @@ class Interpreter:
                     [cmd, *_] = evargs
 
                     if sys.platform in {"wasi", "emscripten"}:
-                        raise BCError("EXECUTE is not supported in the web!", stmt.pos)
+                        raise BCError("EXECUTE is not supported in the browser!", stmt.pos)
 
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
@@ -1272,6 +1272,9 @@ class Interpreter:
             self._returned = True
 
     def visit_include_ffi_stmt(self, stmt: IncludeStatement):
+        if sys.platform in {"emscripten", "wasi"}:
+            self.error("INCLUDE_FFI is not supported on the browser!", stmt.pos)
+
         # XXX: this is probably the most scuffed code in existence.
         try:
             mod: Exports = importlib.import_module(
