@@ -138,7 +138,7 @@ class Lexer:
 
     def is_operator_start(self, ch: str) -> bool:
         # catch % for error
-        return ch in "%+-*/<>=^←"
+        return ch in "%+-*/<>=^\uf0ac←"
 
     def trim_spaces(self) -> Comment | None:
         if not self.in_bounds():
@@ -258,6 +258,7 @@ class Lexer:
             "-": TokenKind.SUB,
             "^": TokenKind.POW,
             "←": TokenKind.ASSIGN,
+            "\uf0ac": TokenKind.ASSIGN,
         }
 
         kind = TABLE.get(cur)
