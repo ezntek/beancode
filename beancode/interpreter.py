@@ -1545,7 +1545,7 @@ class Interpreter:
             key: str = s.ident.ident  # type: ignore
 
             if s.ident.libroutine:  # type: ignore
-                self.error(f'cannot shadow library routine named "{key}"')
+                self.error(f'cannot shadow library routine named "{key}"', s.pos)
 
             target = self.variables.get(key)
 
