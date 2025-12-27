@@ -1,0 +1,18 @@
+// yes...you can just put the file name without quotes
+OPENFILE file.txt FOR WRITE
+// This is also OK
+WRITEFILE "file.txt", "Hello, world!"
+
+// You can use a variable too
+CONSTANT FileName <- "file.txt"
+WRITEFILE(FileName), "You must use a () if you end up using a variable for your filename!"
+
+CLOSEFILE file.txt
+OPENFILE file.txt FOR READ
+
+// Reading
+DECLARE Contents: STRING
+READFILE(FileName), Contents
+OUTPUT "Wrote: ", Contents
+
+CLOSEFILE file.txt

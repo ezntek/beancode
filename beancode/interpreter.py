@@ -17,7 +17,7 @@ from .tracer import *
 
 def _get_file_mode(read: bool, write: bool, append: bool) -> str | None:
     if read and write:
-        return "r+"
+        return "w+"
     elif append and read:
         return "a+"
     elif read:
@@ -45,9 +45,7 @@ class Interpreter:
     tracer_inputs: list[str] | None = None
     tracer_outputs: list[str] | None = None
     tracer_open = False  # open generated html or not by default
-    # support non-file files (via StringIOs for web frontends)
     files: dict[str, File]
-    file_callbacks: FileCallbacks
 
     def __init__(
         self,
@@ -57,7 +55,6 @@ class Interpreter:
         loop=False,
         tracer=None,
         tracer_open=False,
-        file_callbacks=None,
         toplevel=True,
     ) -> None:
         self.block = block
@@ -68,17 +65,6 @@ class Interpreter:
         self.tracer_open = tracer_open
         self.files = dict()
         self.toplevel = toplevel
-
-        if not file_callbacks:
-            _open = lambda n, m: open(n, m)
-            _close = lambda f: f.close()
-            # dummy callbacks because we don't need to know when the file has changed
-            _write = lambda *_: None
-            _append = lambda *_: None
-            self.file_callbacks = FileCallbacks(_open, _close, _write, _append)
-        else:
-            self.file_callbacks = file_callbacks
-
         self.reset_all()
 
     @classmethod
@@ -95,15 +81,7 @@ class Interpreter:
         intp.variables = self.variables.copy()
         intp.functions = self.functions.copy()
         intp.files = self.files.copy()
-        intp.file_callbacks = self.file_callbacks
         return intp
-
-    def __del__(self):
-        if not self.toplevel:
-            return
-
-        for file in self.files.values():
-            self.file_callbacks.close(file.stream)
 
     def reset(self):
         self.cur_stmt = 0
@@ -121,11 +99,11 @@ class Interpreter:
         self.cur_stmt = 0
 
         for f in self.files.values():
-            self.file_callbacks.close(f.stream)
+            f.stream.close()
 
         self.files = dict()
         for file in self.files.values():
-            self.file_callbacks.close(file.stream)
+            file.stream.close()
 
     def can_return(self) -> tuple[bool, bool]:
         proc = False
@@ -656,10 +634,11 @@ class Interpreter:
 
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
+                        out = out.decode('utf-8')
                     except Exception as e:
-                        out = f"Error: {e}"
+                        raise BCError(f"Error: {e}", stmt.pos)
 
-                    return BCValue.new_string(str(out))
+                    return BCValue.new_string(out)
                 case "putchar":
                     [ch, *_] = evargs
                     bean_putchar(stmt.pos, ch.get_char())
@@ -725,7 +704,6 @@ class Interpreter:
             return self.visit_ffi_fncall(func, stmt)
 
         intp = self.new(func.block, func=True, tracer=tracer)
-        intp.file_callbacks = self.file_callbacks
         intp.files = self.files.copy()
         intp.calls = self.calls.copy()
         intp.calls.append(CallStackEntry(func.name, func.returns, func=True))
@@ -816,7 +794,6 @@ class Interpreter:
 
         intp.functions = self.functions.copy()
         intp.variables = self.variables.copy()
-        intp.file_callbacks = self.file_callbacks
         intp.files = self.files.copy()
         for argdef, argval in zip(proc.args, stmt.args):
             val = self.visit_expr(argval)
@@ -1805,7 +1782,6 @@ class Interpreter:
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
         name = self._get_file_name(stmt.file_ident, stmt.pos)
 
-        stream: Any
         mode = _get_file_mode(*stmt.mode)
         if not mode:
             self.error(
@@ -1815,7 +1791,7 @@ class Interpreter:
             )
 
         try:
-            stream = self.file_callbacks.open(name, mode)
+            self.files[name] = File(stream=open(name, mode), mode=stmt.mode)
         except PermissionError as e:
             self.error(
                 f'not enough permissions to open "{name}"\n'
@@ -1836,7 +1812,7 @@ class Interpreter:
                 stmt.pos,
             )
 
-        self.files[name] = File(stream, stmt.mode)
+        self.files[name] = File(open(name, mode), stmt.mode)
 
     def _get_file_obj(self, fileid: Any, pos: Pos) -> tuple[str, File]:
         name = self._get_file_name(fileid, pos)
@@ -1868,12 +1844,11 @@ class Interpreter:
 
         contents = str(self.visit_expr(stmt.src))
         file.stream.write(contents)
-        self.file_callbacks.write(contents)
 
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         name, file = self._get_file_obj(stmt.file_ident, stmt.pos)
 
-        self.file_callbacks.close(file.stream)
+        file.stream.close()
         self.files.pop(name)
 
     def visit_stmt(self, stmt: Statement):
