@@ -1,5 +1,4 @@
 import os
-from beancode.bean_ast import BCArray
 from beancode.bean_ffi import *
 
 import sys
@@ -37,7 +36,9 @@ def _writeln_err(args: BCArgsList):
 
 def _get_env(args: BCArgsList) -> BCValue:
     s = args["s"].get_string()
-    return BCValue.new_string(os.environ[s])
+    res = os.environ.get(s)
+    res = res if res else ""
+    return BCValue.new_string(res)
 
 
 consts = []
