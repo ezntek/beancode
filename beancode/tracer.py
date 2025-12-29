@@ -57,6 +57,14 @@ class TracerConfig:
 
         return res
 
+    @classmethod
+    def from_dict(cls, cfg: dict[str, str]) -> "TracerConfig":
+        res = cls()
+        for key, val in cfg.items():
+            if key in res.__dict__:
+                setattr(res, key, val)
+        return res
+
     def write_out(self, path: str):
         s = f"""
 TraceEveryLine <- {str(self.trace_every_line).upper()}

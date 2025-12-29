@@ -423,14 +423,15 @@ class Lexer:
 
     def next_token(self) -> Token | None:
         self.trim_spaces()
-        if not self.in_bounds():
-            return
 
         if self.cur_comment and self.preserve_comments:
             t = Token(TokenKind.COMMENT, self.cur_comment_pos, self.cur_comment)  # type: ignore
             self.cur_comment = None
             self.cur_comment_pos = None
             return t
+
+        if not self.in_bounds():
+            return
 
         if self.get_cur() == "\n":
             t = Token(TokenKind.NEWLINE, self.pos_here(1))
