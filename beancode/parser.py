@@ -105,6 +105,10 @@ class Parser:
             return
 
     def consume_and_expect(self, expected: TokenKind, ctx="", help="") -> Token:
+        if expected != TokenKind.COMMENT:
+            while self.check(TokenKind.COMMENT):
+                self.consume()
+
         cons = self.consume()
         if cons.kind != expected:
             s = " " + ctx if ctx else ""
@@ -131,7 +135,7 @@ class Parser:
         return self.prev()
 
     def consume_newlines(self):
-        while self.cur < len(self.tokens) and self.peek().kind == TokenKind.NEWLINE:
+        while self.cur < len(self.tokens) and self.match(TokenKind.NEWLINE):
             self.consume()
 
     def expect_newline(self, s: str):
@@ -380,7 +384,7 @@ class Parser:
     def ident(self, ctx="", function=False) -> Identifier:
         c = self.consume_and_expect(TokenKind.IDENT, ctx=ctx)
         libroutine = False
-        if not function and is_case_consistent(c.data) and c.data in LIBROUTINES:  # type: ignore
+        if not function and is_case_consistent(c.data) and c.data.lower() in LIBROUTINES:  # type: ignore
             libroutine = True
         return Identifier(c.pos, c.data, libroutine=libroutine)  # type: ignore
 
@@ -800,19 +804,14 @@ class Parser:
         if export == True:
             self.consume()
 
-        idents = []
-        ident = self.consume_and_expect(TokenKind.IDENT, "after declare statement")
-        idents.append(Identifier(ident.pos, str(ident.data)))
+        idents = [self.ident("after DECLARE")]
 
         while self.check(TokenKind.COMMA):
             self.consume()  # consume the sep
             if self.check(TokenKind.COLON):
                 break
 
-            ident = self.consume_and_expect(
-                TokenKind.IDENT, "after comma in declare statement"
-            )
-            idents.append(Identifier(ident.pos, str(ident.data)))
+            idents.append(self.ident("after DECLARE"))
 
         colon = self.consume_and_expect(TokenKind.COLON)
         typ = self.typ()
@@ -845,10 +844,8 @@ class Parser:
         if export == True:
             self.consume()
 
-        ident = self.consume_and_expect(TokenKind.IDENT, "after constant declaration")
-        self.consume_and_expect(
-            TokenKind.ASSIGN, "after variable name in constant declaration"
-        )
+        ident = self.ident()
+        self.consume_and_expect(TokenKind.ASSIGN, "after identifier in constant declaration")
 
         expr = self.expr()
         if not expr:
@@ -859,7 +856,7 @@ class Parser:
         self.expect_newline("constant declaration (CONSTANT)")
 
         return ConstantStatement(
-            begin.pos, Identifier(ident.pos, str(ident.data)), expr, export=export
+            begin.pos, ident, expr, export=export
         )
 
     def assign_stmt(self) -> Statement | None:
@@ -917,21 +914,38 @@ class Parser:
         if not cond:
             raise BCError("found invalid or no expression for if condition", self.pos())
 
+        if_stmts = []
+        else_stmts = []
+
         # allow stupid igcse stuff
-        if self.peek().kind == TokenKind.NEWLINE:
+        # FIXME: absolutely horrible code
+        if self.check(TokenKind.NEWLINE):
+            self.clean_newlines()
+
+        while self.check(TokenKind.COMMENT) and self.preserve_trivia:
+            t = self.consume()
+            if_stmts.append(CommentStatement(t.pos, t.data)) # type: ignore
+
+        if self.check(TokenKind.NEWLINE):
             self.clean_newlines()
 
         self.consume_and_expect(TokenKind.THEN, "after if condition")
         self.clean_newlines()
 
-        if_stmts = []
-        else_stmts = []
-
         while not self.check_many(TokenKind.ELSE, TokenKind.ENDIF):
             if_stmts.append(self.statement())
 
         if self.check_and_consume(TokenKind.ELSE):
-            self.clean_newlines()
+            if self.check(TokenKind.NEWLINE):
+                self.clean_newlines()
+
+            while self.check(TokenKind.COMMENT) and self.preserve_trivia:
+                t = self.consume()
+                else_stmts.append(CommentStatement(t.pos, t.data)) # type: ignore
+
+            if self.check(TokenKind.NEWLINE):
+                self.clean_newlines()
+
             else_stmts = self.block_until(TokenKind.ENDIF)
 
         self.consume()  # byebye endif
@@ -1538,7 +1552,7 @@ class Parser:
                     f"cannot end a {end} statement now!\n" + DIDNT_END, cur.pos
                 )
             else:
-                raise BCError(f"unexpected token: {cur.kind.humanize()}", cur.pos)
+                raise BCError(f"unexpected symbol: {cur.kind.humanize()}", cur.pos)
 
     def statement(self) -> Statement | None:
         if self.preserve_trivia:

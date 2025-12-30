@@ -1545,14 +1545,14 @@ class Interpreter:
             key: str = s.ident.ident  # type: ignore
 
             if s.ident.libroutine:  # type: ignore
-                self.error(f'cannot shadow library routine named "{key}"', s.pos)
+                self.error(f'cannot shadow library routine "{key}"', s.pos)
 
             target = self.variables.get(key)
 
             if target is None:
                 if key in self.functions:
                     self.error(
-                        f'cannot shadow existing function or procedure named "{key}"',
+                        f'cannot shadow existing function or procedure "{key}"',
                         s.pos,
                     )
 
@@ -1727,13 +1727,13 @@ class Interpreter:
 
             if ident.libroutine:
                 self.error(
-                    f'cannot shadow existing library routine "{key}" with a variable of the same name',
+                    f'cannot redeclare a library routine "{key}" as a variable!',
                     s.pos,
                 )
 
             if key in self.functions:
                 self.error(
-                    f'cannot shadow existing function or procedure named "{key}" with a variable of the same name',
+                    f'cannot redeclare a function or procedure named "{key}" as a variable!',
                     s.pos,
                 )
 
