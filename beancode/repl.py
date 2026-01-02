@@ -14,9 +14,18 @@ from . import __version__
 
 from enum import IntEnum
 
+def pyver():
+    vi = sys.version_info
+    ver = f"{vi.major}.{vi.minor}.{vi.micro}"
+    impl = sys.implementation
+    res = { "cpython": "CPython", "pypy": "PyPy", "graalpy": "GraalPython", "micropython": "MicroPython" }.get(impl.name)
+    impl = impl if res is None else res
+    return f"{ver} ({impl} on {sys.implementation._multiarch})"
+
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
-\033[2mUsing Python {sys.version}\033[0m
-type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code."""
+\033[2mUsing Python {pyver()}
+Copyright (c) ezntek, 2025-2026. type ".license" for more information.\033[0m
+type ".exit" to quit the REPL, or ".help" for a list of available commands."""
 
 PROMPT = "\001\033[1m\002>> \001\033[0m\002"
 
@@ -39,7 +48,7 @@ HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .exit       exit the interpreter (.quit also works)
 """
 
-LICENSE = """This software is copyright (c) Eason Qin, <eason@ezntek.com>.
+LICENSE = """This software is copyright (c) 2025-2026 Eason Qin <eason@ezntek.com>.
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this

@@ -33,20 +33,8 @@ class BCError(Exception):
             "span": self.pos.span if self.pos else None,
         }
 
-    def print(self, filename: str, file_content: str):
-        if self.pos is None:
-            print(self.msg, end="", file=sys.stderr)
-            sys.stderr.flush()
-            global _bcerror_debug
-            if _bcerror_debug:
-                raise RuntimeError("a traceback is provided:")
-            else:
-                exit(1)
-
-        line_no = self.pos.row
-        col = self.pos.col
-        bol = 0
-
+    @staticmethod
+    def _get_line_start_end(line_no: int, file_content: str):
         i = 1
         j = -1
         while i < line_no and j < len(file_content):
@@ -59,6 +47,22 @@ class BCError(Exception):
         eol = bol
         while eol != len(file_content) and file_content[eol] != "\n":
             eol += 1
+
+        return (bol, eol)
+
+    def print(self, filename: str, file_content: str):
+        if self.pos is None:
+            print(self.msg, end="", file=sys.stderr)
+            sys.stderr.flush()
+            global _bcerror_debug
+            if _bcerror_debug:
+                raise RuntimeError("a traceback is provided:")
+            else:
+                exit(1)
+
+        line_no = self.pos.row
+        col = self.pos.col
+        bol, eol = self._get_line_start_end(line_no, file_content)
 
         line_begin = f" \033[31;1m{line_no}\033[0m | "
         padding = len(str(line_no) + "  | ") + col - 1
