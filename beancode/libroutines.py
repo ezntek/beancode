@@ -47,7 +47,7 @@ LIBROUTINES: Libroutines = {
     "execute": [BCPrimitiveType.STRING],
     "putchar": [BCPrimitiveType.CHAR],
     "exit": [BCPrimitiveType.INTEGER],
-    "sleep": [BCPrimitiveType.REAL],
+    "sleep": [_NUMERIC],
     "flush": [],
     # complicated stuff goes here
     "typeof": [None],

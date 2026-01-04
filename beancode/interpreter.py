@@ -657,7 +657,8 @@ class Interpreter:
                     bean_exit(stmt.pos, code.get_integer())
                 case "sleep":
                     [duration, *_] = evargs
-                    bean_sleep(stmt.pos, duration.get_real())
+                    # we know the type has already been checked
+                    bean_sleep(stmt.pos, float(duration.val)) # type: ignore
                     return BCValue.new_null()
                 case "flush":
                     sys.stdout.flush()
