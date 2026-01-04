@@ -24,7 +24,7 @@ def pyver():
 
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
 \033[2mUsing Python {pyver()}
-Copyright (c) ezntek, 2025-2026. type ".license" for more information.\033[0m
+Copyright (c) Eason Qin, 2025-2026. type ".license" for more information.\033[0m
 type ".exit" to quit the REPL, or ".help" for a list of available commands."""
 
 PROMPT = "\001\033[1m\002>> \001\033[0m\002"

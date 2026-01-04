@@ -105,7 +105,7 @@ class Parser:
             return
 
     def consume_and_expect(self, expected: TokenKind, ctx="", help="") -> Token:
-        if expected != TokenKind.COMMENT:
+        if expected != TokenKind.COMMENT and self.preserve_trivia:
             while self.check(TokenKind.COMMENT):
                 self.consume()
 
@@ -135,7 +135,7 @@ class Parser:
         return self.prev()
 
     def consume_newlines(self):
-        while self.cur < len(self.tokens) and self.match(TokenKind.NEWLINE):
+        while self.cur < len(self.tokens) and self.check(TokenKind.NEWLINE):
             self.consume()
 
     def expect_newline(self, s: str):

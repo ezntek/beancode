@@ -1,5 +1,4 @@
 import sys
-import os
 
 from . import Pos
 
@@ -21,16 +20,24 @@ class BCError(Exception):
         self.func = func
         self.pos = pos
 
-        s = f"\033[31;1merror: \033[0m{msg}\n"
-        self.msg = s
-        super().__init__(s)
+        self.msg = msg
+        super().__init__(msg)
 
-    def to_dict(self) -> dict[str, str | int | None]:
+    def to_dict(self, file_content: str | None = None) -> dict[str, str | int | None]:
+        frm = None
+        to = None
+
+        if self.pos and file_content:
+            bol, eol = self._get_line_start_end(self.pos.row, file_content)
+            frm = bol + self.pos.col - 1 # col 1 = bol + 0
+            to = frm + self.pos.span
+            if to > eol:
+                to = eol
+
         return {
             "msg": self.msg,
-            "row": self.pos.row if self.pos else None,
-            "col": self.pos.col if self.pos else None,
-            "span": self.pos.span if self.pos else None,
+            "from": frm if frm else None,
+            "to": to if to else None,
         }
 
     @staticmethod
@@ -50,21 +57,24 @@ class BCError(Exception):
 
         return (bol, eol)
 
-    def print(self, filename: str, file_content: str):
-        if self.pos is None:
-            print(self.msg, end="", file=sys.stderr)
-            sys.stderr.flush()
-            global _bcerror_debug
-            if _bcerror_debug:
-                raise RuntimeError("a traceback is provided:")
-            else:
-                exit(1)
+    def print_compact(self, pos: Pos, filename: str, file_content: str):
+        _ = file_content
+        line_no = pos.row
+        col = pos.col
+        res = list()
 
-        line_no = self.pos.row
-        col = self.pos.col
+        info = f"\x1b[1m{filename}: \x1b[31merror\x1b[0m at line {line_no} column {col}:"
+        res.append(info+"\n")
+        res += self.msg
+
+        print("".join(res), file=sys.stdout, flush=True)
+
+    def print_normal(self, pos: Pos, filename: str, file_content: str):
+        line_no = pos.row
+        col = pos.col
         bol, eol = self._get_line_start_end(line_no, file_content)
 
-        line_begin = f" \033[31;1m{line_no}\033[0m | "
+        line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
         padding = len(str(line_no) + "  | ") + col - 1
         tabs = 0
         spaces = lambda *_: " " * padding + "\t" * tabs
@@ -72,12 +82,12 @@ class BCError(Exception):
         res = list()
 
         info = f"{filename}:{line_no}: "
-        res.append(f"\033[0m\033[1m{info}")
-        msg_lines = self.msg.splitlines()
+        res.append(f"\x1b[0m\x1b[1m{info}")
+        msg_lines = ("\x1b[31;1merror: \x1b[0m" + self.msg).splitlines()
         res.append(msg_lines[0])  # splitlines on a non-empty string guarantees one elem
         for msg_line in msg_lines[1:]:
             sp = " " * len(info)
-            res.append(f"\033[2m\n{sp}{msg_line}\033[0m")
+            res.append(f"\x1b[2m\n{sp}{msg_line}\x1b[0m")
         res.append("\n")
 
         res.append(line_begin)
@@ -89,25 +99,43 @@ class BCError(Exception):
                 padding -= 1
                 tabs += 1
 
-        tildes = f"{spaces()}\033[31;1m{'~' * self.pos.span}\033[0m"
+        tildes = f"{spaces()}\x1b[31;1m{'~' * pos.span}\x1b[0m"
         res.append(tildes)
         res.append("\n")
 
-        indicator = f"{spaces()}\033[31;1m"
-        if os.name == "nt":
+        indicator = f"{spaces()}\x1b[31;1m"
+        if sys.platform in ("nt", "wasi", "emscripten"):
             indicator += "+-"
         else:
             indicator += "∟"
 
-        indicator += f" \033[0m\033[1merror at line {line_no} column {col}\033[0m"
+        indicator += f" \x1b[0m\x1b[1merror at line {line_no} column {col}\x1b[0m"
         res.append(indicator)
 
         print("".join(res), file=sys.stdout, flush=True)
 
+    def print(self, filename: str, file_content: str, compact=False):
+        try:
+            if self.pos is None:
+                print("\x1b[31;1merror: \x1b[0m"+self.msg, end="", file=sys.stderr)
+                sys.stderr.flush()
+                global _bcerror_debug
+                if _bcerror_debug:
+                    raise RuntimeError("a traceback is provided:")
+                else:
+                    exit(1)
+
+            if compact:
+                self.print_compact(self.pos, filename, file_content)
+            else:
+                self.print_normal(self.pos, filename, file_content)
+        except KeyboardInterrupt:
+            return
+
 
 def info(msg: str):
     print(
-        f"\033[34;1minfo:\033[0m {msg}",
+        f"\x1b[34;1minfo:\x1b[0m {msg}",
         file=sys.stderr,
     )
     sys.stderr.flush()
@@ -115,7 +143,7 @@ def info(msg: str):
 
 def warn(msg: str):
     print(
-        f"\033[33;1mwarn:\033[0m {msg}",
+        f"\x1b[33;1mwarn:\x1b[0m {msg}",
         file=sys.stderr,
     )
     sys.stderr.flush()
@@ -123,7 +151,7 @@ def warn(msg: str):
 
 def error(msg: str):
     print(
-        f"\033[31;1merror:\033[0m {msg}",
+        f"\x1b[31;1merror:\x1b[0m {msg}",
         file=sys.stderr,
     )
     sys.stderr.flush()
