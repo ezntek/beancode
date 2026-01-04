@@ -7,6 +7,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
 
+import os
 import subprocess
 
 from .cfgparser import parse_config_from_file

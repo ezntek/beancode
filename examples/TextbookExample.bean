@@ -1,9 +1,10 @@
 TRACE(Total, Average, Counter, Mark) TO "textbook.html"
     DECLARE Total, Average: REAL
     DECLARE Mark, Counter: INTEGER
+
     Total <- 0
     Mark <- 0
-    Counter <- -1
+    Counter <- 1
     OUTPUT "Enter marks, 999 to finish "
     REPEAT
         Total <- Total + Mark

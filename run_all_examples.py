@@ -32,5 +32,5 @@ for file in sorted(os.listdir("examples")):
         exit(1)
     except Exception as e:
         log(f"exception caught:")
-        print(e)
+        print(e.__repr__())
         exit(1)
