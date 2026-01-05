@@ -293,7 +293,7 @@ class Lexer:
 
             cur = self.get_cur()
             if is_delimited_literal:
-                stop = cur == delim
+                stop = cur == delim or cur == "\n"
             else:
                 stop = (
                     self.is_operator_start(cur)
@@ -313,7 +313,7 @@ class Lexer:
             self.cur += 1
 
         if is_delimited_literal:
-            if not self.in_bounds():
+            if not self.in_bounds() or self.src[self.cur].isspace():
                 # we don't set eof to true, becuase we do not allow for multile string literals, and this
                 # would break the REPL.
                 raise BCError(
