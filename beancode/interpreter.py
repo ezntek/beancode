@@ -1595,7 +1595,7 @@ class Interpreter:
                 )
             else:
                 val = BCValue(
-                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
+                    BCPrimitiveType.REAL, val=float(val.val), is_array=False  # type: ignore
                 )
 
         target.replace_inner(val.copy())
