@@ -13,7 +13,7 @@ import importlib
 import math
 import subprocess
 import ctypes
-from ctypes.util import find_library
+import ctypes.util
 
 from typing import Any, NoReturn
 
@@ -690,32 +690,36 @@ class Interpreter:
                 case BCPrimitiveType.NULL:
                     args.append(None)
 
-        lib: str = ""
         fn: str = stmt.ident
-        # DECLARE LIBS: STRING
-        # // use my custom C libraries (libc is always a fallback)
-        # // libcurl.so.4 libsafe23.so
-        # LIBS <- "curl safe23"
-        if "LIBS" in self.variables and self.variables["LIBS"].val.kind == BCPrimitiveType.STRING:
-            libs = self.variables["LIBS"].val.val
-            for lib in libs.split():
-                c_lib = ctypes.CDLL(find_library(lib))
-                if hasattr(c_lib, fn):
-                    break
-
-        if not hasattr(lib, fn):
-            lib = ctypes.CDLL(find_library("c"))
-        if not hasattr(lib, fn):
+        lib = self.find_cffi_lib(fn)
+        if lib == None:
             self.error(
                 f"Couldn't find C FFI function {fn}.",
                 stmt.pos,
             )
-
         getattr(lib, fn).restype = ctypes.c_long
         retval = getattr(lib, fn)(*args)
         return BCValue(
             kind=BCPrimitiveType.INTEGER, val=int(retval), is_array=False  # type: ignore
         )
+
+    def find_cffi_lib(self, name: str) -> ctypes.CDLL | None:
+        # DECLARE LIBS: STRING
+        # // use my custom C libraries (libc is always a fallback)
+        # // libcurl.so.4 libsafe23.so
+        # LIBS <- "curl safe23"
+        lib: ctypes.CDLL | None = None
+        if "LIBS" in self.variables and self.variables["LIBS"].val.kind == BCPrimitiveType.STRING:
+            libs = self.variables["LIBS"].val.val
+            for lib in libs.split():
+                lib = ctypes.CDLL(ctypes.util.find_library(lib))
+                if hasattr(lib, name):
+                    break
+        if lib == None or (not hasattr(lib, name)):
+            lib = ctypes.CDLL(ctypes.util.find_library("c"))
+        if lib == None or (not hasattr(lib, name)):
+            return None
+        return lib
 
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):
