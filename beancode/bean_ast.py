@@ -401,9 +401,9 @@ class BCValue:
     val: BCPayload
     is_array: bool
 
-    def __init__(self, kind: BCType, value: BCPayload = None, is_array=False):
+    def __init__(self, kind: BCType, val: BCPayload = None, is_array=False):
         self.kind = kind
-        self.val = value
+        self.val = val
         self.is_array = is_array
 
     def is_uninitialized(self) -> bool:
