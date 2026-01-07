@@ -25,6 +25,8 @@ def _reverse_escape_code(ch: str) -> str:
             return "\\b"
         case "\f":
             return "\\f"
+        case "\t":
+            return "\\t"
         case "\v":
             return "\\v"
         case "\0":
