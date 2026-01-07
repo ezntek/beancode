@@ -38,7 +38,7 @@ class BCError(Exception):
 
         if self.pos and file_content:
             bol, eol = self._get_line_start_end(self.pos.row, file_content)
-            frm = bol + self.pos.col - 1 # col 1 = bol + 0
+            frm = bol + self.pos.col - 1  # col 1 = bol + 0
             to = frm + self.pos.span
             if to > eol:
                 to = eol
@@ -72,9 +72,35 @@ class BCError(Exception):
         col = pos.col
         res = list()
 
-        info = f"\x1b[1m{filename}: \x1b[31merror\x1b[0m at line {line_no} column {col}:"
-        res.append(info+"\n")
+        line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
+        bol, eol = self._get_line_start_end(line_no, file_content)
+        snippet = file_content[bol:eol]
+        begin_space_count = 0
+        for ch in snippet:
+            if not ch.isspace():
+                break
+
+            if ch in "\t ":
+                begin_space_count += 1
+
+        info = (
+            f"\x1b[1m{filename}: \x1b[31merror\x1b[0m at line {line_no} column {col}:"
+        )
+        res.append(info + "\n")
         res += self.msg
+        res.append("\n")
+
+
+        res.append(line_begin)
+        res.append(snippet.strip())
+        res.append("\n")
+
+        # 4: space, <number>, space, pipe, space
+        #    ^^^^^            ^^^^^  ^^^^  ^^^^^
+        padding = (col - begin_space_count) + len(str(line_no)) + 3
+
+        tildes = f"{' ' * padding}\x1b[31;1m{'~' * pos.span}\x1b[0m"
+        res.append(tildes)
 
         print("".join(res), file=sys.stdout, flush=True)
 
@@ -113,7 +139,7 @@ class BCError(Exception):
         res.append("\n")
 
         indicator = f"{spaces()}\x1b[31;1m"
-        if sys.platform in ("nt", "wasi", "emscripten"):
+        if sys.platform == "nt":
             indicator += "+-"
         else:
             indicator += "∟"
@@ -126,7 +152,7 @@ class BCError(Exception):
     def print(self, filename: str, file_content: str, compact=False):
         try:
             if self.pos is None:
-                print("\x1b[31;1merror: \x1b[0m"+self.msg, end="", file=sys.stderr)
+                print("\x1b[31;1merror: \x1b[0m" + self.msg, end="", file=sys.stderr)
                 sys.stderr.flush()
                 global _bcerror_debug
                 if _bcerror_debug:
