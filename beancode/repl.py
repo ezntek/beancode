@@ -168,7 +168,14 @@ class Repl:
 
         print("".join(buf))
 
-    def print_func(self, func: FunctionStatement | BCFunction):
+    def print_func(self, name: str, func: FunctionStatement | BCFunction | None):
+        if func == None:
+            lib = self.i.find_cffi_lib(name)
+            if lib == None:
+                print(f'FUNCTION {name} (C FFI from "<unknown>")')
+            else:
+                print(f'FUNCTION {name} (C FFI from "{lib._name}")')
+            return
         sio = list()
         sio.append("FUNCTION ")
         ffi = False
@@ -234,7 +241,7 @@ class Repl:
             if isinstance(func, ProcedureStatement) or isinstance(func, BCProcedure):
                 self.print_proc(func)
             else:
-                self.print_func(func)
+                self.print_func(func_name, func)
 
         return DotCommandResult.NO_OP
 
@@ -244,11 +251,11 @@ class Repl:
         if len(self.i.functions) == 0:
             info("no functions or procedures")
 
-        for func in self.i.functions.values():
+        for name, func in self.i.functions.items():
             if isinstance(func, ProcedureStatement) or isinstance(func, BCProcedure):
                 self.print_proc(func)
             else:
-                self.print_func(func)
+                self.print_func(name, func)
 
         return DotCommandResult.NO_OP
 

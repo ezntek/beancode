@@ -12,6 +12,8 @@ import sys
 import importlib
 import math
 import subprocess
+import ctypes
+import ctypes.util
 
 from typing import Any, NoReturn
 
@@ -41,7 +43,7 @@ class Interpreter:
     block: list[Statement]
     variables: dict[str, Variable]
     functions: dict[
-        str, ProcedureStatement | FunctionStatement | BCProcedure | BCFunction
+        str, ProcedureStatement | FunctionStatement | BCProcedure | BCFunction | None # None = C FFI Function
     ]
     calls: list[CallStackEntry]
     func: bool
@@ -670,6 +672,55 @@ class Interpreter:
             e.pos = stmt.pos
             raise e
 
+    def visit_cffi_fncall(self, stmt: FunctionCall) -> BCValue:
+        args = []
+        for arg in stmt.args:
+            res = self.visit_expr(arg)
+            match res.kind:
+                case BCPrimitiveType.INTEGER:
+                    args.append(ctypes.c_long(res.val))
+                case BCPrimitiveType.REAL:
+                    args.append(ctypes.c_float(res.val))
+                case BCPrimitiveType.CHAR:
+                    args.append(ctypes.c_char(res.val))
+                case BCPrimitiveType.STRING:
+                    args.append(ctypes.c_char_p(res.val.encode("utf-8")))
+                case BCPrimitiveType.BOOLEAN:
+                    args.append(ctypes.c_bool(res.val))
+                case BCPrimitiveType.NULL:
+                    args.append(None)
+
+        fn: str = stmt.ident
+        lib = self.find_cffi_lib(fn)
+        if lib == None:
+            self.error(
+                f"Couldn't find C FFI function {fn}.",
+                stmt.pos,
+            )
+        getattr(lib, fn).restype = ctypes.c_long
+        retval = getattr(lib, fn)(*args)
+        return BCValue(
+            kind=BCPrimitiveType.INTEGER, val=int(retval), is_array=False  # type: ignore
+        )
+
+    def find_cffi_lib(self, name: str) -> ctypes.CDLL | None:
+        # DECLARE LIBS: STRING
+        # // use my custom C libraries (libc is always a fallback)
+        # // libcurl.so.4 libsafe23.so
+        # LIBS <- "curl safe23"
+        lib: ctypes.CDLL | None = None
+        if "LIBS" in self.variables and self.variables["LIBS"].val.kind == BCPrimitiveType.STRING:
+            libs = self.variables["LIBS"].val.val
+            for lib in libs.split():
+                lib = ctypes.CDLL(ctypes.util.find_library(lib))
+                if hasattr(lib, name):
+                    break
+        if lib == None or (not hasattr(lib, name)):
+            lib = ctypes.CDLL(ctypes.util.find_library("c"))
+        if lib == None or (not hasattr(lib, name)):
+            return None
+        return lib
+
     def visit_ffi_fncall(self, func: BCFunction, stmt: FunctionCall) -> BCValue:
         if len(func.params) != len(stmt.args):
             self.error(
@@ -703,6 +754,9 @@ class Interpreter:
             func = self.functions[stmt.ident]
         except KeyError:
             self.error(f"no function named {stmt.ident} exists", stmt.pos)
+
+        if func == None:
+            return self.visit_cffi_fncall(stmt)
 
         if isinstance(func, ProcedureStatement):
             self.error("cannot call procedure without CALL!", stmt.pos)
@@ -1720,39 +1774,64 @@ class Interpreter:
             is_prev_func = len(self.calls) > 0 and (
                 self.calls[-1].proc or self.calls[-1].func
             )
-            if key in self.variables and not is_prev_func:
-                existing_var = self.variables[key]
-                actual_type = self.visit_type(s.typ)
-                if existing_var.val.kind != actual_type:
+            if s.func_decl:
+                if key in self.variables and not is_prev_func:
+                    if self.variables[key].const:
+                        self.error(
+                            f'constant "{key}" redeclared as a C function',
+                            s.pos,
+                        )
+                    else:
+                        self.error(f'variable "{key}" redeclared as a C function!', s.pos)
+
+                if ident.libroutine:
                     self.error(
-                        f'variable "{key}" declared with a different type!', s.pos
-                    )
-                elif existing_var.const:
-                    self.error(
-                        f'cannot shadow variable declaration for constant "{key}"',
+                        f'cannot redeclare a library routine "{key}" as a C function!',
                         s.pos,
                     )
-                else:
-                    self.error(f"variable or constant {key} declared!", s.pos)
 
-            if ident.libroutine:
-                self.error(
-                    f'cannot redeclare a library routine "{key}" as a variable!',
-                    s.pos,
-                )
+                if key in self.functions:
+                    self.error(
+                        f'cannot redeclare a function or procedure named "{key}" as a C external function!',
+                        s.pos,
+                    )
 
-            if key in self.functions:
-                self.error(
-                    f'cannot redeclare a function or procedure named "{key}" as a variable!',
-                    s.pos,
-                )
+                self.functions[key] = None
 
-            if isinstance(s.typ, ArrayType):
-                self._declare_array(s, key)
             else:
-                self.variables[key] = Variable(
-                    BCValue(kind=s.typ), False, export=s.export
-                )
+                if key in self.variables and not is_prev_func:
+                    existing_var = self.variables[key]
+                    actual_type = self.visit_type(s.typ)
+                    if existing_var.val.kind != actual_type:
+                        self.error(
+                            f'variable "{key}" declared with a different type!', s.pos
+                        )
+                    elif existing_var.const:
+                        self.error(
+                            f'cannot shadow variable declaration for constant "{key}"',
+                            s.pos,
+                        )
+                    else:
+                        self.error(f"variable or constant {key} declared!", s.pos)
+
+                if ident.libroutine:
+                    self.error(
+                        f'cannot redeclare a library routine "{key}" as a variable!',
+                        s.pos,
+                    )
+
+                if key in self.functions:
+                    self.error(
+                        f'cannot redeclare a function or procedure named "{key}" as a variable!',
+                        s.pos,
+                    )
+
+                if isinstance(s.typ, ArrayType):
+                    self._declare_array(s, key)
+                else:
+                    self.variables[key] = Variable(
+                        BCValue(kind=s.typ), False, export=s.export
+                    )
         self.trace(s.pos.row)
 
     def visit_trace_stmt(self, stmt: TraceStatement):

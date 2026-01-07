@@ -823,13 +823,18 @@ class Parser:
             idents.append(self.ident("after DECLARE"))
 
         colon = self.consume_and_expect(TokenKind.COLON)
+        if self.check(TokenKind.FUNCTION):
+           self.consume()
+           self.expect_newline("C-style FFI declaration (DECLARE)")
+           return DeclareStatement(begin.pos, idents, None, export, True)
+
         typ = self.typ()
         if not typ:
             raise BCError("invalid type after DECLARE", colon.pos)
 
         self.expect_newline("variable declaration (DECLARE)")
 
-        return DeclareStatement(begin.pos, idents, typ, export)  # type: ignore
+        return DeclareStatement(begin.pos, idents, typ, export, False)  # type: ignore
 
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
