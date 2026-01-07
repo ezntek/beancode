@@ -1043,8 +1043,12 @@ class Parser:
                 "found invalid or no expression for while loop condition", self.pos()
             )
 
-        self.clean_newlines()
-        self.consume_and_expect(TokenKind.DO, "after while loop condition")
+        if self.check(TokenKind.NEWLINE):
+            self.clean_newlines()
+            self.check_and_consume(TokenKind.DO)
+        else:
+            self.consume_and_expect(TokenKind.DO, "after while loop condition")
+
         self.clean_newlines()
 
         stmts = self.block_until(TokenKind.ENDWHILE)
