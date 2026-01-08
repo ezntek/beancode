@@ -1587,15 +1587,20 @@ class Interpreter:
         should_promote_real = (
             target.kind == BCPrimitiveType.REAL and val.kind == BCPrimitiveType.INTEGER
         )
+        should_promote_char = (
+            target.kind == BCPrimitiveType.STRING and val.kind == BCPrimitiveType.CHAR
+        )
         if target.kind != val.kind:
-            if not should_promote_real:
+            if should_promote_real:
+                val = BCValue(
+                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
+                )
+            elif should_promote_char:
+                val.kind = BCPrimitiveType.STRING
+            else:
                 self.error(
                     f"cannot assign {val.kind} to {target.kind}",
                     s.ident.pos,
-                )
-            else:
-                val = BCValue(
-                    BCPrimitiveType.REAL, val=float(val.val), is_array=False  # type: ignore
                 )
 
         target.replace_inner(val.copy())
