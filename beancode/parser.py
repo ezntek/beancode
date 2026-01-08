@@ -34,6 +34,10 @@ def _convert_escape_code(ch: str) -> str | None:
             return "\v"
         case "0":
             return "\0"
+        case "'":
+            return "'"
+        case '"':
+            return '"' 
         case "\\":
             return "\\"
         case _:

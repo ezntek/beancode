@@ -407,16 +407,13 @@ class Interpreter:
             case Operator.OR:
                 return BCValue(BCPrimitiveType.BOOLEAN, lhs.val or rhs.val)  # type: ignore
 
-    def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
+    def _get_array_index(self, a: BCArray, ind: ArrayIndex) -> tuple[int, int | None]:
         index_v = self.visit_expr(ind.idx_outer)  # type: ignore
         if index_v.kind != BCPrimitiveType.INTEGER:
             self.error(
                 f"type of array index is {index_v.kind}, not INTEGER!",
                 ind.idx_outer.pos,
             )
-
-        v = self.visit_expr(ind.expr)
-        a: BCArray = v.val  # type: ignore
 
         if a.typ.is_matrix():
             if ind.idx_inner is None:
@@ -447,7 +444,7 @@ class Interpreter:
 
         if v.is_array:
             a = v.get_array()
-            tup = self._get_array_index(ind)
+            tup = self._get_array_index(a, ind)
             if a.typ.is_matrix():
                 outer, inner = tup
                 bounds = a.get_matrix_bounds()

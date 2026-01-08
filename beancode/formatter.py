@@ -33,6 +33,10 @@ def _reverse_escape_code(ch: str) -> str:
             return "\\0"
         case "\\":
             return "\\\\"
+        case "'":
+            return "\\'"
+        case '"':
+            return '\\"' 
         case _:
             return ch
 
