@@ -1,0 +1,44 @@
+diff --git a/beancode/interpreter.py b/beancode/interpreter.py
+index c532c6a..532b125 100644
+--- a/beancode/interpreter.py
++++ b/beancode/interpreter.py
+@@ -1597,16 +1597,21 @@ class Interpreter:
+         should_promote_real = (
+             target.kind == BCPrimitiveType.REAL and val.kind == BCPrimitiveType.INTEGER
+         )
++        should_promote_char = (
++            target.kind == BCPrimitiveType.STRING and val.kind == BCPrimitiveType.CHAR
++        )
+         if target.kind != val.kind:
+-            if not should_promote_real:
++            if should_promote_real:
++                val = BCValue(
++                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
++                )
++            elif should_promote_char:
++                val.kind = BCPrimitiveType.STRING
++            else:
+                 self.error(
+                     f"cannot assign {val.kind} to {target.kind}",
+                     s.ident.pos,
+                 )
+-            else:
+-                val = BCValue(
+-                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
+-                )
+ 
+         target.replace_inner(val.copy())
+ 
+diff --git a/beancode/libroutines.py b/beancode/libroutines.py
+index b9d227a..fe1c037 100644
+--- a/beancode/libroutines.py
++++ b/beancode/libroutines.py
+@@ -74,7 +74,7 @@ def bean_substring(pos: Pos, txt: str, begin: int, length: int) -> BCValue:
+         (begin > txt_len)
+         or (length > txt_len)
+         or (begin < 1)
+-        or (length < 1)
++        or (length < 0)
+         or (begin + length - 1 > txt_len)
+     ):
+         raise BCError(

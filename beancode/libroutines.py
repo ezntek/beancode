@@ -83,7 +83,7 @@ def bean_substring(pos: Pos, txt: str, begin: int, length: int) -> BCValue:
         (begin > txt_len)
         or (length > txt_len)
         or (begin < 1)
-        or (length < 1)
+        or (length < 0)
         or (begin + length - 1 > txt_len)
     ):
         raise BCError(
