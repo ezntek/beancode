@@ -28,6 +28,8 @@ def _convert_escape_code(ch: str) -> str | None:
             return "\b"
         case "f":
             return "\f"
+        case "t":
+            return "\t"
         case "v":
             return "\v"
         case "0":
