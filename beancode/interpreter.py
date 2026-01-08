@@ -1848,8 +1848,7 @@ class Interpreter:
         else:
             target = self.visit_identifier(stmt.target)
 
-        target.val = str(file.stream.read())
-        file.stream.seek(0)
+        target.val = str(file.stream.readline())
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
         _, file = self._get_file_obj(stmt.file_ident, stmt.pos)
