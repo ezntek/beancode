@@ -515,7 +515,9 @@ class Repl:
             self.i.block = program.stmts
             self.i.toplevel = True
             try:
-                self.i.visit_block(None)
+                res = self.i.visit_block(None)
+                if res != StatementResult.DONE:
+                     self.handle_error(BCError(f'{res} in REPL input outside a loop', self.i.cur_stmt_pos))
             except BCError as err:
                 self.handle_error(err)
                 continue

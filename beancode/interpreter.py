@@ -38,6 +38,19 @@ def _get_file_mode(read: bool, write: bool, append: bool) -> str | None:
     elif append:
         return "a"
 
+class StatementResult(IntEnum):
+    DONE = 0
+    CONTINUE = 1
+    BREAK = 2
+
+    def __str__(self):
+        match self.value:
+            case StatementResult.DONE:
+                return "DONE"
+            case StatementResult.CONTINUE:
+                return "CONTINUE"
+            case StatementResult.BREAK:
+                return "BREAK"
 
 class Interpreter:
     block: list[Statement]
@@ -95,7 +108,7 @@ class Interpreter:
         return intp
 
     def reset(self):
-        self.cur_stmt = 0
+        self.cur_stmt_pos = None
 
     def reset_all(self):
         self.calls = list()
@@ -107,7 +120,7 @@ class Interpreter:
             self.tracer_inputs = list()
 
         self._returned = False
-        self.cur_stmt = 0
+        self.cur_stmt_pos = None
 
         for f in self.files.values():
             f.stream.close()
@@ -787,7 +800,12 @@ class Interpreter:
             intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.functions = self.functions.copy()
-        intp.visit_block(func.block)
+        res = intp.visit_block(func.block)
+        if res != StatementResult.DONE:
+            self.error(
+                f"{res} in function body outside a loop!",
+                stmt.pos,
+            )
         intp.calls.pop()
         if intp._returned is False:
             self.error(
@@ -863,7 +881,12 @@ class Interpreter:
             val = self.visit_expr(argval)
             intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
-        intp.visit_block(proc.block)
+        res = intp.visit_block(proc.block)
+        if res != StatementResult.DONE:
+            self.error(
+                f'procedure "{proc.name}" has a {res} outside a loop',
+                stmt.pos,
+            )
         intp.calls.pop()
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue:
@@ -1376,7 +1399,8 @@ class Interpreter:
 
         intp = self.new(program.stmts)
         try:
-            intp.visit_block(None)
+            if intp.visit_block(None) != StatementResult.DONE:
+                self.error(f'{res} outside a loop in included file "{stmt.file}".', stmt.pos)
         except BCError as err:
             err.print(filename, file_content)
             print(file=sys.stderr)
@@ -1393,20 +1417,20 @@ class Interpreter:
             if fn.export:  # type: ignore
                 self.functions[name] = fn
 
-    def visit_if_stmt(self, stmt: IfStatement):
+    def visit_if_stmt(self, stmt: IfStatement) -> StatementResult:
         cond: BCValue = self.visit_expr(stmt.cond)
 
         if cond.kind != BCPrimitiveType.BOOLEAN:
             self.error("condition of while loop must be a boolean!", stmt.cond.pos)
 
-        saved_cur = self.cur_stmt
+        res: StatementResult = StatementResult.DONE
         if cond.get_boolean():
-            self.visit_block(stmt.if_block)
+            res = self.visit_block(stmt.if_block)
         else:
-            self.visit_block(stmt.else_block)
-        self.cur_stmt = saved_cur
+            res = self.visit_block(stmt.else_block)
+        return res
 
-    def visit_caseof_stmt(self, stmt: CaseofStatement):
+    def visit_caseof_stmt(self, stmt: CaseofStatement) -> StatementResult:
         value: BCValue = self.visit_expr(stmt.expr)
 
         for branch in stmt.branches:
@@ -1415,11 +1439,11 @@ class Interpreter:
 
             rhs = self.visit_expr(branch.expr)
             if value == rhs:
-                self.visit_stmt(branch.stmt)
-                return
+                return self.visit_stmt(branch.stmt)
 
         if stmt.otherwise is not None:
-            self.visit_stmt(stmt.otherwise)
+            return self.visit_stmt(stmt.otherwise)
+        return StatementResult.DONE
 
     def visit_while_stmt(self, stmt: WhileStatement):
         cond: Expr = stmt.cond  # type: ignore
@@ -1436,10 +1460,13 @@ class Interpreter:
             if not evcond.get_boolean():
                 break
 
-            intp.visit_block(block)
+            res = intp.visit_block(block)
 
             # trace all I/O that happened
             intp.trace(stmt.end_pos.row, loop_trace=True)
+
+            if res == StatementResult.BREAK:
+                break
 
             # FIXME: barbaric aah
             # reset all declares
@@ -1502,9 +1529,11 @@ class Interpreter:
             )
 
         while cond():
-            intp.visit_block(None)
+            res = intp.visit_block(None)
             intp.trace(stmt.end_pos.row, loop_trace=True)
 
+            if res == StatementResult.BREAK:
+                break
             #  FIXME: barbaric
             # clear declared variables
             c = intp.variables[stmt.counter.ident]
@@ -1538,9 +1567,12 @@ class Interpreter:
         intp.loop = True
 
         while True:
-            intp.visit_block(None)
+            res = intp.visit_block(None)
 
             intp.trace(stmt.end_pos.row, loop_trace=True)
+
+            if res == StatementResult.BREAK:
+                break
 
             intp.variables = dict(self.variables)
             if intp._returned:
@@ -1564,9 +1596,9 @@ class Interpreter:
             if evcond.get_boolean():
                 break
 
-    def visit_scope_stmt(self, stmt: ScopeStatement):
+    def visit_scope_stmt(self, stmt: ScopeStatement) -> StatementResult:
         intp = self._make_new_interpreter(stmt.block)
-        intp.visit_block(None)
+        res = intp.visit_block(None)
 
         for name, var in intp.variables.items():
             if var.export:
@@ -1575,6 +1607,8 @@ class Interpreter:
         for name, fn in intp.functions.items():
             if fn.export:  # type: ignore
                 self.functions[name] = fn
+
+        return res
 
     def visit_procedure(self, stmt: ProcedureStatement):
         if stmt.name in LIBROUTINES:
@@ -1945,12 +1979,13 @@ class Interpreter:
         file.stream.close()
         self.files.pop(name)
 
-    def visit_stmt(self, stmt: Statement):
+    def visit_stmt(self, stmt: Statement) -> StatementResult:
+        self.cur_stmt_pos = stmt.pos
         match stmt:
             case IfStatement():
-                self.visit_if_stmt(stmt)
+                return self.visit_if_stmt(stmt)
             case CaseofStatement():
-                self.visit_caseof_stmt(stmt)
+                return self.visit_caseof_stmt(stmt)
             case ForStatement():
                 self.visit_for_stmt(stmt)
             case WhileStatement():
@@ -1964,11 +1999,11 @@ class Interpreter:
             case ReturnStatement():
                 self.visit_return_stmt(stmt)
             case ProcedureStatement():
-                self.visit_procedure(stmt)
+                return self.visit_procedure(stmt)
             case FunctionStatement():
-                self.visit_function(stmt)
+                return self.visit_function(stmt)
             case ScopeStatement():
-                self.visit_scope_stmt(stmt)
+                return self.visit_scope_stmt(stmt)
             case IncludeStatement():
                 self.visit_include_stmt(stmt)
             case CallStatement():
@@ -1991,19 +2026,29 @@ class Interpreter:
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
                 self.visit_expr(stmt.inner)
+            case ContinueStatement():
+                return StatementResult.CONTINUE
+            case BreakStatement():
+                return StatementResult.BREAK
             # ignore newline statement if ever given
+        return StatementResult.DONE
 
-    def visit_block(self, block: list[Statement] | None):
+    def visit_block(self, block: list[Statement] | None) -> StatementResult:
         blk = block if block is not None else self.block
+        res = StatementResult.DONE
         cur = 0
         while cur < len(blk):
             stmt = blk[cur]
-            self.cur_stmt = cur
-            self.visit_stmt(stmt)
+            res = self.visit_stmt(stmt)
             if self._returned:
-                return
+                return StatementResult.DONE
+            if res == StatementResult.BREAK or res == StatementResult.CONTINUE:
+                return res
             cur += 1
+        return StatementResult.DONE
 
     def visit_program(self, program: Program):
         if program is not None:
-            self.visit_block(program.stmts)
+            res = self.visit_block(program.stmts)
+            if res == StatementResult.BREAK or res == StatementResult.CONTINUE:
+                self.error(f'{res} outside a loop', self.cur_stmt_pos)

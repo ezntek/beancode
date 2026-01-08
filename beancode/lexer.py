@@ -74,6 +74,8 @@ KEYWORDS = {
     "to",
     "step",
     "next",
+    "continue",
+    "break",
     "procedure",
     "endprocedure",
     "call",

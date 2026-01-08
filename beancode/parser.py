@@ -838,6 +838,26 @@ class Parser:
 
         return DeclareStatement(begin.pos, idents, typ, export, False)  # type: ignore
 
+    def break_stmt(self) -> Statement | None:
+        begin = self.peek()
+        if not self.check(TokenKind.BREAK):
+            return None
+
+        self.consume()
+        self.expect_newline("break statement (BREAK)")
+
+        return BreakStatement(begin.pos)
+
+    def continue_stmt(self) -> Statement | None:
+        begin = self.peek()
+        if not self.check(TokenKind.CONTINUE):
+            return None
+
+        self.consume()
+        self.expect_newline("continue statement (CONTINUE)")
+
+        return ContinueStatement(begin.pos)
+
     def constant_stmt(self) -> Statement | None:
         begin = self.peek()
         export = False
@@ -1468,6 +1488,14 @@ class Parser:
         if self.check(TokenKind.COMMENT):
             c = self.consume()
             return CommentStatement(c.pos, c.data)  # type: ignore
+
+        brk = self.break_stmt()
+        if brk:
+            return brk
+
+        cont = self.continue_stmt()
+        if cont:
+            return cont
 
         constant = self.constant_stmt()
         if constant:

@@ -42,59 +42,61 @@ class TokenKind(IntEnum):
     TO = 22
     STEP = 23
     NEXT = 24
-    PROCEDURE = 25
-    ENDPROCEDURE = 26
-    CALL = 27
-    FUNCTION = 28
-    RETURN = 29
-    RETURNS = 30
-    ENDFUNCTION = 31
-    OPENFILE = 32
-    READFILE = 33
-    WRITEFILE = 34
-    CLOSEFILE = 35
-    READ = 36
-    WRITE = 37
-    APPEND = 38
-    INCLUDE = 39
-    INCLUDE_FFI = 40
-    EXPORT = 41
-    SCOPE = 42
-    ENDSCOPE = 43
-    PRINT = 44
-    TRACE = 45
-    ENDTRACE = 46
-    ASSIGN = 47
-    EQUAL = 48
-    LESS_THAN = 49
-    GREATER_THAN = 50
-    LESS_THAN_OR_EQUAL = 51
-    GREATER_THAN_OR_EQUAL = 52
-    NOT_EQUAL = 53
-    MUL = 54
-    DIV = 55
-    ADD = 56
-    SUB = 57
-    POW = 58
-    LEFT_PAREN = 59
-    RIGHT_PAREN = 60
-    LEFT_BRACKET = 61
-    RIGHT_BRACKET = 62
-    LEFT_CURLY = 63
-    RIGHT_CURLY = 64
-    COLON = 65
-    COMMA = 66
-    DOT = 67
-    NEWLINE = 68
-    LITERAL_STRING = 69
-    LITERAL_CHAR = 70
-    LITERAL_NUMBER = 71
-    TRUE = 72
-    FALSE = 73
-    NULL = 74
-    IDENT = 75
-    TYPE = 76
-    COMMENT = 77
+    CONTINUE = 25
+    BREAK = 26
+    PROCEDURE = 27
+    ENDPROCEDURE = 28
+    CALL = 29
+    FUNCTION = 30
+    RETURN = 31
+    RETURNS = 32
+    ENDFUNCTION = 33
+    OPENFILE = 34
+    READFILE = 35
+    WRITEFILE = 36
+    CLOSEFILE = 37
+    READ = 38
+    WRITE = 39
+    APPEND = 40
+    INCLUDE = 41
+    INCLUDE_FFI = 42
+    EXPORT = 43
+    SCOPE = 44
+    ENDSCOPE = 45
+    PRINT = 46
+    TRACE = 47
+    ENDTRACE = 48
+    ASSIGN = 49
+    EQUAL = 50
+    LESS_THAN = 51
+    GREATER_THAN = 52
+    LESS_THAN_OR_EQUAL = 53
+    GREATER_THAN_OR_EQUAL = 54
+    NOT_EQUAL = 55
+    MUL = 56
+    DIV = 57
+    ADD = 58
+    SUB = 59
+    POW = 60
+    LEFT_PAREN = 61
+    RIGHT_PAREN = 62
+    LEFT_BRACKET = 63
+    RIGHT_BRACKET = 64
+    LEFT_CURLY = 65
+    RIGHT_CURLY = 66
+    COLON = 67
+    COMMA = 68
+    DOT = 69
+    NEWLINE = 70
+    LITERAL_STRING = 71
+    LITERAL_CHAR = 72
+    LITERAL_NUMBER = 73
+    TRUE = 74
+    FALSE = 75
+    NULL = 76
+    IDENT = 77
+    TYPE = 78
+    COMMENT = 79
 
     @classmethod
     def from_str_or_none(cls, s: str):
@@ -722,6 +724,16 @@ class OutputStatement(Statement):
 @dataclass(slots=True)
 class InputStatement(Statement):
     ident: Lvalue
+
+
+@dataclass(slots=True)
+class ContinueStatement(Statement):
+    pass
+
+
+@dataclass(slots=True)
+class BreakStatement(Statement):
+    pass
 
 
 @dataclass(slots=True)
