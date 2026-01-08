@@ -682,7 +682,7 @@ class Interpreter:
                 case BCPrimitiveType.REAL:
                     args.append(ctypes.c_float(res.val))
                 case BCPrimitiveType.CHAR:
-                    args.append(ctypes.c_char(res.val))
+                    args.append(ctypes.c_int(ord(res.val)))
                 case BCPrimitiveType.STRING:
                     args.append(ctypes.c_char_p(res.val.encode("utf-8")))
                 case BCPrimitiveType.BOOLEAN:
