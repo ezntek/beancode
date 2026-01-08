@@ -678,15 +678,15 @@ class Interpreter:
             res = self.visit_expr(arg)
             match res.kind:
                 case BCPrimitiveType.INTEGER:
-                    args.append(ctypes.c_long(res.val))
+                    args.append(ctypes.c_long(res.val)) # type: ignore
                 case BCPrimitiveType.REAL:
-                    args.append(ctypes.c_float(res.val))
+                    args.append(ctypes.c_float(res.val)) # type: ignore
                 case BCPrimitiveType.CHAR:
-                    args.append(ctypes.c_int(ord(res.val)))
+                    args.append(ctypes.c_int(ord(res.val))) # type: ignore
                 case BCPrimitiveType.STRING:
-                    args.append(ctypes.c_char_p(res.val.encode("utf-8")))
+                    args.append(ctypes.c_char_p(res.val.encode("utf-8"))) # type: ignore
                 case BCPrimitiveType.BOOLEAN:
-                    args.append(ctypes.c_bool(res.val))
+                    args.append(ctypes.c_bool(res.val)) # type: ignore
                 case BCPrimitiveType.NULL:
                     args.append(None)
 
@@ -694,9 +694,10 @@ class Interpreter:
         lib = self.find_cffi_lib(fn)
         if lib == None:
             self.error(
-                f"Couldn't find C FFI function {fn}.",
+                f"Could not find C FFI function {fn}",
                 stmt.pos,
             )
+        
         getattr(lib, fn).restype = ctypes.c_long
         retval = getattr(lib, fn)(*args)
         return BCValue(
@@ -710,9 +711,9 @@ class Interpreter:
         # LIBS <- "curl safe23"
         lib: ctypes.CDLL | None = None
         if "LIBS" in self.variables and self.variables["LIBS"].val.kind == BCPrimitiveType.STRING:
-            libs = self.variables["LIBS"].val.val
-            for lib in libs.split():
-                lib = ctypes.CDLL(ctypes.util.find_library(lib))
+            libs = self.variables["LIBS"].val.get_string()
+            for libname in libs.split():
+                lib = ctypes.CDLL(ctypes.util.find_library(libname))
                 if hasattr(lib, name):
                     break
         if lib == None or (not hasattr(lib, name)):
@@ -823,9 +824,8 @@ class Interpreter:
                 stmt.pos,
             )
 
-        try:
-            proc = self.functions[stmt.ident]
-        except KeyError:
+        proc = self.functions.get(stmt.ident)
+        if not proc:
             self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
         if isinstance(proc, FunctionStatement):

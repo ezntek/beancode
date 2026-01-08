@@ -734,7 +734,7 @@ class ConstantStatement(Statement):
 @dataclass(slots=True)
 class DeclareStatement(Statement):
     ident: list[Identifier]
-    typ: Type | None
+    typ: Type
     export: bool = False
     func_decl: bool = False
 
