@@ -1,4 +1,5 @@
 a.out
+*.csv
 *.asm
 testdir
 .*.py

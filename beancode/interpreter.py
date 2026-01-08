@@ -351,7 +351,7 @@ class Interpreter:
                 if rhs.val == 0:
                     self.error("cannot divide by zero!", expr.rhs.pos)
 
-                return BCValue(BCPrimitiveType.REAL, lhs.val / rhs.val) # type: ignore
+                return BCValue(BCPrimitiveType.REAL, lhs.val / rhs.val)  # type: ignore
             case Operator.ADD:
                 if (
                     lhs.kind == BCPrimitiveType.BOOLEAN
@@ -410,7 +410,10 @@ class Interpreter:
     def _get_array_index(self, ind: ArrayIndex) -> tuple[int, int | None]:
         index_v = self.visit_expr(ind.idx_outer)  # type: ignore
         if index_v.kind != BCPrimitiveType.INTEGER:
-            self.error(f"type of array index is {index_v.kind}, not an INTEGER!")
+            self.error(
+                f"type of array index is {index_v.kind}, not INTEGER!",
+                ind.idx_outer.pos,
+            )
 
         v = self.visit_expr(ind.expr)
         a: BCArray = v.val  # type: ignore
@@ -419,16 +422,24 @@ class Interpreter:
             if ind.idx_inner is None:
                 self.error("expected 2 indices for matrix indexing", ind.pos)
 
+            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
+                self.error(f"type of outer array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
+
             inner_index_v = self.visit_expr(ind.idx_inner)  # type: ignore
-            if inner_index_v.kind != BCPrimitiveType.INTEGER:
+            if inner_index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
                 self.error(
-                    f"type of inner array index is {index_v.kind}, not an INTEGER!"
+                    f"type of inner array index is {inner_index_v.kind}, not INTEGER!",
+                    ind.idx_inner.pos,
                 )
 
             return (index_v.val, inner_index_v.val)  # type: ignore
         else:
             if ind.idx_inner is not None:
                 self.error("expected only 1 index for array indexing", ind.pos)
+
+            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
+                self.error(f"type of array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
+            
             return (index_v.val, None)  # type: ignore
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
@@ -515,7 +526,7 @@ class Interpreter:
                 elif arg_type != new.kind:
                     mismatch = True
 
-                if mismatch and new.is_null():
+                if mismatch or new.is_uninitialized():
                     self.error(
                         f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
@@ -639,11 +650,13 @@ class Interpreter:
                     [cmd, *_] = evargs
 
                     if sys.platform in {"wasi", "emscripten"}:
-                        raise BCError("EXECUTE is not supported in the browser!", stmt.pos)
+                        raise BCError(
+                            "EXECUTE is not supported in the browser!", stmt.pos
+                        )
 
                     try:
                         out = subprocess.check_output(cmd.get_string(), shell=True)
-                        out = out.decode('utf-8')
+                        out = out.decode("utf-8")
                     except Exception as e:
                         raise BCError(f"Error: {e}", stmt.pos)
 
@@ -658,13 +671,13 @@ class Interpreter:
                 case "sleep":
                     [duration, *_] = evargs
                     # we know the type has already been checked
-                    bean_sleep(stmt.pos, float(duration.val)) # type: ignore
+                    bean_sleep(stmt.pos, float(duration.val))  # type: ignore
                     return BCValue.new_null()
                 case "flush":
                     sys.stdout.flush()
                     return BCValue.new_null()
                 case "clear":
-                    print("\x1b[2J\x1b[H", end='', flush=True)
+                    print("\x1b[2J\x1b[H", end="", flush=True)
                     return BCValue.new_null()
         except BCError as e:
             e.pos = stmt.pos

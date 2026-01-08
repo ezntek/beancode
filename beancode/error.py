@@ -152,13 +152,13 @@ class BCError(Exception):
     def print(self, filename: str, file_content: str, compact=False):
         try:
             if self.pos is None:
-                print("\x1b[31;1merror: \x1b[0m" + self.msg, end="", file=sys.stderr)
+                print("\x1b[31;1merror: \x1b[0m" + self.msg, end="\n", file=sys.stderr)
                 sys.stderr.flush()
                 global _bcerror_debug
                 if _bcerror_debug:
                     raise RuntimeError("a traceback is provided:")
                 else:
-                    exit(1)
+                    return
 
             if compact:
                 self.print_compact(self.pos, filename, file_content)
