@@ -523,14 +523,15 @@ class Interpreter:
                 elif arg_type != new.kind:
                     mismatch = True
 
-                if mismatch or new.is_uninitialized():
+                if new.is_uninitialized():
                     self.error(
                         f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
                     )
 
                 if mismatch:
-                    err_base = f"expected {humanize_index(idx + 1)} argument to library routine {name.upper()} to be "
+                    err_base = f"type mismatch in {humanize_index(idx + 1)} argument to library routine call\n"
+                    err_base += f"expected {name.upper()} to be "
                     if isinstance(arg_type, tuple):
                         err_base += "either "
 
@@ -551,8 +552,8 @@ class Interpreter:
                         err_base += prefix_string_with_article(str(arg_type).upper())
                         err_base += " "
 
-                    wanted = str(new.kind).upper()
-                    err_base += f"but found {wanted}"
+                    needed = str(new.kind).upper()
+                    err_base += f"but found {needed}"
                     self.error(err_base, pos)
 
                 evargs.append(new)
