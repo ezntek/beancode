@@ -52,6 +52,7 @@ LIBROUTINES: Libroutines = {
     # complicated stuff goes here
     "typeof": [None],
     "type": [None],
+    "boundof": [None, BCPrimitiveType.INTEGER],
     "clear": [],
     "format": None,
     "initarray": None,
@@ -236,3 +237,18 @@ def bean_initarray(pos: Pos, args: list[BCValue]):
         for outer in arr.get_matrix():
             for item in outer:
                 item.val = val.val
+
+def bean_boundof(pos: Pos, data: BCValue, wanted: int) -> BCValue:
+    arr = data.get_array()
+
+    if arr.is_matrix():
+        if wanted < 0 or wanted > 3:
+            raise BCError(f"Invalid position passed {wanted} to BOUNDOF", pos)
+        else:
+            return BCValue.new_integer(arr.get_matrix_bounds()[wanted])
+    else:
+        if wanted < 0 or wanted > 1:
+            raise BCError(f"Invalid position passed {wanted} to BOUNDOF", pos)
+        else:
+            return BCValue.new_integer(arr.get_flat_bounds()[wanted])
+    

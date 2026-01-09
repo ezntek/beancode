@@ -188,6 +188,7 @@ class BCPrimitiveType(IntEnum):
     STRING = 4
     BOOLEAN = 5
     NULL = 6
+    ANY = 7
 
     def __repr__(self):
         return self.name.lower()
@@ -199,6 +200,11 @@ class BCPrimitiveType(IntEnum):
         _ = f
         return self.__repr__().upper()
 
+    def approx_eq(self, other: object, /) -> bool:
+        if self.value == BCPrimitiveType.ANY or other.value == BCPrimitiveType.ANY: # type: ignore
+            return True
+        return super().__eq__(other)
+ 
     @classmethod
     def from_str(cls, kind: str):
         res = cls.__members__.get(kind.upper())
@@ -215,34 +221,44 @@ class ArrayType:
     __slots__ = ("inner", "bounds")
 
     inner: BCPrimitiveType
-    bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"]
+    bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"] | None
 
     def __init__(
         self,
         inner: BCPrimitiveType,
-        bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"],
+        bounds: tuple["Expr", "Expr"] | tuple["Expr", "Expr", "Expr", "Expr"] | None,
     ):
         self.inner = inner
         self.bounds = bounds
 
     def is_flat(self) -> bool:
-        return len(self.bounds) == 2
+        return self.bounds is not None and len(self.bounds) == 2
 
     def is_matrix(self) -> bool:
-        return len(self.bounds) == 4
+        return self.bounds is not None and len(self.bounds) == 4 
+
+    def is_unbounded(self):
+        return self.bounds is None
 
     def get_flat_bounds(self) -> tuple["Expr", "Expr"]:
+        if not self.bounds:
+            raise BCError("tried to access flat bounds on a non-bounded array")
+
         if len(self.bounds) != 2:
             raise BCError("tried to access flat bounds on a matrix!")
         return self.bounds
 
     def get_matrix_bounds(self) -> tuple["Expr", "Expr", "Expr", "Expr"]:
+        if not self.bounds:
+            raise BCError("tried to access matrix bounds on a non-bounded array")
+
         if len(self.bounds) != 4:
             raise BCError("tried to access matrix bounds on a flat array!")
+
         return self.bounds
 
     def __repr__(self) -> str:
-        if len(self.bounds) == 2:
+        if self.bounds is not None and len(self.bounds) == 2:
             return "ARRAY[2D] OF " + str(self.inner).upper()
         else:
             return "ARRAY OF " + str(self.inner).upper()
@@ -254,12 +270,12 @@ class BCArrayType:
     __slots__ = ("inner", "bounds")
 
     inner: BCPrimitiveType
-    bounds: tuple[int, int] | tuple[int, int, int, int]
+    bounds: tuple[int, int] | tuple[int, int, int, int] | None
 
     def __init__(
         self,
         inner: BCPrimitiveType,
-        bounds: tuple[int, int] | tuple[int, int, int, int],
+        bounds: tuple[int, int] | tuple[int, int, int, int] | None,
     ):
         self.inner = inner
         self.bounds = bounds
@@ -273,14 +289,23 @@ class BCArrayType:
 
         return self.inner == value.inner and self.bounds == value.bounds  # type: ignore
 
+    def approx_eq(self, value: object) -> bool:
+        if type(self) is not type(value):
+            return False
+        r = self == value
+        return r if r else (self.is_unbounded() or value.is_unbounded()) and self.inner == value.inner # type: ignore
+
     def __neq__(self, value: object, /) -> bool:
         return not (self.__eq__(value))
 
     def is_flat(self) -> bool:
-        return len(self.bounds) == 2
+        return self.bounds is not None and len(self.bounds) == 2
 
     def is_matrix(self) -> bool:
-        return len(self.bounds) == 4
+        return self.bounds is not None and len(self.bounds) == 4
+
+    def is_unbounded(self) -> bool:
+        return self.bounds is None
 
     @classmethod
     def new_flat(cls, inner: BCPrimitiveType, bounds: tuple[int, int]) -> "BCArrayType":
@@ -293,11 +318,17 @@ class BCArrayType:
         return cls(inner, bounds)
 
     def get_flat_bounds(self) -> tuple[int, int]:
+        if not self.bounds:
+            raise BCError("tried to access flat bounds on a non-bounded array")
+
         if len(self.bounds) != 2:
             raise BCError("tried to access flat bounds on a matrix!")
         return self.bounds
 
     def get_matrix_bounds(self) -> tuple[int, int, int, int]:
+        if not self.bounds:
+            raise BCError("tried to access matrix bounds on a non-bounded array")
+
         if len(self.bounds) != 4:
             raise BCError("tried to access flat bounds on a matrix!")
         return self.bounds
@@ -306,10 +337,13 @@ class BCArrayType:
         s = list()
         s.append("ARRAY[")
 
-        if len(self.bounds) == 2:
-            s.append(array_bounds_to_string(self.bounds))
+        if self.bounds:
+            if len(self.bounds) == 2:
+                s.append(array_bounds_to_string(self.bounds))
+            else:
+                s.append(matrix_bounds_to_string(self.bounds))
         else:
-            s.append(matrix_bounds_to_string(self.bounds))
+            s.append("*")
 
         s.append("] OF ")
         s.append(str(self.inner).upper())
@@ -396,15 +430,17 @@ BCPayload = int | float | str | bool | BCArray | None
 
 
 class BCValue:
-    __slots__ = ("kind", "val", "is_array")
+    __slots__ = ("kind", "val", "is_array", "is_any")
     kind: BCType
     val: BCPayload
     is_array: bool
+    is_any: bool
 
-    def __init__(self, kind: BCType, val: BCPayload = None, is_array=False):
+    def __init__(self, kind: BCType, val: BCPayload=None, is_array=False, is_any=False):
         self.kind = kind
         self.val = val
         self.is_array = is_array
+        self.is_any = is_any
 
     def is_uninitialized(self) -> bool:
         return self.val is None
@@ -438,6 +474,7 @@ class BCValue:
 
     def replace_inner(self, other: "BCValue"):
         self.kind = other.kind
+        self.is_any = other.is_any
         self.is_array = other.is_array
         if self.is_array:
             self.val = other.val.copy()  # type: ignore
@@ -742,7 +779,7 @@ class DeclareStatement(Statement):
 class AssignStatement(Statement):
     ident: Lvalue
     value: Expr
-    is_ident: bool = True  # for optimization
+    is_ident: bool = False  # for optimization
 
 
 @dataclass(slots=True)

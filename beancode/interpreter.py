@@ -171,6 +171,9 @@ class Interpreter:
         return self.calls[-1].rtype
 
     def visit_array_type(self, t: ArrayType) -> BCArrayType:
+        if t.is_unbounded():
+            return BCArrayType(t.inner, None)
+
         if t.is_matrix():
             s_bounds = t.get_matrix_bounds()
             ob = self.visit_expr(s_bounds[0])
@@ -213,6 +216,17 @@ class Interpreter:
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         lhs = self.visit_expr(expr.lhs)
+
+        if (
+            expr.op == Operator.AND
+            and lhs.kind == BCPrimitiveType.BOOLEAN
+            and not lhs.val
+        ):
+            return BCValue.new_boolean(False)
+
+        if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
+            return BCValue.new_boolean(True)
+
         rhs = self.visit_expr(expr.rhs)
 
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
@@ -419,11 +433,20 @@ class Interpreter:
             if ind.idx_inner is None:
                 self.error("expected 2 indices for matrix indexing", ind.pos)
 
-            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
-                self.error(f"type of outer array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
+            if (
+                index_v.kind != BCPrimitiveType.INTEGER
+                and not index_v.is_uninitialized()
+            ):
+                self.error(
+                    f"type of outer array index is {index_v.kind}, not INTEGER!",
+                    ind.idx_outer.pos,
+                )
 
             inner_index_v = self.visit_expr(ind.idx_inner)  # type: ignore
-            if inner_index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
+            if (
+                inner_index_v.kind != BCPrimitiveType.INTEGER
+                and not index_v.is_uninitialized()
+            ):
                 self.error(
                     f"type of inner array index is {inner_index_v.kind}, not INTEGER!",
                     ind.idx_inner.pos,
@@ -434,9 +457,15 @@ class Interpreter:
             if ind.idx_inner is not None:
                 self.error("expected only 1 index for array indexing", ind.pos)
 
-            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
-                self.error(f"type of array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
-            
+            if (
+                index_v.kind != BCPrimitiveType.INTEGER
+                and not index_v.is_uninitialized()
+            ):
+                self.error(
+                    f"type of array index is {index_v.kind}, not INTEGER!",
+                    ind.idx_outer.pos,
+                )
+
             return (index_v.val, None)  # type: ignore
 
     def visit_array_index(self, ind: ArrayIndex) -> BCValue:  # type: ignore
@@ -676,6 +705,11 @@ class Interpreter:
                 case "clear":
                     print("\x1b[2J\x1b[H", end="", flush=True)
                     return BCValue.new_null()
+                case "boundof":
+                    [arr, num, *_] = evargs
+                    if not arr.is_array:
+                        self.error(f"cannot get the bounds of an {arr.kind}!", stmt.pos)
+                    return bean_boundof(stmt.pos, arr, num.get_integer())
         except BCError as e:
             e.pos = stmt.pos
             raise e
@@ -684,7 +718,7 @@ class Interpreter:
         if len(func.params) != len(stmt.args):
             self.error(
                 # TODO: better error msg
-                f"FFI function {func.name} declares {len(func.params)} variables but only found {len(stmt.args)} in function call",
+                f"FFI function {func.name} declares {len(func.params)} parameters but only found {len(stmt.args)} in function call",
                 stmt.pos,
             )
 
@@ -732,13 +766,21 @@ class Interpreter:
 
         if len(func.args) != len(stmt.args):
             self.error(
-                f"function {func.name} declares {len(func.args)} variables but only found {len(stmt.args)} in procedure call",
+                f"function {func.name} declares {len(func.args)} parameters but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
             )
 
         intp.variables = self.variables.copy()
-        for argdef, argval in zip(func.args, stmt.args):
+        for i, (argdef, argval) in enumerate(zip(func.args, stmt.args)):
             val = self.visit_expr(argval)
+
+            deftyp = self.visit_type(argdef.typ)
+            if deftyp.approx_eq(val.kind):
+                self.error(
+                    f"type mismatch in {humanize_index(i+1)} argument in function call\nwanted: {deftyp}, but got: {val.kind}",
+                    argval.pos,
+                )
+
             intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.functions = self.functions.copy()
@@ -759,7 +801,7 @@ class Interpreter:
         if len(proc.params) != len(stmt.args):
             self.error(
                 # TODO: better error msg
-                f"FFI procedure {proc.name} declares {len(proc.params)} variables but only found {len(stmt.args)} in procedure call",
+                f"FFI procedure {proc.name} declares {len(proc.params)} parameters but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
             )
 
@@ -808,15 +850,23 @@ class Interpreter:
 
         if len(proc.args) != len(stmt.args):
             self.error(
-                f"procedure {proc.name} declares {len(proc.args)} variables but only found {len(stmt.args)} in procedure call",
+                f"procedure {proc.name} declares {len(proc.args)} parameters but only found {len(stmt.args)} in procedure call",
                 stmt.pos,
             )
 
         intp.functions = self.functions.copy()
         intp.variables = self.variables.copy()
         intp.files = self.files.copy()
-        for argdef, argval in zip(proc.args, stmt.args):
+        for i, (argdef, argval) in enumerate(zip(proc.args, stmt.args)):
             val = self.visit_expr(argval)
+
+            deftyp = self.visit_type(argdef.typ)
+            if not deftyp.approx_eq(val.kind):
+                self.error(
+                    f"type mismatch in {humanize_index(i+1)} argument in procedure call\nwanted: {deftyp}, but got: {val.kind}",
+                    argval.pos,
+                )
+
             intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
 
         intp.visit_block(proc.block)
@@ -1053,7 +1103,7 @@ class Interpreter:
             case Identifier():
                 return self.visit_identifier(expr)
             case Literal():
-                return expr.val
+                return expr.val.copy()
             case ArrayLiteral():
                 return self.visit_array_literal(expr)
             case BinaryExpr():
@@ -1560,6 +1610,7 @@ class Interpreter:
 
     def visit_assign_stmt(self, s: AssignStatement):
         val = self.visit_expr(s.value)
+        is_any = False
 
         if s.is_ident:  # isinstance(s.ident, Identifier)
             key: str = s.ident.ident  # type: ignore
@@ -1584,6 +1635,15 @@ class Interpreter:
 
             target = target.val
 
+            if target.is_array:
+                self.error(
+                    "cannot assign to array!\ndid you discover the indirect assignment hack?",
+                    s.pos,
+                )
+
+            if target.is_any:
+                is_any = True
+
             if val.is_array:
                 a: BCArray = val.val  # type: ignore
                 t: BCArray = target.val  # type: ignore
@@ -1593,6 +1653,8 @@ class Interpreter:
                     self.error(f"mismatched array sizes in array assignment", s.pos)
         else:  # elif isinstance(s.ident, ArrayIndex)
             target = self.visit_expr(s.ident)
+            if target.is_any:
+                is_any = True
 
         should_promote_real = (
             target.kind == BCPrimitiveType.REAL and val.kind == BCPrimitiveType.INTEGER
@@ -1600,7 +1662,7 @@ class Interpreter:
         should_promote_char = (
             target.kind == BCPrimitiveType.STRING and val.kind == BCPrimitiveType.CHAR
         )
-        if target.kind != val.kind:
+        if target.kind != val.kind and not is_any:
             if should_promote_real:
                 val = BCValue(
                     BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
@@ -1614,6 +1676,7 @@ class Interpreter:
                 )
 
         target.replace_inner(val.copy())
+        target.is_any = is_any
 
         self.trace(s.pos.row)
 
@@ -1647,7 +1710,12 @@ class Interpreter:
     def _declare_array(self, d: DeclareStatement, key: str):
         at: ArrayType = d.typ  # type: ignore
         inner_type = at.inner
+        is_any = False
         t = self.visit_array_type(at)
+
+        if t.is_unbounded():
+            self.error("cannot declare an unbounded array!", d.pos)
+
         if t.is_matrix():
             bounds = t.get_matrix_bounds()
             ob, oe, ib, ie = bounds
@@ -1691,9 +1759,19 @@ class Interpreter:
             # Directly setting the result of the comprehension results in multiple pointers pointing to the same list
             in_size = ie - ib
             out_size = oe - ob
+
+            if in_size > (1 << 20):
+                self.error("too many elements in array!", at.get_matrix_bounds()[3].pos)
+
+            if out_size > (1 << 20):
+                self.error("too many elements in array!", at.get_matrix_bounds()[1].pos)
+
             # array bound declarations are inclusive
+            if inner_type == BCPrimitiveType.ANY:
+                inner_type = BCPrimitiveType.NULL
+                is_any = True
             outer_arr = [
-                [BCValue(inner_type) for _ in range(in_size + 1)]
+                [BCValue(inner_type, is_any=is_any) for _ in range(in_size + 1)]
                 for _ in range(out_size + 1)
             ]
 
@@ -1722,7 +1800,14 @@ class Interpreter:
                 )  # type: ignore
 
             size = end - begin
-            arr = [BCValue(t.inner) for _ in range(size + 1)]
+            if size > (1 << 20):
+                self.error("too many elements in array!", at.get_flat_bounds()[1].pos)
+
+            inner_type = t.inner
+            if t.inner == BCPrimitiveType.ANY:
+                inner_type = BCPrimitiveType.NULL
+                is_any = True
+            arr = [BCValue(inner_type, is_any=is_any) for _ in range(size + 1)]
 
             atype = BCArrayType.new_flat(inner_type, bounds)
             res = BCArray.new_flat(atype, arr)
@@ -1764,10 +1849,12 @@ class Interpreter:
 
             if isinstance(s.typ, ArrayType):
                 self._declare_array(s, key)
-            else:
+            elif s.typ == BCPrimitiveType.ANY:
                 self.variables[key] = Variable(
-                    BCValue(kind=s.typ), False, export=s.export
+                    BCValue(kind=BCPrimitiveType.NULL, is_any=True), False, export=s.export,
                 )
+            else:
+                self.variables[key] = Variable(BCValue(kind=BCPrimitiveType.NULL), False, export=s.export)
         self.trace(s.pos.row)
 
     def visit_trace_stmt(self, stmt: TraceStatement):

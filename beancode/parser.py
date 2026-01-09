@@ -313,67 +313,75 @@ class Parser:
     def _array_type(self) -> Type:
         inner: BCPrimitiveType
 
+        unbounded = False
         self.consume_and_expect(TokenKind.LEFT_BRACKET, "for array type declaration")
-        begin = self.expr()
-        if not begin:
-            raise BCError(
-                "invalid or no expression as beginning value of array declaration",
-                begin,
+        mult = self.check_and_consume(TokenKind.MUL)
+        if mult:
+            unbounded = True
+            self.consume_and_expect(
+                TokenKind.RIGHT_BRACKET, "after array length declaration"
             )
-
-        self.consume_and_expect(
-            TokenKind.COLON, "after beginning value of array declaration"
-        )
-
-        end = self.expr()
-        if not end:
-            raise BCError(
-                "invalid or no expression as ending value of array declaration",
-                end,
-            )
-
-        flat_bounds = (begin, end)
-        matrix_bounds = None
-
-        right_bracket = self.consume()
-        if right_bracket.kind == TokenKind.RIGHT_BRACKET:
-            pass
-        elif right_bracket.kind == TokenKind.COMMA:
-            inner_begin = self.expr()
-            if not inner_begin:
+        else:
+            begin = self.expr()
+            if not begin:
                 raise BCError(
                     "invalid or no expression as beginning value of array declaration",
-                    inner_begin,
+                    begin,
                 )
 
             self.consume_and_expect(
                 TokenKind.COLON, "after beginning value of array declaration"
             )
 
-            inner_end = self.expr()
-            if not inner_end:
+            end = self.expr()
+            if not end:
                 raise BCError(
                     "invalid or no expression as ending value of array declaration",
+                    end,
+                )
+
+            flat_bounds = (begin, end)
+            matrix_bounds = None
+
+            right_bracket = self.consume()
+            if right_bracket.kind == TokenKind.RIGHT_BRACKET:
+                pass
+            elif right_bracket.kind == TokenKind.COMMA:
+                inner_begin = self.expr()
+                if not inner_begin:
+                    raise BCError(
+                        "invalid or no expression as beginning value of array declaration",
+                        inner_begin,
+                    )
+
+                self.consume_and_expect(
+                    TokenKind.COLON, "after beginning value of array declaration"
+                )
+
+                inner_end = self.expr()
+                if not inner_end:
+                    raise BCError(
+                        "invalid or no expression as ending value of array declaration",
+                        inner_end,
+                    )
+
+                matrix_bounds = (
+                    flat_bounds[0],
+                    flat_bounds[1],
+                    inner_begin,
                     inner_end,
                 )
 
-            matrix_bounds = (
-                flat_bounds[0],
-                flat_bounds[1],
-                inner_begin,
-                inner_end,
-            )
+                flat_bounds = None
 
-            flat_bounds = None
-
-            self.consume_and_expect(
-                TokenKind.RIGHT_BRACKET, "after matrix length declaration"
-            )
-        else:
-            raise BCError(
-                "expected right bracket or comma after array bounds declaration",
-                right_bracket.pos,
-            )
+                self.consume_and_expect(
+                    TokenKind.RIGHT_BRACKET, "after matrix length declaration"
+                )
+            else:
+                raise BCError(
+                    "expected right bracket or comma after array bounds declaration",
+                    right_bracket.pos,
+                )
 
         self.consume_and_expect(TokenKind.OF, "after array size declaration")
 
@@ -386,7 +394,7 @@ class Parser:
 
         inner = BCPrimitiveType.from_str(arrtyp.data)  # type: ignore
 
-        bounds = matrix_bounds if matrix_bounds else flat_bounds
+        bounds = None if unbounded else (matrix_bounds if matrix_bounds else flat_bounds) # type: ignore
         return ArrayType(inner, bounds)  # type: ignore
 
     def typ(self) -> Type:
@@ -911,7 +919,7 @@ class Parser:
         if isinstance(ident, Identifier):
             is_ident = True
 
-        return AssignStatement(ident.pos, ident, expr, is_ident=is_ident)  # type: ignore
+        return AssignStatement(ident.pos, ident, expr, is_ident=is_ident)
 
     # multiline statements go here
     def block_until(self, delim: TokenKind) -> list[Statement]:

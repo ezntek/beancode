@@ -48,7 +48,7 @@ class Token:
         return f"token({self.kind})"
 
 
-TYPES = {"integer", "boolean", "real", "char", "string", "array"}
+TYPES = {"integer", "boolean", "real", "char", "string", "array", "any"}
 KEYWORDS = {
     "declare",
     "constant",
