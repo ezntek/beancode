@@ -23,16 +23,8 @@ from . import __version__
 
 from enum import IntEnum
 
-def pyver():
-    vi = sys.version_info
-    ver = f"{vi.major}.{vi.minor}.{vi.micro}"
-    impl = sys.implementation
-    res = { "cpython": "CPython", "pypy": "PyPy", "graalpy": "GraalPython", "micropython": "MicroPython" }.get(impl.name)
-    impl = impl if res is None else res
-    return f"{ver} ({impl} on {sys.implementation._multiarch})"
-
 BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[0m
-\033[2mUsing Python {pyver()}
+\033[2mUsing Python {sys.version}
 Copyright (c) Eason Qin, 2025-2026. type ".license" for more information.\033[0m
 type ".exit" to quit the REPL, or ".help" for a list of available commands."""
 
@@ -73,10 +65,10 @@ def setup_readline():
         histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
         try:
             readline.read_history_file(histfile)
-            # default history len is -1 (infinite), which may grow unruly
             readline.set_history_length(10000)
         except FileNotFoundError:
             open(histfile, "wb").close()
+
         atexit.register(readline.write_history_file, histfile)
     except ImportError:
         if sys.platform not in {"emscripten", "wasi"}:
