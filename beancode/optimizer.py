@@ -7,6 +7,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
 
+# INFO: this doubles as a static analyzer for the compiler
+
 from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
@@ -25,6 +27,7 @@ class Optimizer:
     # TODO: use
     constants: list[dict[str, BCValue]]
     ignore_constants: list[list[str]]
+    var_types: list[dict[str, Type]]
     block: list[Statement]
     cur_stmt: int
     active_constants: set[str]
@@ -37,6 +40,7 @@ class Optimizer:
         self.active_constants = set()
         self.elided_procedures = set()
         self.ignore_constants = list()
+        self.var_types = list()
         self.cur_stmt = 0
         self.remove_cur = False
 
@@ -45,6 +49,18 @@ class Optimizer:
             *(d.keys() for d in self.constants)
         )
         self.active_constants -= {x for row in self.ignore_constants for x in row}
+
+    def var_type_of(self, name: str) -> Type | None:
+        for d in reversed(self.var_types):
+            if name in d:
+                return d[name]
+
+    @staticmethod
+    def type_to_bctype(t: Type) -> BCType:
+        if isinstance(t, ArrayType):
+            return BCArrayType(t.inner, bounds=None)
+        else:
+            return t
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -155,12 +171,19 @@ class Optimizer:
 
         if not inner:
             return
+        elif isinstance(inner, BCType):
+            inner_typ = inner
+        else:
+            inner_typ = inner.kind
 
-        if inner.kind == BCPrimitiveType.NULL:
+        if inner_typ == BCPrimitiveType.NULL:
             raise BCError("cannot cast NULL to anything!", tc.pos)
 
-        if isinstance(inner.kind, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
+        if isinstance(inner_typ, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
             raise BCError(f"cannot cast an array to a {tc.typ}", tc.pos)
+
+        if not inner or isinstance(inner, BCType):
+            return
 
         match tc.typ:
             case BCPrimitiveType.STRING:
@@ -174,9 +197,12 @@ class Optimizer:
             case BCPrimitiveType.BOOLEAN:
                 return self._typecast_boolean(inner)
 
-    def visit_identifier(self, id: Identifier) -> BCValue | None:
+    def visit_identifier(self, id: Identifier) -> BCValue | BCType | None:
         if id.ident not in self.active_constants:
-            return
+            t = self.var_type_of(id.ident)
+            if t:
+                return self.type_to_bctype(t)
+            return None
 
         for d in reversed(self.constants):
             if id.ident in d:
@@ -185,15 +211,18 @@ class Optimizer:
     def visit_array_literal(self, expr: ArrayLiteral):
         for i in range(len(expr.items)):
             opt = self.fold_expr(expr.items[i])
-            if not opt:
+            if not opt or isinstance(opt, BCType):
                 continue
             expr.items[i] = Literal(expr.items[i].pos, opt)
 
     def visit_binaryexpr(self, expr: BinaryExpr):
         should_return = False
         lhs = self.fold_expr(expr.lhs)  # type: ignore
-        if not lhs:
+        if not lhs or isinstance(lhs, BCType):
             should_return = True
+        elif isinstance(lhs, BCType):
+            should_return = True
+            lhs = BCValue(lhs, None)
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
 
@@ -210,11 +239,11 @@ class Optimizer:
         rhs = self.fold_expr(expr.rhs)  # type: ignore
         if not rhs:
             should_return = True
+        elif isinstance(rhs, BCType):
+            should_return = True
+            rhs = BCValue(rhs, None)
         else:
             expr.rhs = Literal(expr.rhs.pos, rhs)
-
-        if should_return:
-            return
 
         lhs: BCValue
         rhs: BCValue
@@ -267,6 +296,10 @@ class Optimizer:
                     f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
                     expr.pos,
                 )
+
+        # allow for type checking first
+        if should_return:
+            return
 
         if expr.op != Operator.EQUAL:
             if lhs.is_uninitialized():
@@ -428,23 +461,29 @@ class Optimizer:
                 pos,
             )
 
+        should_abort = False
         evargs: list[BCValue] = []
         if lr:
             for idx, (arg, arg_type) in enumerate(zip(args, lr)):
                 new = self.fold_expr(arg)
                 if not new:
                     return
+                elif isinstance(new, BCType):
+                    new_typ = new
+                    should_abort = True
+                else:
+                    new_typ = new.kind
 
                 mismatch = False
                 if isinstance(arg_type, tuple):
-                    if new.kind not in arg_type:
+                    if new_typ not in arg_type:
                         mismatch = True
                 elif not arg_type:
                     pass
-                elif arg_type != new.kind:
+                elif arg_type != new_typ:
                     mismatch = True
 
-                if mismatch and new.is_null():
+                if mismatch and isinstance(new, BCValue) and new.is_null():
                     raise BCError(
                         f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
@@ -464,7 +503,7 @@ class Optimizer:
                             )
                             err_base += " "
                     else:
-                        if str(new.kind)[0] in "aeiou":
+                        if str(new_typ)[0] in "aeiou":
                             err_base += "a "
                         else:
                             err_base += "an "
@@ -472,20 +511,22 @@ class Optimizer:
                         err_base += prefix_string_with_article(str(arg_type).upper())
                         err_base += " "
 
-                    wanted = str(new.kind).upper()
+                    wanted = str(new_typ).upper()
                     err_base += f"but found {wanted}"
                     raise BCError(err_base, pos)
 
-                evargs.append(new)
+                if isinstance(new, BCValue):
+                    evargs.append(new)
         else:
             evargs = list()
             for e in args:
                 evaled = self.fold_expr(e)
-                if not evaled:
+                if not evaled or isinstance(evaled, BCType):
                     return
                 evargs.append(evaled)
 
-        return evargs
+        if not should_abort:
+            return evargs
 
     def visit_libroutine(self, stmt: FunctionCall) -> BCValue | None:  # type: ignore
         name = stmt.ident.lower()
@@ -594,10 +635,10 @@ class Optimizer:
 
         for i, itm in enumerate(expr.args):
             val = self.fold_expr(itm)
-            if val:
+            if val and not isinstance(val, BCType):
                 expr.args[i] = Literal(itm.pos, val)
 
-    def fold_expr(self, expr: Expr) -> BCValue | None:
+    def fold_expr(self, expr: Expr) -> BCValue | BCType | None:
         match expr:
             case Typecast():
                 return self.visit_typecast(expr)
@@ -607,6 +648,8 @@ class Optimizer:
                 inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
+                elif isinstance(inner, BCType):
+                    return inner
 
                 if inner.kind == BCPrimitiveType.INTEGER:
                     return BCValue.new_integer(-inner.get_integer())  # type: ignore
@@ -616,6 +659,8 @@ class Optimizer:
                 inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
+                elif isinstance(inner, BCType):
+                    return inner
 
                 if inner.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
@@ -627,7 +672,7 @@ class Optimizer:
             case Identifier():
                 return self.visit_identifier(expr)
             case Literal():
-                return expr.val
+                return expr.val.copy()
             case ArrayLiteral():
                 return self.visit_array_literal(expr)
             case BinaryExpr():
@@ -642,7 +687,7 @@ class Optimizer:
 
     def fold_expr_if_possible(self, expr: Expr) -> Expr:
         res = self.fold_expr(expr)
-        if res:
+        if res and not isinstance(res, BCType):
             return Literal(expr.pos, res)
         else:
             return expr
@@ -699,9 +744,10 @@ class Optimizer:
     def visit_type(self, typ: Type):
         if isinstance(typ, ArrayType):
             new = list()
-            for itm in typ.bounds:
-                new.append(self.visit_expr(itm))
-            typ.bounds = tuple(new)
+            if typ.bounds:
+                for itm in typ.bounds:
+                    new.append(self.visit_expr(itm))
+                typ.bounds = tuple(new)
 
     def visit_if_stmt(self, stmt: IfStatement):
         stmt.cond = self.visit_expr(stmt.cond)
@@ -792,7 +838,7 @@ class Optimizer:
 
     def visit_constant_stmt(self, stmt: ConstantStatement):
         val = self.fold_expr(stmt.value)
-        if not val:
+        if not val or isinstance(val, BCType):
             # try optimizing the expr instead
             stmt.value = self.visit_expr(stmt.value)
             return
@@ -802,6 +848,12 @@ class Optimizer:
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
         self.visit_type(stmt.typ)
+        for id in stmt.ident:
+            if isinstance(stmt.typ, ArrayType):
+                # unbounded by default
+                self.var_types[-1][id.ident] = ArrayType(stmt.typ.inner, None)
+            else:
+                self.var_types[-1][id.ident] = stmt.typ
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         _ = stmt
@@ -926,6 +978,7 @@ class Optimizer:
         self.constants.append(dict())
         self.ignore_constants.append(ignore if ignore else list())
         saved_elided_procedures = self.elided_procedures.copy()
+        self.var_types.append(dict())
         self._update_active_constants()
         new_block = []
         while cur < len(blk):
@@ -940,6 +993,7 @@ class Optimizer:
             cur += 1
         self.constants.pop()
         self.ignore_constants.pop()
+        self.var_types.pop()
         self.elided_procedures = saved_elided_procedures
         self._update_active_constants()
         return new_block

@@ -63,14 +63,17 @@ class Formatter:
         if isinstance(typ, ArrayType):
             self.write("ARRAY[")
             bounds = typ.bounds
-            self.visit_expr(bounds[0])
-            self.write(":")
-            self.visit_expr(bounds[1])
-            if typ.is_matrix():
-                self.write(",")
-                self.visit_expr(bounds[2])  # type: ignore
+            if not bounds:
+                self.write('*')
+            else:
+                self.visit_expr(bounds[0])
                 self.write(":")
-                self.visit_expr(bounds[3])  # type: ignore
+                self.visit_expr(bounds[1])
+                if typ.is_matrix():
+                    self.write(",")
+                    self.visit_expr(bounds[2])  # type: ignore
+                    self.write(":")
+                    self.visit_expr(bounds[3])  # type: ignore
             self.write(f"] OF {typ.inner}")
         else:
             self.write(str(typ).upper())
