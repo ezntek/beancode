@@ -1,4 +1,4 @@
-# beancode: a portable IGCSE Computer Science (0478, 2210) Pseudocode interpreter.
+# beancode: a portable IGCSE Computer Science (0478, 0984, 2210) Pseudocode interpreter.
 #
 # Copyright (c) Eason Qin, 2025-2026.
 #
@@ -196,6 +196,16 @@ class Optimizer:
             should_return = True
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
+
+        if (
+            expr.op == Operator.AND
+            and lhs.kind == BCPrimitiveType.BOOLEAN
+            and not lhs.val
+        ):
+            return BCValue.new_boolean(False)
+
+        if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
+            return BCValue.new_boolean(True)
 
         rhs = self.fold_expr(expr.rhs)  # type: ignore
         if not rhs:
@@ -570,6 +580,10 @@ class Optimizer:
                     return None  # runtime only
                 case "flush":
                     return None  # runtime only
+                case "clear":
+                    return None
+                case _:
+                    return None
         except BCError as e:
             e.pos = stmt.pos
             raise e

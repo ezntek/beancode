@@ -1,4 +1,4 @@
-# beancode: a portable IGCSE Computer Science (0478, 2210) Pseudocode interpreter.
+# beancode: a portable IGCSE Computer Science (0478, 0984, 2210) Pseudocode interpreter.
 #
 # Copyright (c) Eason Qin, 2025-2026.
 #
@@ -213,6 +213,17 @@ class Interpreter:
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         lhs = self.visit_expr(expr.lhs)
+
+        if (
+            expr.op == Operator.AND
+            and lhs.kind == BCPrimitiveType.BOOLEAN
+            and not lhs.val
+        ):
+            return BCValue.new_boolean(False)
+
+        if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
+            return BCValue.new_boolean(True)
+
         rhs = self.visit_expr(expr.rhs)
 
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
@@ -581,7 +592,7 @@ class Interpreter:
                     return bean_ucase(stmt.pos, txt)
                 case "lcase":
                     [txt, *_] = evargs
-                    return bean_ucase(stmt.pos, txt)
+                    return bean_lcase(stmt.pos, txt)
                 case "substring":
                     [txt, begin, length, *_] = evargs
 

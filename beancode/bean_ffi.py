@@ -1,4 +1,4 @@
-# beancode: a portable IGCSE Computer Science (0478, 2210) Pseudocode interpreter.
+# beancode: a portable IGCSE Computer Science (0478, 0984, 2210) Pseudocode interpreter.
 #
 # Copyright (c) Eason Qin, 2025-2026.
 #
