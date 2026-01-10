@@ -1,11 +1,6 @@
 # beancode
 
-This is a fully syllabus-compliant (optimizing) interpreter for IGCSE pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
-
-## WARNING!
-
-This is the development branch of beancode, where breaking changes may be made each commit. To access source history
-for a specific version, please go to the respective branch, like `0.6`.
+This is a fully syllabus-compliant (optimizing) interpreter for IGCSE Computer Science (0478, 0984, 2210) pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
 
 ## Installation
 
