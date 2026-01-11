@@ -412,11 +412,7 @@ class Formatter:
         self.write("ENDTRACE\n")
 
     def visit_fileid(self, file_id: Expr | str):
-        if isinstance(file_id, Grouping):
-            self.write("(")
-            self.visit_expr(file_id.inner)
-            self.write(")")
-        elif isinstance(file_id, Expr):
+        if isinstance(file_id, Expr):
             self.write(" ")
             self.visit_expr(file_id)
         else:
@@ -448,13 +444,13 @@ class Formatter:
             self.write("APPEND")
 
     def visit_readfile_stmt(self, stmt: ReadfileStatement):
-        self.write("READFILE ")
+        self.write("READFILE")
         self.visit_fileid(stmt.file_ident)
         self.write(", ")
         self.visit_lvalue(stmt.target)
 
     def visit_writefile_stmt(self, stmt: WritefileStatement):
-        self.write("WRITEFILE ")
+        self.write("WRITEFILE")
         self.visit_fileid(stmt.file_ident)
         self.write(", ")
         self.visit_expr(stmt.src)

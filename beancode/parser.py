@@ -1350,8 +1350,8 @@ class Parser:
             expr = self.expr()
             if not expr:
                 raise BCError(
-                    f"expected expression, file identifier or string literal after {ctx}!\n"
-                    + "pass the name of the file as a string literal or bare file name.",
+                    f"expected expression or string literal after {ctx}!\n"
+                    + "pass the name of the file as a string literal.",
                     self.pos(),
                 )
             return expr

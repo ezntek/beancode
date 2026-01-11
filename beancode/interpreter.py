@@ -1801,13 +1801,10 @@ class Interpreter:
     def _get_file_name(self, id: Expr | str, pos: Pos):
         name = str()
         if isinstance(id, Expr):
-            if isinstance(id, Identifier):
-                name = id.ident
-            else:
-                exp = self.visit_expr(id)
-                if exp.kind != BCPrimitiveType.STRING:
-                    self.error("file name must be a string!", pos)
-                name = exp.get_string()
+            exp = self.visit_expr(id)
+            if exp.kind != BCPrimitiveType.STRING:
+                self.error("file name must be a string!", pos)
+            name = exp.get_string()
         else:
             name = id
 

@@ -1,13 +1,14 @@
 // PPM Image Generator
-
-CONSTANT Width <- 16*40 
-CONSTANT Height <- 9*40
+CONSTANT Width <- 16 * 40
+CONSTANT Height <- 9 * 40
 CONSTANT Max <- 60
 
 PROCEDURE Image(Name: STRING)
-    WRITEFILE(Name), "P3\n"
-    WRITEFILE(Name), Width + " " + Height + "\n"
-    WRITEFILE(Name), "255\n"
+    WRITEFILE Name, "P3\n"
+
+    WRITEFILE Name, Width + " " + Height + "\n"
+
+    WRITEFILE Name, "255\n"
 
     DECLARE Data: STRING
     DECLARE Pixel: STRING
@@ -19,21 +20,23 @@ PROCEDURE Image(Name: STRING)
             IF MOD(DIV(X, 30) + DIV(Y, 30), 2) = 0
               THEN
                 Pixel <- 255 + " " + 0 + " " + 0
-                //Pixel <- 79 + " " + 169 + " " + 232 + " "
+                // Pixel <- 79 + " " + 169 + " " + 232 + " "
               ELSE
                 Pixel <- 0 + " " + 0 + " " + 0
-                //Pixel <- 120 + " " + 187 + " " + 232 + " "
+                // Pixel <- 120 + " " + 187 + " " + 232 + " "
             ENDIF
-            WRITEFILE(Name), Pixel + "\n"
+            WRITEFILE Name, Pixel + "\n"
         NEXT X
     NEXT Y
 ENDPROCEDURE
 
-//DECLARE FileName: STRING
-//OUTPUT "File Name?"
-//INPUT FileName
+// DECLARE FileName: STRING
+// OUTPUT "File Name?"
+// INPUT FileName
 CONSTANT FileName <- "image.ppm"
-OPENFILE(FileName) FOR WRITE
+OPENFILE FileName FOR WRITE
+
 CALL Image(FileName)
-CLOSEFILE(FileName)
+CLOSEFILE FileName
+
 OUTPUT "File Written to ", FileName
