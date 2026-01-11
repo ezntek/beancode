@@ -412,7 +412,10 @@ class Formatter:
         self.write("ENDTRACE\n")
 
     def visit_fileid(self, file_id: Expr | str):
-        if isinstance(file_id, Expr):
+        if isinstance(file_id, Grouping):
+            self.write(" ")
+            self.visit_expr(file_id.inner)
+        elif isinstance(file_id, Expr):
             self.write(" ")
             self.visit_expr(file_id)
         else:

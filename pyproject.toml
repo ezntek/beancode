@@ -1,7 +1,7 @@
 [project]
 name = "beancode"
-version = "0.7.0-beta4"
-description = "A cursed IGCSE pseudocode interpreter/transpiler"
+version = "0.7.0-beta5"
+description = "A portable, dependency-free IGCSE/O-Level Computer Science (0478, 0984, 2210) Pseudocode interpreter."
 authors = [
     {name = "ezntek", email = "eason@ezntek.com"}
 ]
