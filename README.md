@@ -1,6 +1,6 @@
 # beancode
 
-This is a fully syllabus-compliant (optimizing) interpreter for IGCSE Computer Science (0478, 0984, 2210) pseudocode, as shown in the [2023-2025 syllabus](https://ezntek.com/doc/2023_2025_cs_syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
+This is a fully syllabus-compliant (optimizing) interpreter for IGCSE Computer Science (0478, 0984, 2210) pseudocode, as shown in the [2026-2028 syllabus](https://www.cambridgeinternational.org/Images/697167-2026-2028-syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
 
 ## Installation
 
@@ -82,9 +82,10 @@ There is also a formatter available, go to [this section](#formatter) for detail
 The REPL (or Read-Eval-Print-Loop) allows you to write beancode directly in your terminal. Run beancode (with the above instructions) without any arguments (i.e. just the command), and you will be dropped into this prompt:
 
 ```
-=== welcome to beancode 0.7.0 ==
-Using Python 3.13.7 (main, Sep  9 2025, 16:20:24) [GCC 15.2.1 20250813]
-type ".help" for a list of REPL commands, ".exit" to exit, or start typing some code.
+=== welcome to beancode 0.7.0 ===
+Using Python 3.13.9 (main, Dec 17 2025, 04:03:25) [GCC 15.2.1 20251122]
+Copyright (c) Eason Qin, 2025-2026. type ".license" for more information.
+type ".exit" to quit the REPL, or ".help" for a list of available commands.
 >> 
 ```
 
