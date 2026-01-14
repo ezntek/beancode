@@ -135,6 +135,10 @@ or
 python3 -m beancode.cli.beanfmt myfile.bean
 ```
 
+## Contributing
+
+Please PR to the `main` branch, this version is for stable and tested releases that are known to be highly compliant and reliable.
+
 ## Performance Improvements since 0.5
 
 Since version 0.6 (which was scrapped due to last minute plan changes) and this version were written in part to boost the performance of beancode, I have done some benchmarking. This is due to the technological improvements made, by using more efficient data structures to represent the AST.
