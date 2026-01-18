@@ -7,6 +7,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
 
+import os
+
 from .error import *
 from .lexer import Lexer
 from .parser import Parser
