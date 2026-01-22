@@ -518,6 +518,8 @@ class Parser:
 
     def array_index(self) -> Expr | None:
         expr = self.unary()
+        if not expr:
+            return
 
         leftb = self.check_and_consume(TokenKind.LEFT_BRACKET)
         if not leftb:
