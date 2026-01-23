@@ -411,12 +411,14 @@ class Lexer:
                 match word.lower():
                     case "endfor":
                         raise BCError(
-                            "ENDFOR is not a valid keyword!\nPlease use NEXT <your counter> to end a for loop instead.",
+                            "ENDFOR is not a valid keyword!\n"
+                            + "Please use NEXT <your counter> to end a for loop instead.",
                             p,
                         )
                     case "open":
                         raise BCError(
-                            "OPEN is not a valid keyword!\nPlease use OPENFILE instead. If you are copying from the textbook\n"
+                            "OPEN is not a valid keyword!\n"
+                            + "Please use OPENFILE instead. If you are copying from the textbook\n"
                             + "(ISBN 9781398318281), their File I/O examples are incorrect to\n"
                             + "Cambridge's official pseudocode.",
                             p,

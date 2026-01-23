@@ -714,6 +714,7 @@ class Parser:
             exprs.append(new)
 
         self.expect_newline("OUTPUT")
+        self.check_and_consume(TokenKind.NEWLINE)
 
         return OutputStatement(begin.pos, items=exprs, newline=newline)
 
@@ -1403,6 +1404,8 @@ class Parser:
 
             self.check_and_consume(TokenKind.AND)
 
+        self.check_and_consume(TokenKind.NEWLINE)
+
         if not (read or write or append):
             raise BCError("No file modes specified!", begin.pos)
 
@@ -1420,6 +1423,8 @@ class Parser:
         val: ArrayIndex | Identifier | None = self.array_index_or_none()  # type: ignore
         if not val:
             val = self.ident()
+
+        self.check_and_consume(TokenKind.NEWLINE)
 
         return ReadfileStatement(begin.pos, fileid, val)  # type: ignore
 
@@ -1439,6 +1444,8 @@ class Parser:
                 self.pos(),
             )
 
+        self.check_and_consume(TokenKind.NEWLINE)
+
         return WritefileStatement(begin.pos, fileid, val)
 
     def closefile_stmt(self) -> Statement | None:
@@ -1447,6 +1454,8 @@ class Parser:
             return
 
         fileid: Expr | str = self._file_id("CLOSEFILE")
+
+        self.check_and_consume(TokenKind.NEWLINE)
 
         return ClosefileStatement(begin.pos, fileid)
 
