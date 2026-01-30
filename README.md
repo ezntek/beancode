@@ -1,6 +1,6 @@
-# beancode
-
 ![beancode logo](/logo.png)
+
+## Introduction
 
 This is a fully syllabus-compliant (optimizing) interpreter for IGCSE Computer Science (0478, 0984, 2210) pseudocode, as shown in the [2026-2028 syllabus](https://www.cambridgeinternational.org/Images/697167-2026-2028-syllabus.pdf) and is compatible with all later versions. It is written in Python, and is compatible with all versions above and including version 3.10.
 
