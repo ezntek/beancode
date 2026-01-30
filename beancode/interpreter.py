@@ -835,31 +835,8 @@ class Interpreter:
         intp.calls.pop()
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue:
-        _ = pos  # shut up the type checker
-        s = ""
-
-        if inner.is_array:
-            arr = inner.get_array()
-            s = self._display_array(arr)
-        else:
-            match inner.kind:
-                case BCPrimitiveType.NULL:
-                    s = "(null)"
-                case BCPrimitiveType.BOOLEAN:
-                    if inner.get_boolean():
-                        s = "true"
-                    else:
-                        s = "false"
-                case BCPrimitiveType.INTEGER:
-                    s = str(inner.get_integer())
-                case BCPrimitiveType.REAL:
-                    s = str(inner.get_real())
-                case BCPrimitiveType.CHAR:
-                    s = str(inner.get_char()[0])
-                case BCPrimitiveType.STRING:
-                    return inner
-
-        return BCValue.new_string(s)
+        _ = pos
+        return BCValue.new_string(str(inner))
 
     def _typecast_integer(self, inner: BCValue, pos: Pos) -> BCValue:
         i = 0
