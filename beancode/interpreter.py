@@ -372,6 +372,8 @@ class Interpreter:
 
                 if lhs.kind_is_alpha() or rhs.kind_is_alpha():
                     return BCValue(BCPrimitiveType.STRING, str(lhs) + str(rhs))
+                elif lhs.is_array or rhs.is_array:
+                    self.error("cannot add a value to an array!", expr.pos)
                 else:
                     res = lhs.val + rhs.val  # type: ignore
                     return (
