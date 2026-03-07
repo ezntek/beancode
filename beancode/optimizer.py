@@ -56,7 +56,7 @@ class Optimizer:
             if name in d:
                 return d[name]
 
-    def type_to_bctype(self, t: Type) -> BCType:
+    def fold_type(self, t: Type) -> BCType:
         if not isinstance(t, ArrayType):
             return t
 
@@ -216,7 +216,7 @@ class Optimizer:
         if id.ident not in self.active_constants:
             t = self.var_type_of(id.ident)
             if t:
-                return self.type_to_bctype(t)
+                return self.fold_type(t)
             return None
 
         for d in reversed(self.constants):
@@ -224,11 +224,55 @@ class Optimizer:
                 return d[id.ident]
 
     def visit_array_literal(self, expr: ArrayLiteral):
+        static = True
+        nested = False
+
+        if not expr.items:
+            return
+
+        typ = None
         for i in range(len(expr.items)):
             opt = self.fold_expr(expr.items[i])
-            if not opt or isinstance(opt, BCType):
+
+            if not opt:
+                static = False
                 continue
+            elif isinstance(opt, BCType):
+                static = False
+                if not typ:
+                    typ = opt
+                elif typ and not isinstance(opt, BCArrayType) and opt != typ:
+                    raise BCError(f"inconsistent type in array literal (expected {typ} but got {opt})!", expr.items[i].pos)
+
+                if isinstance(opt, BCArrayType) and not nested:
+                    nested = True
+                continue
+
             expr.items[i] = Literal(expr.items[i].pos, opt)
+            if not typ:
+                typ = opt.kind
+            elif typ and not isinstance(opt.kind, BCArrayType) and opt.kind != typ:
+                raise BCError(f"inconsistent type in array literal (expected {typ} but got {opt.kind})!", expr.items[i].pos)
+
+            if isinstance(opt.kind, BCArrayType) and not nested:
+                nested = True
+
+        if not static:
+            return
+
+        if not nested:
+            bcvals = [itm.val for itm in expr.items] # type: ignore
+            return BCValue.new_array(BCArray.new_flat(
+                BCArrayType.new_flat(typ, (1, len(bcvals))), # type: ignore
+                bcvals))
+        else:
+            outer = []
+            for arr in expr.items:
+                bcvals = [itm.val for itm in arr.val.get_array().get_flat()] # type: ignore
+                outer.append(bcvals)
+            return BCValue.new_array(BCArray.new_matrix(
+                BCArrayType.new_matrix(typ, (1, len(outer), 1, len(outer[0]))), # type: ignore
+                outer))
 
     def visit_binaryexpr(self, expr: BinaryExpr):
         should_return = False
@@ -425,7 +469,6 @@ class Optimizer:
             raise BCError(f"cannot index {typ}!", pos=expr.pos)
         
         is_flat = typ.is_flat()
-
 
         idx_outer = self.fold_expr(expr.idx_outer)
         idx_inner = None
