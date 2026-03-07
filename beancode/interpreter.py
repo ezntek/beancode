@@ -15,6 +15,8 @@ import subprocess
 
 from typing import Any, NoReturn
 
+from beancode.typechecker import check_binaryexpr
+
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
@@ -226,72 +228,7 @@ class Interpreter:
 
         rhs = self.visit_expr(expr.rhs)
 
-        if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
-            human_kind = "a comparison"
-        elif expr.op in {
-            Operator.LESS_THAN,
-            Operator.LESS_THAN_OR_EQUAL,
-            Operator.GREATER_THAN,
-            Operator.GREATER_THAN_OR_EQUAL,
-        }:
-            human_kind = "an ordered comparison"
-
-            if lhs.kind != rhs.kind and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                self.error(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
-                    expr.pos,
-                )
-        elif expr.op in {
-            Operator.AND,
-            Operator.OR,
-            Operator.NOT,
-        }:
-            human_kind = "a boolean operation"
-
-            if lhs.kind != rhs.kind:
-                self.error(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-
-            if not (
-                lhs.kind == BCPrimitiveType.BOOLEAN
-                or rhs.kind == BCPrimitiveType.BOOLEAN
-            ):
-                self.error(
-                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-        else:
-            human_kind = "an arithmetic expression"
-
-            # XXX: microoptimizations™
-            # we are reducing the number of calls we visit in the Python VM per addition. Addition is a
-            # very very common operator and it speeds PrimeTorture up by around 230ms.
-            if expr.op != Operator.ADD:
-                if expr.op not in {Operator.FLOOR_DIV, Operator.MOD} and not (
-                    lhs.kind_is_numeric() and rhs.kind_is_numeric()
-                ):
-                    self.error(
-                        f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
-                        expr.pos,
-                    )
-
-        if expr.op != Operator.EQUAL:
-            if lhs.is_uninitialized():
-                self.error(
-                    f"cannot have NULL in the left hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.lhs.pos,
-                )
-            if rhs.is_uninitialized():
-                self.error(
-                    f"cannot have NULL in the right hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.rhs.pos,
-                )
+        check_binaryexpr(expr, lhs, rhs)
 
         match expr.op:
             case Operator.ASSIGN:

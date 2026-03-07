@@ -6,12 +6,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-
-# INFO: this doubles as a static analyzer for the compiler
+#
+# INFO: this doubles as a static type analyzer for the compiler
 
 from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
+from .typechecker import check_binaryexpr
 
 def block_empty(blk: list[Statement]):
     if not blk:
@@ -55,12 +56,26 @@ class Optimizer:
             if name in d:
                 return d[name]
 
-    @staticmethod
-    def type_to_bctype(t: Type) -> BCType:
-        if isinstance(t, ArrayType):
-            return BCArrayType(t.inner, bounds=None)
-        else:
+    def type_to_bctype(self, t: Type) -> BCType:
+        if not isinstance(t, ArrayType):
             return t
+
+        if t.bounds:
+            bounds = []
+            for i, itm in enumerate(t.bounds):
+                folded = self.fold_expr(itm)
+
+                if not isinstance(folded, BCValue):
+                    return BCArrayType(t.inner, bounds=None)
+
+                if folded.kind != BCPrimitiveType.INTEGER:
+                    raise BCError(f"{humanize_index(i+1)} array bound is a {folded.kind} must be an INTEGER!", itm.pos)
+
+                bounds.append(folded.get_integer())
+            bounds = tuple(bounds)
+            return BCArrayType(t.inner, bounds=bounds)
+        else:
+            return BCArrayType(t.inner, bounds=None)
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -225,6 +240,17 @@ class Optimizer:
             lhs = BCValue(lhs, None)
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
+            # only do the short-circuiting if true, we silenced the typechecker
+            # before
+            if (
+                expr.op == Operator.AND
+                and lhs.kind == BCPrimitiveType.BOOLEAN
+                and not lhs.val
+            ):
+                return BCValue.new_boolean(False)
+
+            if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
+                return BCValue.new_boolean(True)
 
         if (
             expr.op == Operator.AND
@@ -248,72 +274,11 @@ class Optimizer:
         lhs: BCValue
         rhs: BCValue
 
-        if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
-            human_kind = "a comparison"
-        elif expr.op in {
-            Operator.LESS_THAN,
-            Operator.LESS_THAN_OR_EQUAL,
-            Operator.GREATER_THAN,
-            Operator.GREATER_THAN_OR_EQUAL,
-        }:
-            human_kind = "an ordered comparison"
-
-            if lhs.kind != rhs.kind and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
-                    expr.pos,
-                )
-        elif expr.op in {
-            Operator.AND,
-            Operator.OR,
-            Operator.NOT,
-        }:
-            human_kind = "a boolean operation"
-
-            if lhs.kind != rhs.kind:
-                raise BCError(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-
-            if not (
-                lhs.kind == BCPrimitiveType.BOOLEAN
-                or rhs.kind == BCPrimitiveType.BOOLEAN
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-        else:
-            human_kind = "an arithmetic expression"
-
-            if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
-                    expr.pos,
-                )
+        check_binaryexpr(expr, lhs, rhs)
 
         # allow for type checking first
         if should_return:
             return
-
-        if expr.op != Operator.EQUAL:
-            if lhs.is_uninitialized():
-                raise BCError(
-                    f"cannot have NULL in the left hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.lhs.pos,
-                )
-            if rhs.is_uninitialized():
-                raise BCError(
-                    f"cannot have NULL in the right hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.rhs.pos,
-                )
 
         match expr.op:
             case Operator.ASSIGN:
@@ -446,7 +411,107 @@ class Optimizer:
                 return BCValue(BCPrimitiveType.BOOLEAN, lhs.val or rhs.val)  # type: ignore
 
     def visit_array_index(self, expr: ArrayIndex):
-        _ = expr
+        folded = self.fold_expr(expr.expr)
+
+        if isinstance(folded, BCType):
+            typ = folded
+        elif isinstance(folded, BCValue):
+            expr.expr = Literal(val=folded, pos=expr.expr.pos)
+            typ = folded.kind
+        else:
+            return
+
+        if not isinstance(typ, BCArrayType):
+            raise BCError(f"cannot index {typ}!", pos=expr.pos)
+        
+        is_flat = typ.is_flat()
+
+
+        idx_outer = self.fold_expr(expr.idx_outer)
+        idx_inner = None
+        if expr.idx_inner:
+            if is_flat:
+                raise BCError(f"cannot index into 1D array with 2 indices!", pos=expr.pos)
+
+            idx_inner = self.fold_expr(expr.idx_inner)
+
+        if not idx_inner and not is_flat:
+            raise BCError("too few indices to 2D array!", pos=expr.pos)
+        
+        if not isinstance(idx_outer, BCValue):
+            if isinstance(idx_inner, BCValue):
+                # at least fold this one
+                expr.idx_inner = Literal(val=idx_inner, pos=expr.idx_inner.pos) # type: ignore
+            return
+
+        # we have an idx_outer
+        if not isinstance(idx_outer.val, int):
+            raise BCError(f"type of array index is {idx_outer.kind}, not INTEGER!", pos=expr.idx_outer.pos)
+        outer = int(idx_outer.val)
+
+        inner = None
+        if isinstance(idx_inner, BCValue):
+            if not isinstance(idx_inner.val, int):
+                raise BCError(f"type of array index is {idx_inner.kind}, not INTEGER!", pos=expr.idx_inner.pos) # type: ignore
+            inner = int(idx_inner.val)
+
+        if not folded:
+            return
+
+        tup = (outer, inner)
+        a = None
+        if isinstance(folded, BCValue):
+            a = folded.get_array() # type: ignore
+
+        at: BCArrayType
+        if isinstance(folded, BCArrayType):
+            at = folded
+        else:
+            # we already checked that this is an array
+            at = folded.kind # type: ignore
+
+        if is_flat:
+            if tup[0] not in range(
+                at.get_flat_bounds()[0], at.get_flat_bounds()[1] + 1
+            ):
+                if tup[0] == 0:
+                    raise BCError(
+                        "cannot access the 0th array element, which is disallowed in pseudocode",
+                        expr.idx_outer.pos,
+                    )
+                else:
+                    raise BCError(
+                        f"cannot access out of bounds array element {tup[0]}",
+                        expr.idx_outer.pos,
+                    )
+
+            if a:
+                return a.get_flat()[tup[0] - a.get_flat_bounds()[0]]
+        else:
+            outer, inner = tup
+            bounds = at.get_matrix_bounds()
+            if inner is None:
+                raise BCError(
+                    "second index not present for matrix index", expr.expr.pos
+                )
+
+            bounds = at.get_matrix_bounds()
+            if outer not in range(bounds[0], bounds[1] + 1):  # type: ignore
+                raise BCError(
+                    f'cannot access out of bounds array element "{tup[0]}"',
+                    expr.idx_outer.pos,
+                )
+
+            if inner not in range(bounds[2], bounds[3] + 1):  # type: ignore
+                raise BCError(
+                    f'cannot access out of bounds array element "{tup[1]}"',
+                    expr.idx_inner.pos,  # type: ignore
+                )
+
+            idx1 = outer - bounds[0]
+            idx2 = inner - bounds[2]
+            if a:
+                return a.get_matrix()[idx1][idx2]
 
     def _eval_libroutine_args(
         self,
@@ -742,13 +807,15 @@ class Optimizer:
         return default
 
     def visit_type(self, typ: Type):
-        if isinstance(typ, ArrayType):
-            new = list()
-            if typ.bounds:
-                for itm in typ.bounds:
-                    new.append(self.visit_expr(itm))
-                typ.bounds = tuple(new)
+        if not isinstance(typ, ArrayType):
+            return
 
+        new = list()
+        if typ.bounds:
+            for itm in typ.bounds:
+                new.append(self.visit_expr(itm))
+            typ.bounds = tuple(new)
+    
     def visit_if_stmt(self, stmt: IfStatement):
         stmt.cond = self.visit_expr(stmt.cond)
         stmt.if_block = self.visit_block(stmt.if_block)
@@ -849,11 +916,7 @@ class Optimizer:
     def visit_declare_stmt(self, stmt: DeclareStatement):
         self.visit_type(stmt.typ)
         for id in stmt.ident:
-            if isinstance(stmt.typ, ArrayType):
-                # unbounded by default
-                self.var_types[-1][id.ident] = ArrayType(stmt.typ.inner, None)
-            else:
-                self.var_types[-1][id.ident] = stmt.typ
+            self.var_types[-1][id.ident] = stmt.typ
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         _ = stmt
