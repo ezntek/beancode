@@ -80,8 +80,13 @@ class Compiler:
                     right=self.visit_expr(expr.rhs),
                 )
 
-    def visit_array_index(self, expr: ArrayIndex):
-        pass
+    def visit_array_index(self, expr: ArrayIndex) -> ast.expr:
+        value = None
+        if expr.idx_inner:
+            value = ast.Subscript(value=self.visit_expr(expr.expr), slice=self.visit_expr(expr.idx_inner), ctx=ast.Load()) 
+        else:
+            value = self.visit_expr(expr.expr)
+        return ast.Subscript(value, slice=self.visit_expr(expr.idx_outer), ctx=ast.Load())
 
     def visit_fncall(self, expr: FunctionCall):
         pass
@@ -120,7 +125,7 @@ class Compiler:
             case BinaryExpr():
                 return self.visit_binaryexpr(expr)
             case ArrayIndex():
-                pass
+                return self.visit_array_index(expr)
             case FunctionCall():
                 pass
             case Sqrt():
