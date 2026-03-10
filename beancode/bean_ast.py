@@ -392,6 +392,17 @@ Type = ArrayType | BCPrimitiveType
 # runtime
 BCType = BCArrayType | BCPrimitiveType
 
+
+def is_type_numeric(t: BCType):
+    return (not isinstance(t, BCArrayType)) and (
+        t == BCPrimitiveType.INTEGER or t == BCPrimitiveType.REAL
+    )
+
+def is_type_alpha(t: BCType):
+    return (not isinstance(t, BCArrayType)) and (
+        t == BCPrimitiveType.STRING or t == BCPrimitiveType.CHAR
+    )
+
 BCPayload = int | float | str | bool | BCArray | None
 
 
