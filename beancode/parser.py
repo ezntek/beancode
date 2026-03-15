@@ -319,7 +319,7 @@ class Parser:
         if not begin:
             raise BCError(
                 "invalid or no expression as beginning value of array declaration",
-                begin,
+                self.pos(),
             )
 
         self.consume_and_expect(
@@ -330,7 +330,7 @@ class Parser:
         if not end:
             raise BCError(
                 "invalid or no expression as ending value of array declaration",
-                end,
+                self.pos(),
             )
 
         flat_bounds = (begin, end)
