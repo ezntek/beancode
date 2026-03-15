@@ -1065,20 +1065,6 @@ class Interpreter:
         elif not self.tracer:
             print(res, end=("\n" if stmt.newline else ""), flush=True)
 
-    def _guess_input_type(self, inp: str) -> BCValue:
-        if is_real(inp):
-            return BCValue.empty(BCPrimitiveType.REAL)
-        elif is_integer(inp):
-            return BCValue.empty(BCPrimitiveType.INTEGER)
-
-        if inp.strip().lower() in {"true", "false", "no", "yes"}:
-            return BCValue.empty(BCPrimitiveType.BOOLEAN)
-
-        if len(inp.strip()) == 1:
-            return BCValue.empty(BCPrimitiveType.CHAR)
-        else:
-            return BCValue.empty(BCPrimitiveType.STRING)
-
     def visit_input_stmt(self, s: InputStatement):
         prompt = str()
         if self.tracer and self.tracer.config.prompt_on_inputs:
@@ -1097,7 +1083,7 @@ class Interpreter:
 
             data: Variable | None = self.variables.get(id)
             if data is None:
-                val = self._guess_input_type(inp)
+                val = guess_input_type(inp)
                 data = Variable(val, False, export=False)
                 self.variables[id] = data
             target = data.val  # type: ignore

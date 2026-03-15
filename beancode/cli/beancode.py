@@ -159,19 +159,19 @@ def real_main(args: argparse.Namespace):
     if args.no_run:
         return
 
-    if not compile:
-        try:
-            i = Interpreter(program.stmts, tracer_open=tracer_open)
-            i.toplevel = True
-            i.visit_block(None)
-        except BCError as err:
-            err.print(args.file, file_content)
-            exit(1)
-    else:
-        comp = Compiler(program.stmts)
-        output = comp.visit_program()
-        print(ast.unparse(output))
-        pass
+    try:
+        if not compile:
+                i = Interpreter(program.stmts, tracer_open=tracer_open)
+                i.toplevel = True
+                i.visit_block(None)
+        else:
+            comp = Compiler(program.stmts)
+            output = comp.visit_program()
+            print(ast.unparse(output))
+            pass
+    except BCError as err:
+        err.print(args.file, file_content)
+        exit(1)
 
 
 def main():

@@ -13,7 +13,7 @@ from enum import IntEnum
 from typing import IO, Any, Callable
 from dataclasses import dataclass
 
-from . import Pos, is_case_consistent
+from . import Pos, is_case_consistent, is_integer, is_real
 from .error import *
 
 
@@ -928,3 +928,18 @@ class Comment:
 @dataclass(slots=True)
 class CommentStatement(Statement):
     comment: Comment
+
+def guess_input_type(inp: str) -> BCValue:
+    if is_real(inp):
+        return BCValue.empty(BCPrimitiveType.REAL)
+    elif is_integer(inp):
+        return BCValue.empty(BCPrimitiveType.INTEGER)
+
+    if inp.strip().lower() in {"true", "false", "no", "yes"}:
+        return BCValue.empty(BCPrimitiveType.BOOLEAN)
+
+    if len(inp.strip()) == 1:
+        return BCValue.empty(BCPrimitiveType.CHAR)
+    else:
+        return BCValue.empty(BCPrimitiveType.STRING)
+

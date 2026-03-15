@@ -10,13 +10,23 @@
 
 import ast
 
+from beancode import humanize_index
 from beancode.bean_ast import *
 from beancode.bean_ffi import BCParamSpec
 
+class TypeEntry:
+    __slots__ = ('typ', 'const')
+
+    typ: BCType
+    const: bool
+
+    def __init__(self, t: BCType, const: bool):
+        self.typ = t
+        self.const = const
 
 class Compiler:
     block: list[Statement]
-    vars: list[dict[str, BCType]]
+    vars: list[dict[str, TypeEntry]]
     # list of a table between function name and args (which is a table between the arg name and type)
     funcs: list[dict[str, dict[str, BCType]]]
 
@@ -30,9 +40,9 @@ class Compiler:
     def get_ident_type(self, expr: Identifier) -> BCType:
         for itm in reversed(self.vars):
             if expr.ident in itm:
-                return itm[expr.ident]
+                return itm[expr.ident].typ
 
-        raise BCError(f'cannot access undeclared variable "{expr.ident}"')
+        raise BCError(f'cannot access undeclared variable "{expr.ident}"', expr.pos)
 
     def get_binaryexpr_type(self, expr: BinaryExpr) -> BCType:
         lhs = self.get_expr_type(expr.lhs)
@@ -142,6 +152,23 @@ class Compiler:
                     )
                 return t
         raise RuntimeError("unreachable")
+
+    def visit_type(self, typ: Type, pos: Pos) -> BCType:
+        if isinstance(typ, ArrayType):
+            if not typ.bounds:
+                raise BCError("Cannot have unbounded arrays in compiled beancode", pos)
+
+            new_bounds = []
+            for i, itm in enumerate(typ.bounds):
+                if not isinstance(itm, Literal):
+                    raise BCError(f"{humanize_index(i+1)} bound to array must be a constant value known at compile-time!", itm.pos)
+                v = itm.val
+                if v.kind != BCPrimitiveType.INTEGER:
+                    raise BCError(f"{humanize_index(i+1)} bound to array must be an INTEGER, not {v.kind}!")
+                new_bounds.append(v.get_integer()) 
+            return BCArrayType(bounds=tuple(new_bounds), inner=typ.inner)
+        else:
+            return typ # type: ignore
 
     def visit_ident(self, expr: Identifier) -> ast.expr:
         for itm in reversed(self.vars):
@@ -283,11 +310,12 @@ class Compiler:
                 return self.visit_sqrt(expr)
         raise RuntimeError("unreachable")
 
-    def visit_lvalue(self, lv: Lvalue):
+    def visit_lvalue(self, lv: Lvalue) -> ast.expr:
         if isinstance(lv, ArrayIndex):
-            pass
+            raise RuntimeError("lvalue array indexes not implemented")
         else:
-            pass
+            _ = self.get_ident_type(lv)
+            return ast.Name(id=lv.ident, ctx=ast.Store())
 
     def visit_if_stmt(self, stmt: IfStatement):
         pass
@@ -313,6 +341,9 @@ class Compiler:
         )
 
     def visit_input_stmt(self, stmt: InputStatement):
+        target = self.visit_lvalue(stmt.ident)
+        call = ast.Call(func=ast.Name(id="input", ctx=ast.Load()), args=[], keywords=[])
+
         pass
 
     def visit_return_stmt(self, stmt: ReturnStatement):
@@ -337,13 +368,26 @@ class Compiler:
         pass
 
     def visit_assign_stmt(self, stmt: AssignStatement):
-        pass
+        if isinstance(stmt.ident, ArrayIndex):
+            raise RuntimeError("not implemented")
+        else:
+            lhs = self.visit_lvalue(stmt.ident)
+            rhs = self.visit_expr(stmt.value)
+            return ast.Assign(targets=[lhs], value=rhs, lineno=0)
 
     def visit_constant_stmt(self, stmt: ConstantStatement):
-        pass
+        if isinstance(stmt.value, Literal):
+            typ = stmt.value.val.kind 
+        else:
+            typ = self.get_expr_type(stmt.value)
+        self.vars[-1][stmt.ident.ident] = TypeEntry(typ, True)
+        exp = self.visit_expr(stmt.value)
+        return ast.Assign(targets=[ast.Name(id=stmt.ident.ident, ctx=ast.Store())], value=exp, lineno=0)
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
-        pass
+        typ = self.visit_type(stmt.typ, stmt.pos)
+        for name in stmt.ident:
+            self.vars[-1][name.ident] = TypeEntry(typ, False)
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         pass
@@ -363,8 +407,7 @@ class Compiler:
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         pass
 
-    def visit_stmt(self, stmt: Statement) -> ast.stmt:
-        print(f"-> {type(stmt)}")
+    def visit_stmt(self, stmt: Statement) -> ast.stmt | None:
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
@@ -393,11 +436,11 @@ class Compiler:
             case CallStatement():
                 self.visit_call(stmt)
             case AssignStatement():
-                self.visit_assign_stmt(stmt)
+                return self.visit_assign_stmt(stmt)
             case ConstantStatement():
-                self.visit_constant_stmt(stmt)
+                return self.visit_constant_stmt(stmt)
             case DeclareStatement():
-                self.visit_declare_stmt(stmt)
+                return self.visit_declare_stmt(stmt)
             case TraceStatement():
                 self.visit_trace_stmt(stmt)
             case OpenfileStatement():
@@ -422,8 +465,14 @@ class Compiler:
         # Type checks are performed there.
         blk = block if block is not None else self.block
         res = []
+        self.vars.append(dict())
+        self.funcs.append(dict())
         for stmt in blk:
-            res.append(self.visit_stmt(stmt))
+            s = self.visit_stmt(stmt)
+            if s:
+                res.append(s)
+        self.vars.pop()
+        self.funcs.pop()
         return res
 
     def visit_program(self) -> ast.Module:

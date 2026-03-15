@@ -13,6 +13,7 @@ from .bean_ast import *
 from .libroutines import LIBROUTINES
 from .error import *
 
+from .bean_ast import *
 
 def _convert_escape_code(ch: str) -> str | None:
     match ch:
@@ -473,7 +474,7 @@ class Parser:
             raise BCError("invalid or no expression inside grouping", begin.pos)
 
         self.consume_and_expect(TokenKind.RIGHT_PAREN, "after expression in grouping")
-        return Grouping(begin.pos, inner=e)
+        return e
 
     def unary(self) -> Expr | None:
         p = self.peek()
