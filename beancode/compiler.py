@@ -48,22 +48,30 @@ class Compiler:
                 | Operator.GREATER_THAN_OR_EQUAL
             ):
                 if not is_type_numeric(lhs):
-                    raise BCError(f"cannot have {lhs} in left hand side of {expr.op.humanize()}!", expr.lhs.pos)
+                    raise BCError(
+                        f"cannot have {lhs} in left hand side of {expr.op.humanize()}!",
+                        expr.lhs.pos,
+                    )
 
                 if not is_type_numeric(rhs):
-                    raise BCError(f"cannot have {rhs} in right hand side of {expr.op.humanize()}!", expr.rhs.pos)
+                    raise BCError(
+                        f"cannot have {rhs} in right hand side of {expr.op.humanize()}!",
+                        expr.rhs.pos,
+                    )
 
                 return BCPrimitiveType.BOOLEAN
-            case (
-                Operator.AND
-                | Operator.OR
-                | Operator.NOT
-            ):
+            case Operator.AND | Operator.OR | Operator.NOT:
                 if lhs != BCPrimitiveType.BOOLEAN:
-                    raise BCError(f"cannot have {lhs} in left hand side of {expr.op.humanize()}!", expr.lhs.pos)
+                    raise BCError(
+                        f"cannot have {lhs} in left hand side of {expr.op.humanize()}!",
+                        expr.lhs.pos,
+                    )
 
                 if rhs != BCPrimitiveType.BOOLEAN:
-                    raise BCError(f"cannot have {rhs} in right hand side of {expr.op.humanize()}!", expr.rhs.pos)
+                    raise BCError(
+                        f"cannot have {rhs} in right hand side of {expr.op.humanize()}!",
+                        expr.rhs.pos,
+                    )
 
                 return BCPrimitiveType.BOOLEAN
             case Operator.ADD:
@@ -71,10 +79,16 @@ class Compiler:
                     return BCPrimitiveType.STRING
 
                 if lhs == BCPrimitiveType.BOOLEAN:
-                    raise BCError(f"cannot have BOOLEAN in left hand side of addition!", expr.lhs.pos)
+                    raise BCError(
+                        f"cannot have BOOLEAN in left hand side of addition!",
+                        expr.lhs.pos,
+                    )
 
                 if rhs == BCPrimitiveType.BOOLEAN:
-                    raise BCError(f"cannot have BOOLEAN in right hand side of addition!", expr.rhs.pos)
+                    raise BCError(
+                        f"cannot have BOOLEAN in right hand side of addition!",
+                        expr.rhs.pos,
+                    )
 
                 if lhs == BCPrimitiveType.REAL or rhs == BCPrimitiveType.REAL:
                     return BCPrimitiveType.REAL
@@ -85,7 +99,9 @@ class Compiler:
                     is_type_numeric(lhs) and is_type_numeric(rhs)
                 ):
                     # everything else
-                    raise BCError(f"cannot {expr.op.humanize()} between {lhs} and {rhs}", expr.pos)
+                    raise BCError(
+                        f"cannot {expr.op.humanize()} between {lhs} and {rhs}", expr.pos
+                    )
 
         raise RuntimeError("unreachable")
 
@@ -230,7 +246,7 @@ class Compiler:
         raise NotImplementedError()
 
     def visit_function_call(self, expr: FunctionCall) -> ast.expr:
-        pass
+        raise NotImplementedError()
 
     def visit_sqrt(self, expr: Sqrt) -> ast.expr:
         return ast.Call(
@@ -265,6 +281,7 @@ class Compiler:
                 return self.visit_function_call(expr)
             case Sqrt():
                 return self.visit_sqrt(expr)
+        raise RuntimeError("unreachable")
 
     def visit_lvalue(self, lv: Lvalue):
         if isinstance(lv, ArrayIndex):
@@ -287,8 +304,13 @@ class Compiler:
     def visit_repeatuntil_stmt(self, stmt: RepeatUntilStatement):
         pass
 
-    def visit_output_stmt(self, stmt: OutputStatement):
-        pass
+    def visit_output_stmt(self, stmt: OutputStatement) -> ast.stmt:
+        args = []
+        for arg in stmt.items:
+            args.append(self.visit_expr(arg))
+        return ast.Expr(
+            ast.Call(func=ast.Name(id="print", ctx=ast.Load()), args=args, keywords=[])
+        )
 
     def visit_input_stmt(self, stmt: InputStatement):
         pass
@@ -341,7 +363,8 @@ class Compiler:
     def visit_closefile_stmt(self, stmt: ClosefileStatement):
         pass
 
-    def visit_stmt(self, stmt: Statement):
+    def visit_stmt(self, stmt: Statement) -> ast.stmt:
+        print(f"-> {type(stmt)}")
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
@@ -354,7 +377,7 @@ class Compiler:
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
             case OutputStatement():
-                self.visit_output_stmt(stmt)
+                return self.visit_output_stmt(stmt)
             case InputStatement():
                 self.visit_input_stmt(stmt)
             case ReturnStatement():
@@ -386,13 +409,22 @@ class Compiler:
             case ClosefileStatement():
                 self.visit_closefile_stmt(stmt)
             case ExprStatement():
-                self.visit_expr(stmt.inner)
+                exp = self.visit_expr(stmt.inner)
+                return ast.Expr(value=exp)
             case NewlineStatement():
-                pass
+                raise RuntimeError("unreachable")
             case CommentStatement():
-                pass
+                raise RuntimeError("unreachable")
+        raise NotImplementedError("aaaaaaa")
 
     def visit_block(self, block: list[Statement] | None = None) -> list[ast.stmt]:
         # NOTE: To reduce code size, ALL CODE MUST RUN THROUGH THE OPTIMIZER.
         # Type checks are performed there.
-        return []
+        blk = block if block is not None else self.block
+        res = []
+        for stmt in blk:
+            res.append(self.visit_stmt(stmt))
+        return res
+
+    def visit_program(self) -> ast.Module:
+        return ast.Module(body=self.visit_block(), type_ignores=[])

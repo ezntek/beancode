@@ -7,12 +7,14 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
 
+import ast
 import io
 import os
 import sys
 import argparse
 from typing import NoReturn
 
+from beancode.compiler import Compiler
 from beancode.optimizer import Optimizer
 
 from beancode.repl import Repl
@@ -60,6 +62,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="read source from stdin",
     )
+    parser.add_argument(
+        "-C",
+        "--compile",
+        help="compile to Python",
+        const="stdout",
+        nargs="?",
+        type=str,
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "-c",
@@ -77,6 +87,16 @@ def real_main(args: argparse.Namespace):
     tracer_open = False
     if args.tracer_open:
         tracer_open = args.tracer_open
+
+    compile = False
+    if args.compile is not None:
+        compile = True
+        if args.compile == "stdout":
+            # TODO: handle stdout
+            pass
+        else:
+            # TODO: handle file
+            pass
 
     if args.command is not None:
         file_content = args.command
@@ -120,7 +140,7 @@ def real_main(args: argparse.Namespace):
         err.print(args.file, file_content)
         exit(1)
 
-    if args.optimize:
+    if args.optimize or compile:
         try:
             opt = Optimizer(program.stmts)
             program.stmts = opt.visit_block(None)
@@ -139,13 +159,19 @@ def real_main(args: argparse.Namespace):
     if args.no_run:
         return
 
-    try:
-        i = Interpreter(program.stmts, tracer_open=tracer_open)
-        i.toplevel = True
-        i.visit_block(None)
-    except BCError as err:
-        err.print(args.file, file_content)
-        exit(1)
+    if not compile:
+        try:
+            i = Interpreter(program.stmts, tracer_open=tracer_open)
+            i.toplevel = True
+            i.visit_block(None)
+        except BCError as err:
+            err.print(args.file, file_content)
+            exit(1)
+    else:
+        comp = Compiler(program.stmts)
+        output = comp.visit_program()
+        print(ast.unparse(output))
+        pass
 
 
 def main():
