@@ -14,16 +14,15 @@ import math
 import subprocess
 
 from typing import Any, NoReturn
-
-from beancode.typechecker import check_binaryexpr
-
+from .typechecker import check_binaryexpr
 from .bean_ffi import BCFunction, BCProcedure, Exports
 from .lexer import Lexer
 from .parser import *
 from .error import *
 from .libroutines import *
-from . import __version__, Pos
 from .tracer import *
+from .util import *
+from . import __version__, Pos
 
 
 def _get_file_mode(read: bool, write: bool, append: bool) -> str | None:
@@ -274,13 +273,10 @@ class Interpreter:
                     ),
                 )
             case Operator.POW:
-                lhs_num: int | float = lhs.val  # type: ignore
-                rhs_num: int | float = rhs.val  # type: ignore
-
                 res = (
-                    1 << rhs_num
-                    if (int(lhs_num) == 2 and type(rhs_num) is int)
-                    else lhs_num**rhs_num
+                    1 << rhs.val
+                    if (int(lhs.val) == 2 and type(rhs.val) is int) # type: ignore
+                    else lhs.val**rhs.val # type: ignore
                 )
 
                 return (

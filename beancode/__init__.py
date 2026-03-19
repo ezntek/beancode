@@ -58,41 +58,6 @@ def is_case_consistent(s: str) -> bool:
     return s.isupper() or s.islower()
 
 
-def is_integer(val: str) -> bool:
-    if len(val) == 0:
-        return False
-
-    newval = val
-    if val[0] == '-':
-        newval = val[1:]
-
-    for ch in newval:
-        if not ch.isdigit():
-            return False
-    return True
-
-
-def is_real(val: str) -> bool:
-    if len(val) == 0:
-        return False
-
-    if val[0] == '-':
-        val = val[1:]
-
-    if is_integer(val):
-        return False
-
-    found_decimal = False
-
-    for ch in val:
-        if ch == ".":
-            if found_decimal:
-                return False
-            found_decimal = True
-
-    return found_decimal
-
-
 def panic(msg: str):
     print(f"\033[31;1mpanic! \033[0m{msg}")
     print(

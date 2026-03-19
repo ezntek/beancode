@@ -12,7 +12,9 @@ import ast
 
 from beancode import humanize_index
 from beancode.bean_ast import *
-from beancode.bean_ffi import BCParamSpec
+
+def var(s: str) -> str:
+    return "_id_"+s
 
 class TypeEntry:
     __slots__ = ('typ', 'const')
@@ -23,6 +25,15 @@ class TypeEntry:
     def __init__(self, t: BCType, const: bool):
         self.typ = t
         self.const = const
+
+def call_bcvalue(attr: str, *args) -> ast.expr:
+    return ast.Call(func=ast.Attribute(value=ast.Name(id="BCValue", ctx=ast.Load()), attr=attr, ctx=ast.Load()), args=[*args], keywords=[])
+
+def V(t: str, v: Any) -> ast.expr:
+    return ast.Call(func=ast.Name("V", ctx=ast.Load()), args=[ast.Attribute(value=ast.Name(id="T", ctx=ast.Load()), attr=t, ctx=ast.Load()), v], keywords=[])
+
+def T(t: str) -> ast.expr:
+    return ast.Attribute(value=ast.Name(id="T", ctx=ast.Load()), attr=t, ctx=ast.Load())
 
 class Compiler:
     block: list[Statement]
@@ -173,7 +184,7 @@ class Compiler:
     def visit_ident(self, expr: Identifier) -> ast.expr:
         for itm in reversed(self.vars):
             if expr.ident in itm:
-                return ast.Name(id=expr.ident, ctx=ast.Load())
+                return ast.Name(id=var(expr.ident), ctx=ast.Load())
 
         raise BCError(f'cannot access undeclared variable "{expr.ident}"')
 
@@ -193,6 +204,7 @@ class Compiler:
             Operator.GREATER_THAN_OR_EQUAL: ast.GtE(),
             Operator.LESS_THAN_OR_EQUAL: ast.LtE(),
         }
+
         BINOP_TABLE = {
             Operator.POW: ast.Pow(),
             Operator.MUL: ast.Mult(),
@@ -258,16 +270,20 @@ class Compiler:
         pass
 
     def visit_literal(self, expr: Literal) -> ast.expr:
-        if expr.val.kind == BCPrimitiveType.BOOLEAN:
-            return ast.Constant(value=bool(expr.val.val))
-        elif expr.val.is_array:
-            raise ValueError("impossible to have an array here!")
-        elif expr.val.kind_is_numeric():
-            return ast.Constant(value=expr.val.val)  # type: ignore
-        elif expr.val.kind_is_alpha():
-            return ast.Constant(value=str(expr.val.val))
-
-        return ast.Constant(value=None)
+        match expr.val.kind:
+            case BCPrimitiveType.BOOLEAN:
+                return V("BOOLEAN", ast.Constant(value=expr.val.get_boolean()))
+            case BCPrimitiveType.INTEGER:
+                return V("INTEGER", ast.Constant(value=expr.val.get_integer()))
+            case BCPrimitiveType.REAL:
+                return V("REAL", ast.Constant(value=expr.val.get_real()))
+            case BCPrimitiveType.STRING:
+                return V("STRING", ast.Constant(value=expr.val.get_string()))
+            case BCPrimitiveType.CHAR:
+                return V("CHAR", ast.Constant(value=expr.val.get_char()))
+            case BCPrimitiveType.NULL:
+                return V("NULL", ast.Constant(value=None))
+        raise RuntimeError("unreachable")
 
     def visit_typecast(self, tc: Typecast) -> ast.expr:
         raise NotImplementedError()
@@ -315,7 +331,7 @@ class Compiler:
             raise RuntimeError("lvalue array indexes not implemented")
         else:
             _ = self.get_ident_type(lv)
-            return ast.Name(id=lv.ident, ctx=ast.Store())
+            return ast.Name(id=var(lv.ident), ctx=ast.Store())
 
     def visit_if_stmt(self, stmt: IfStatement):
         pass
@@ -381,8 +397,9 @@ class Compiler:
         else:
             typ = self.get_expr_type(stmt.value)
         self.vars[-1][stmt.ident.ident] = TypeEntry(typ, True)
+        lv = self.visit_lvalue(stmt.ident)
         exp = self.visit_expr(stmt.value)
-        return ast.Assign(targets=[ast.Name(id=stmt.ident.ident, ctx=ast.Store())], value=exp, lineno=0)
+        return ast.Assign(targets=[lv], value=exp, lineno=0)
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
         typ = self.visit_type(stmt.typ, stmt.pos)
@@ -476,4 +493,7 @@ class Compiler:
         return res
 
     def visit_program(self) -> ast.Module:
-        return ast.Module(body=self.visit_block(), type_ignores=[])
+        blk = self.visit_block()
+        tree = ast.Module(body=blk, type_ignores=[])
+        ast.fix_missing_locations(tree)
+        return tree

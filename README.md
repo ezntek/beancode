@@ -142,6 +142,8 @@ python3 -m beancode.cli.beanfmt myfile.bean
 
 Please PR to the `main` branch, this version is for stable and tested releases that are known to be highly compliant and reliable.
 
+If you have major breaking features, please work on it on a separate branch.
+
 ## Performance Improvements since 0.5
 
 Since version 0.6 (which was scrapped due to last minute plan changes) and this version were written in part to boost the performance of beancode, I have done some benchmarking. This is due to the technological improvements made, by using more efficient data structures to represent the AST.
@@ -176,3 +178,4 @@ This section shares notable bugs that may impact daily use.
 * Before `v0.5.0`, assignments were not properly type-checked sometimes. You could not assign array literals to declared arrays.
 * Before `v0.5.0`, you could not assign arrays, even of the same length and type to one another.
 * Before `v0.5.0`, you could not declare arrays with only one item in it. 
+

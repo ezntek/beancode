@@ -14,6 +14,8 @@ import sys
 import argparse
 from typing import NoReturn
 
+import beancode
+from beancode.bean_ast import BCValue
 from beancode.compiler import Compiler
 from beancode.optimizer import Optimizer
 
@@ -24,6 +26,7 @@ from beancode.lexer import *
 from beancode.parser import Parser
 from beancode.error import *
 from beancode import __version__
+from beancode.runtime import get_globals
 
 
 def _error(s: str) -> NoReturn:
@@ -88,9 +91,9 @@ def real_main(args: argparse.Namespace):
     if args.tracer_open:
         tracer_open = args.tracer_open
 
-    compile = False
+    should_compile = False
     if args.compile is not None:
-        compile = True
+        should_compile = True
         if args.compile == "stdout":
             # TODO: handle stdout
             pass
@@ -140,7 +143,7 @@ def real_main(args: argparse.Namespace):
         err.print(args.file, file_content)
         exit(1)
 
-    if args.optimize or compile:
+    if args.optimize or should_compile:
         try:
             opt = Optimizer(program.stmts)
             program.stmts = opt.visit_block(None)
@@ -160,15 +163,17 @@ def real_main(args: argparse.Namespace):
         return
 
     try:
-        if not compile:
-                i = Interpreter(program.stmts, tracer_open=tracer_open)
-                i.toplevel = True
-                i.visit_block(None)
+        if not should_compile:
+            i = Interpreter(program.stmts, tracer_open=tracer_open)
+            i.toplevel = True
+            i.visit_block(None)
         else:
             comp = Compiler(program.stmts)
             output = comp.visit_program()
+            # print(ast.unparse(output))
+            code = compile(output, filename="<generated code>", mode="exec")
             print(ast.unparse(output))
-            pass
+            exec(code, {}, get_globals())
     except BCError as err:
         err.print(args.file, file_content)
         exit(1)

@@ -8,6 +8,7 @@
 #
 
 from . import *
+from .util import *
 from .lexer import *
 from .bean_ast import *
 from .libroutines import LIBROUTINES
