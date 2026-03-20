@@ -8,8 +8,11 @@ from argparse import ArgumentParser
 def log(s: str):
     print(f"\033[33;1m===> {s}\033[0m")
 
+
 p = ArgumentParser()
-p.add_argument("-O", "--optimize", action="store_true", help="run the optimizer before execution")
+p.add_argument(
+    "-O", "--optimize", action="store_true", help="run the optimizer before execution"
+)
 args = p.parse_args()
 
 src = ""
@@ -24,7 +27,9 @@ for file in sorted(os.listdir("examples")):
         with open(p, "r") as f:
             src = f.read()
         log(f"running example {file}")
-        if not execute(src, filename=file, save_interpreter=True, optimize=args.optimize):
+        if not execute(
+            src, filename=file, save_interpreter=True, optimize=args.optimize
+        ):
             exit(1)
     except KeyboardInterrupt:
         log("continuing")

@@ -22,6 +22,7 @@ from beancode.optimizer import Optimizer
 
 optimize = False
 
+
 def _error(s: str) -> NoReturn:
     error(s)
     sys.exit(1)
@@ -104,7 +105,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output", type=str, help="output path of file")
     parser.add_argument("--stdout", action="store_true", help="print output to stdout")
-    parser.add_argument("-O", "--optimize", action="store_true", help="format and optimize code at the same time")
+    parser.add_argument(
+        "-O",
+        "--optimize",
+        action="store_true",
+        help="format and optimize code at the same time",
+    )
     parser.add_argument(
         "--debug", action="store_true", help="print debugging information"
     )

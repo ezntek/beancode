@@ -425,11 +425,11 @@ class BCValue:
         return not (self.__eq__(value))
 
     def kind_is_numeric(self) -> bool:
-        #return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
+        # return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
         return self.kind == BCPrimitiveType.INTEGER or self.kind == BCPrimitiveType.REAL
 
     def kind_is_alpha(self) -> bool:
-        #return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
+        # return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
         return self.kind == BCPrimitiveType.STRING or self.kind == BCPrimitiveType.CHAR
 
     def copy(self) -> "BCValue":
@@ -684,6 +684,9 @@ class BinaryExpr(Expr):
     lhs: Expr
     op: Operator
     rhs: Expr
+
+    def __hash__(self):
+        return hash((self.op, self.lhs.pos, self.rhs.pos))
 
 
 @dataclass(slots=True)

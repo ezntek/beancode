@@ -37,7 +37,7 @@ def _convert_escape_code(ch: str) -> str | None:
         case "'":
             return "'"
         case '"':
-            return '"' 
+            return '"'
         case "\\":
             return "\\"
         case _:
@@ -863,7 +863,9 @@ class Parser:
             self.consume()
 
         ident = self.ident()
-        self.consume_and_expect(TokenKind.ASSIGN, "after identifier in constant declaration")
+        self.consume_and_expect(
+            TokenKind.ASSIGN, "after identifier in constant declaration"
+        )
 
         expr = self.expr()
         if not expr:
@@ -873,9 +875,7 @@ class Parser:
 
         self.expect_newline("constant declaration (CONSTANT)")
 
-        return ConstantStatement(
-            begin.pos, ident, expr, export=export
-        )
+        return ConstantStatement(begin.pos, ident, expr, export=export)
 
     def assign_stmt(self) -> Statement | None:
         p = self.peek_next()
@@ -942,7 +942,7 @@ class Parser:
 
         while self.check(TokenKind.COMMENT) and self.preserve_trivia:
             t = self.consume()
-            if_stmts.append(CommentStatement(t.pos, t.data)) # type: ignore
+            if_stmts.append(CommentStatement(t.pos, t.data))  # type: ignore
 
         if self.check(TokenKind.NEWLINE):
             self.clean_newlines()
@@ -959,7 +959,7 @@ class Parser:
 
             while self.check(TokenKind.COMMENT) and self.preserve_trivia:
                 t = self.consume()
-                else_stmts.append(CommentStatement(t.pos, t.data)) # type: ignore
+                else_stmts.append(CommentStatement(t.pos, t.data))  # type: ignore
 
             if self.check(TokenKind.NEWLINE):
                 self.clean_newlines()

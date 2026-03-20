@@ -3,4 +3,5 @@
 
 if __name__ == "__main__":
     from beancode.cli.beanfmt import main
+
     main()

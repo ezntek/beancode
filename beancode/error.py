@@ -90,7 +90,6 @@ class BCError(Exception):
         res += self.msg
         res.append("\n")
 
-
         res.append(line_begin)
         res.append(snippet.strip())
         res.append("\n")

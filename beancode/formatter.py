@@ -36,7 +36,7 @@ def _reverse_escape_code(ch: str) -> str:
         case "'":
             return "\\'"
         case '"':
-            return '\\"' 
+            return '\\"'
         case _:
             return ch
 
@@ -419,7 +419,7 @@ class Formatter:
             self.write(" ")
             self.visit_expr(file_id)
         else:
-            self.write(f" \"{file_id}\"")
+            self.write(f' "{file_id}"')
 
     def visit_openfile_stmt(self, stmt: OpenfileStatement):
         self.write("OPENFILE")

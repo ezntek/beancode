@@ -11,6 +11,7 @@ from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
 
+
 def block_empty(blk: list[Statement]):
     if not blk:
         return True
@@ -21,6 +22,7 @@ def block_empty(blk: list[Statement]):
 
     return True
 
+
 class Optimizer:
     # TODO: use
     constants: list[dict[str, BCValue]]
@@ -28,7 +30,7 @@ class Optimizer:
     block: list[Statement]
     cur_stmt: int
     active_constants: set[str]
-    elided_procedures: set[str] 
+    elided_procedures: set[str]
     remove_cur: bool
 
     def __init__(self, block: list[Statement]):
@@ -714,7 +716,7 @@ class Optimizer:
                 continue
 
             b.expr = self.visit_expr(b.expr)
-            self.visit_stmt(b.stmt) # type: ignore
+            self.visit_stmt(b.stmt)  # type: ignore
 
     def visit_for_stmt(self, stmt: ForStatement):
         stmt.begin = self.visit_expr(stmt.begin)
@@ -768,14 +770,18 @@ class Optimizer:
     def visit_procedure(self, stmt: ProcedureStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
-        
-        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
+
+        stmt.block = self.visit_block(
+            stmt.block, ignore=[arg.name for arg in stmt.args]
+        )
 
     def visit_function(self, stmt: FunctionStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
 
-        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
+        stmt.block = self.visit_block(
+            stmt.block, ignore=[arg.name for arg in stmt.args]
+        )
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         stmt.block = self.visit_block(stmt.block)
@@ -828,7 +834,10 @@ class Optimizer:
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
-                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                if (
+                    isinstance(stmt.cond, Literal)
+                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
+                ):
                     v = bool(stmt.cond.val.val)
                     if v:
                         return stmt.if_block
@@ -855,20 +864,26 @@ class Optimizer:
                 if block_empty(stmt.block):
                     return []
 
-                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                if (
+                    isinstance(stmt.cond, Literal)
+                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
+                ):
                     v = bool(stmt.cond.val.val)
                     if not v:
-                        return [] # just remove the whole block
+                        return []  # just remove the whole block
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
 
                 if block_empty(stmt.block):
                     return []
 
-                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
+                if (
+                    isinstance(stmt.cond, Literal)
+                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
+                ):
                     v = bool(stmt.cond.val.val)
                     if not v:
-                        return stmt.block # turn it into one block
+                        return stmt.block  # turn it into one block
             case OutputStatement():
                 self.visit_output_stmt(stmt)
             case InputStatement():
@@ -920,7 +935,9 @@ class Optimizer:
     def visit_program(self, program: Program):
         self.visit_block(program.stmts)
 
-    def visit_block(self, block: list[Statement] | None, ignore: list[str] | None = None) -> list[Statement]:
+    def visit_block(
+        self, block: list[Statement] | None, ignore: list[str] | None = None
+    ) -> list[Statement]:
         blk = block if block is not None else self.block
         cur = 0
         self.constants.append(dict())

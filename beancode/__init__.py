@@ -22,6 +22,9 @@ class Pos:
     col: int
     span: int
 
+    def __hash__(self) -> int:
+        return hash((self.row, self.col, self.span))
+
     def __repr__(self) -> str:
         return f"{self.row} {self.col} {self.span}"
 
@@ -63,7 +66,7 @@ def is_integer(val: str) -> bool:
         return False
 
     newval = val
-    if val[0] == '-':
+    if val[0] == "-":
         newval = val[1:]
 
     for ch in newval:
@@ -76,7 +79,7 @@ def is_real(val: str) -> bool:
     if len(val) == 0:
         return False
 
-    if val[0] == '-':
+    if val[0] == "-":
         val = val[1:]
 
     if is_integer(val):
