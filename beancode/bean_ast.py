@@ -413,7 +413,7 @@ class BCValue:
         return self.kind == BCPrimitiveType.NULL or self.val is None
 
     def __hash__(self) -> int:
-        return hash((self.kind, self.val, self.is_array))
+        return hash(self.val)
 
     def __eq__(self, value: object, /) -> bool:
         if type(self) is not type(value):
@@ -425,9 +425,11 @@ class BCValue:
         return not (self.__eq__(value))
 
     def kind_is_numeric(self) -> bool:
+        #return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
         return self.kind == BCPrimitiveType.INTEGER or self.kind == BCPrimitiveType.REAL
 
     def kind_is_alpha(self) -> bool:
+        #return self.kind in {BCPrimitiveType.INTEGER, BCPrimitiveType.REAL}
         return self.kind == BCPrimitiveType.STRING or self.kind == BCPrimitiveType.CHAR
 
     def copy(self) -> "BCValue":

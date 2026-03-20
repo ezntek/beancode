@@ -227,15 +227,13 @@ class Interpreter:
         rhs = self.visit_expr(expr.rhs)
 
         if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
-            human_kind = "a comparison"
+            pass
         elif expr.op in {
             Operator.LESS_THAN,
             Operator.LESS_THAN_OR_EQUAL,
             Operator.GREATER_THAN,
             Operator.GREATER_THAN_OR_EQUAL,
         }:
-            human_kind = "an ordered comparison"
-
             if lhs.kind != rhs.kind and not (
                 lhs.kind_is_numeric() and rhs.kind_is_numeric()
             ):
@@ -248,25 +246,21 @@ class Interpreter:
             Operator.OR,
             Operator.NOT,
         }:
-            human_kind = "a boolean operation"
-
             if lhs.kind != rhs.kind:
                 self.error(
                     f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
                     expr.pos,
                 )
 
-            if not (
-                lhs.kind == BCPrimitiveType.BOOLEAN
-                or rhs.kind == BCPrimitiveType.BOOLEAN
+            if (
+                lhs.kind != BCPrimitiveType.BOOLEAN
+                or rhs.kind != BCPrimitiveType.BOOLEAN
             ):
                 self.error(
                     f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
                     expr.pos,
                 )
         else:
-            human_kind = "an arithmetic expression"
-
             # XXX: microoptimizations™
             # we are reducing the number of calls we visit in the Python VM per addition. Addition is a
             # very very common operator and it speeds PrimeTorture up by around 230ms.
@@ -282,13 +276,13 @@ class Interpreter:
         if expr.op != Operator.EQUAL:
             if lhs.is_uninitialized():
                 self.error(
-                    f"cannot have NULL in the left hand side of {human_kind}\n"
+                    f"cannot have NULL in the left hand side of {expr.op.humanize()}\n"
                     + "is your value an uninitialized value/variable?",
                     expr.lhs.pos,
                 )
-            if rhs.is_uninitialized():
+            elif rhs.is_uninitialized():
                 self.error(
-                    f"cannot have NULL in the right hand side of {human_kind}\n"
+                    f"cannot have NULL in the right hand side of {expr.op.humanize()}\n"
                     + "is your value an uninitialized value/variable?",
                     expr.rhs.pos,
                 )
@@ -422,21 +416,24 @@ class Interpreter:
 
     def _get_array_index(self, a: BCArray, ind: ArrayIndex) -> tuple[int, int | None]:
         index_v = self.visit_expr(ind.idx_outer)  # type: ignore
+
+        # XXX: checking index_v.val is None costs 200ms if ran 150000 times on my machine!!
         if index_v.kind != BCPrimitiveType.INTEGER:
             self.error(
                 f"type of array index is {index_v.kind}, not INTEGER!",
                 ind.idx_outer.pos,
             )
 
-        if a.typ.is_matrix():
+        # XXX: microoptimization! hot code path, reduce method calls
+        if len(a.typ.bounds) == 4:
             if ind.idx_inner is None:
                 self.error("expected 2 indices for matrix indexing", ind.pos)
 
-            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
-                self.error(f"type of outer array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
+            if index_v.val is None:
+                self.error(f"inner array index is uninitialized!", ind.pos)
 
             inner_index_v = self.visit_expr(ind.idx_inner)  # type: ignore
-            if inner_index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
+            if inner_index_v.kind != BCPrimitiveType.INTEGER or index_v.val is None:
                 self.error(
                     f"type of inner array index is {inner_index_v.kind}, not INTEGER!",
                     ind.idx_inner.pos,
@@ -447,8 +444,8 @@ class Interpreter:
             if ind.idx_inner is not None:
                 self.error("expected only 1 index for array indexing", ind.pos)
 
-            if index_v.kind != BCPrimitiveType.INTEGER and not index_v.is_uninitialized():
-                self.error(f"type of array index is {index_v.kind}, not INTEGER!", ind.idx_outer.pos)
+            if index_v.val is None:
+                self.error(f"array index is uninitialized!", ind.pos)
             
             return (index_v.val, None)  # type: ignore
 
@@ -456,37 +453,32 @@ class Interpreter:
         v = self.visit_expr(ind.expr)
 
         if v.is_array:
-            a = v.get_array()
+            a: BCArray = v.val # type: ignore
             tup = self._get_array_index(a, ind)
-            if a.typ.is_matrix():
+            # XXX: microoptimizations, this code path is extremely hot
+            if len(a.typ.bounds) == 4:
                 outer, inner = tup
-                bounds = a.get_matrix_bounds()
                 if inner is None:
                     self.error(
                         "second index not present for matrix index", ind.expr.pos
                     )
 
-                bounds = a.get_matrix_bounds()
-                if outer not in range(bounds[0], bounds[1] + 1):  # type: ignore
+                bounds: tuple[int, int, int, int] = a.typ.bounds # type: ignore
+                if outer < bounds[0] or outer > bounds[1]:  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[0]}"',
                         ind.idx_outer.pos,
                     )
 
-                if inner not in range(bounds[2], bounds[3] + 1):  # type: ignore
+                if inner < bounds[2] or inner > bounds[3]:  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[1]}"',
                         ind.idx_inner.pos,  # type: ignore
                     )
 
-                idx1 = outer - bounds[0]
-                idx2 = inner - bounds[2]
-                res = a.get_matrix()[idx1][idx2]
-                return res
+                return a.data[outer - bounds[0]][inner - bounds[2]] # type: ignore
             else:
-                if tup[0] not in range(
-                    a.get_flat_bounds()[0], a.get_flat_bounds()[1] + 1
-                ):
+                if (a.typ.bounds[0] > tup[0]) or (tup[0] > a.typ.bounds[1]):
                     if tup[0] == 0:
                         self.error(
                             "cannot access the 0th array element, which is disallowed in pseudocode",
@@ -498,8 +490,8 @@ class Interpreter:
                             ind.idx_outer.pos,
                         )
 
-                res = a.get_flat()[tup[0] - a.get_flat_bounds()[0]]
-                return res
+                # we already checked
+                return a.data[tup[0] - a.typ.bounds[0]] # type: ignore
         elif v.kind == BCPrimitiveType.STRING:
             self.error(
                 # FIXME: nicer diagnostics with the AST printer
@@ -997,7 +989,7 @@ class Interpreter:
             )
 
         try:
-            var = self.variables[expr.ident]
+            return self.variables[expr.ident].val
         except KeyError:
             if expr.ident in self.functions:
                 f = self.functions[expr.ident]
@@ -1013,14 +1005,22 @@ class Interpreter:
                     )
             self.error(f'cannot access undeclared variable "{expr.ident}"', expr.pos)
 
-        return var.val
-
     def visit_expr(self, expr: Expr) -> BCValue:  # type: ignore
         match expr:
-            case Typecast():
-                return self.visit_typecast(expr)
-            case Grouping():
-                return self.visit_expr(expr.inner)
+            # XXX: literals and idents on top
+            # microoptimizations!
+            case Literal():
+                return expr.val
+            case Identifier():
+                return self.visit_identifier(expr)
+            case ArrayLiteral():
+                return self.visit_array_literal(expr)
+            case BinaryExpr():
+                return self.visit_binaryexpr(expr)
+            case ArrayIndex():
+                return self.visit_array_index(expr)
+            case FunctionCall():
+                return self.visit_fncall(expr)
             case Negation():
                 inner = self.visit_expr(expr.inner)
                 if inner.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
@@ -1041,23 +1041,15 @@ class Interpreter:
                     )
 
                 return BCValue.new_boolean(not inner.get_boolean())
-            case Identifier():
-                return self.visit_identifier(expr)
-            case Literal():
-                return expr.val
-            case ArrayLiteral():
-                return self.visit_array_literal(expr)
-            case BinaryExpr():
-                return self.visit_binaryexpr(expr)
-            case ArrayIndex():
-                return self.visit_array_index(expr)
-            case FunctionCall():
-                return self.visit_fncall(expr)
+            case Grouping():
+                return self.visit_expr(expr.inner)
+            case Typecast():
+                return self.visit_typecast(expr)
             case Sqrt():
                 # Only the optimizer can generate this node, so we know the type is checked.
                 return BCValue.new_real(math.sqrt(self.visit_expr(expr.inner).val))  # type: ignore
         self.error(
-            "whoops something is very wrong. this is a rare error, please report it to the developers."
+            "whoops something is very wrong. this is a rare error, please report it to the developers.", expr.pos
         )
 
     def _display_array(self, arr: BCArray) -> str:
@@ -1376,11 +1368,14 @@ class Interpreter:
         intp = self._make_new_interpreter(block)
         intp.loop = True
 
+        # evaluate once to check condition
+        evcond = self.visit_expr(cond)
+        if evcond.kind != BCPrimitiveType.BOOLEAN:
+            self.error("condition of while loop must be a boolean!", stmt.cond.pos)
+
         while True:
             evcond = self.visit_expr(cond)
-            if evcond.kind != BCPrimitiveType.BOOLEAN:
-                self.error("condition of while loop must be a boolean!", stmt.cond.pos)
-            if not evcond.get_boolean():
+            if not evcond.val:
                 break
 
             intp.visit_block(block)
@@ -1437,18 +1432,14 @@ class Interpreter:
         counter = Variable(begin.copy(), const=False)
         intp.variables[stmt.counter.ident] = counter
 
-        if step > 0:
-            cond = (
-                lambda *_: counter.val.val  # type: ignore
-                <= self.visit_expr(stmt.end).val
-            )
-        else:
-            cond = (
-                lambda *_: counter.val.val  # type: ignore
-                >= self.visit_expr(stmt.end).val
-            )
-
-        while cond():
+        while True:
+            if step > 0:
+                if counter.val.val > self.visit_expr(stmt.end).val: # type: ignore
+                    break
+            else:
+                if counter.val.val < self.visit_expr(stmt.end).val: # type: ignore
+                    break
+            
             intp.visit_block(None)
             intp.trace(stmt.end_pos.row, loop_trace=True)
 
@@ -1578,9 +1569,9 @@ class Interpreter:
             if val.is_array:
                 a: BCArray = val.val  # type: ignore
                 t: BCArray = target.val  # type: ignore
-                if a.typ.is_matrix() and a.typ.bounds != t.typ.bounds:  # type: ignore
+                if len(a.typ.bounds) == 4 and a.typ.bounds != t.typ.bounds:  # type: ignore
                     self.error(f"mismatched matrix sizes in matrix assignment", s.pos)
-                elif a.typ.is_flat() and a.typ.bounds != t.typ.bounds:  # type: ignore
+                elif len(a.typ.bounds) == 2 and a.typ.bounds != t.typ.bounds:  # type: ignore
                     self.error(f"mismatched array sizes in array assignment", s.pos)
         else:  # elif isinstance(s.ident, ArrayIndex)
             target = self.visit_expr(s.ident)
@@ -1604,7 +1595,8 @@ class Interpreter:
                     s.ident.pos,
                 )
 
-        target.replace_inner(val.copy())
+        target.replace_inner(val)
+        #target.replace_inner(val.copy())
 
         self.trace(s.pos.row)
 
