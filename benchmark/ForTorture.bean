@@ -1,0 +1,9 @@
+CONSTANT Max <- 150000
+//CONSTANT Max <- 5
+DECLARE arr: ARRAY[1:Max] OF INTEGER
+
+FOR i <- 1 TO Max
+    arr[i] <- i*i
+NEXT i
+
+OUTPUT "populated"

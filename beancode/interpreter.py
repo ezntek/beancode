@@ -21,6 +21,7 @@ from .parser import *
 from .error import *
 from .libroutines import *
 from . import __version__, Pos
+from .typechecker import check_binaryexpr
 from .tracer import *
 
 
@@ -235,67 +236,7 @@ class Interpreter:
 
         if id(expr) not in self.checked_exprs:
             self.checked_exprs[id(expr)] = None
-
-            if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
-                pass
-            elif expr.op in {
-                Operator.LESS_THAN,
-                Operator.LESS_THAN_OR_EQUAL,
-                Operator.GREATER_THAN,
-                Operator.GREATER_THAN_OR_EQUAL,
-            }:
-                if lhs.kind != rhs.kind and not (
-                    lhs.kind_is_numeric() and rhs.kind_is_numeric()
-                ):
-                    self.error(
-                        f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
-                        expr.pos,
-                    )
-            elif expr.op in {
-                Operator.AND,
-                Operator.OR,
-                Operator.NOT,
-            }:
-                if lhs.kind != rhs.kind:
-                    self.error(
-                        f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                        expr.pos,
-                    )
-
-                if (
-                    lhs.kind != BCPrimitiveType.BOOLEAN
-                    or rhs.kind != BCPrimitiveType.BOOLEAN
-                ):
-                    self.error(
-                        f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
-                        expr.pos,
-                    )
-            else:
-                # XXX: microoptimizations™
-                # we are reducing the number of calls we visit in the Python VM per addition. Addition is a
-                # very very common operator and it speeds PrimeTorture up by around 230ms.
-                if expr.op != Operator.ADD:
-                    if expr.op not in {Operator.FLOOR_DIV, Operator.MOD} and not (
-                        lhs.kind_is_numeric() and rhs.kind_is_numeric()
-                    ):
-                        self.error(
-                            f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
-                            expr.pos,
-                        )
-
-            if expr.op != Operator.EQUAL:
-                if lhs.is_uninitialized():
-                    self.error(
-                        f"cannot have NULL in the left hand side of {expr.op.humanize()}\n"
-                        + "is your value an uninitialized value/variable?",
-                        expr.lhs.pos,
-                    )
-                elif rhs.is_uninitialized():
-                    self.error(
-                        f"cannot have NULL in the right hand side of {expr.op.humanize()}\n"
-                        + "is your value an uninitialized value/variable?",
-                        expr.rhs.pos,
-                    )
+            check_binaryexpr(expr, lhs, rhs)
 
         match expr.op:
             case Operator.ASSIGN:
@@ -426,9 +367,9 @@ class Interpreter:
 
     def _get_array_index(self, a: BCArray, ind: ArrayIndex) -> tuple[int, int | None]:
         index_v = self.visit_expr(ind.idx_outer)  # type: ignore
-
         if id(ind) in self.checked_exprs:
             if self.checked_exprs[id(ind)]:
+                inner_index_v = self.visit_expr(ind.idx_inner)  # type: ignore
                 return (index_v.val, inner_index_v.val)  # type: ignore
             else:
                 return (index_v.val, None)  # type: ignore
@@ -482,13 +423,13 @@ class Interpreter:
                     )
 
                 bounds: tuple[int, int, int, int] = a.typ.bounds  # type: ignore
-                if outer < bounds[0] or outer > bounds[1]:  # type: ignore
+                if (outer < bounds[0]) or (outer > bounds[1]):  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[0]}"',
                         ind.idx_outer.pos,
                     )
 
-                if inner < bounds[2] or inner > bounds[3]:  # type: ignore
+                if (inner < bounds[2]) or (inner > bounds[3]):  # type: ignore
                     self.error(
                         f'cannot access out of bounds array element "{tup[1]}"',
                         ind.idx_inner.pos,  # type: ignore
@@ -1604,7 +1545,7 @@ class Interpreter:
         if target.kind != val.kind:
             if should_promote_real:
                 val = BCValue(
-                    BCPrimitiveType.REAL, value=float(val.val), is_array=False  # type: ignore
+                    BCPrimitiveType.REAL, float(val.val), is_array=False  # type: ignore
                 )
             elif should_promote_char:
                 val.kind = BCPrimitiveType.STRING
@@ -1614,6 +1555,7 @@ class Interpreter:
                     s.ident.pos,
                 )
 
+        # XXX: if there are any future bugs with assignments copying pointers, it's here
         target.replace_inner(val)
         # target.replace_inner(val.copy())
 

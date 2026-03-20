@@ -6,11 +6,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
+# FIXME: actually fix the optimizer and pull the changes from the compiler branch properly
+#
 
 from . import is_case_consistent, prefix_string_with_article
 from .bean_ast import *
 from .libroutines import *
-
+from .typechecker import check_binaryexpr
 
 def block_empty(blk: list[Statement]):
     if not blk:
@@ -22,15 +24,15 @@ def block_empty(blk: list[Statement]):
 
     return True
 
-
 class Optimizer:
     # TODO: use
     constants: list[dict[str, BCValue]]
     ignore_constants: list[list[str]]
+    var_types: list[dict[str, Type]]
     block: list[Statement]
     cur_stmt: int
     active_constants: set[str]
-    elided_procedures: set[str]
+    elided_procedures: set[str] 
     remove_cur: bool
 
     def __init__(self, block: list[Statement]):
@@ -39,6 +41,7 @@ class Optimizer:
         self.active_constants = set()
         self.elided_procedures = set()
         self.ignore_constants = list()
+        self.var_types = list()
         self.cur_stmt = 0
         self.remove_cur = False
 
@@ -47,6 +50,11 @@ class Optimizer:
             *(d.keys() for d in self.constants)
         )
         self.active_constants -= {x for row in self.ignore_constants for x in row}
+
+    def var_type_of(self, name: str) -> Type | None:
+        for d in reversed(self.var_types):
+            if name in d:
+                return d[name]
 
     def _typecast_string(self, inner: BCValue, pos: Pos) -> BCValue | None:
         _ = pos  # shut up the type checker
@@ -157,12 +165,19 @@ class Optimizer:
 
         if not inner:
             return
+        elif isinstance(inner, BCType):
+            inner_typ = inner
+        else:
+            inner_typ = inner.kind
 
-        if inner.kind == BCPrimitiveType.NULL:
+        if inner_typ == BCPrimitiveType.NULL:
             raise BCError("cannot cast NULL to anything!", tc.pos)
 
-        if isinstance(inner.kind, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
+        if isinstance(inner_typ, BCArrayType) and tc.typ != BCPrimitiveType.STRING:
             raise BCError(f"cannot cast an array to a {tc.typ}", tc.pos)
+
+        if not inner or isinstance(inner, BCType):
+            return
 
         match tc.typ:
             case BCPrimitiveType.STRING:
@@ -176,114 +191,105 @@ class Optimizer:
             case BCPrimitiveType.BOOLEAN:
                 return self._typecast_boolean(inner)
 
-    def visit_identifier(self, id: Identifier) -> BCValue | None:
+    def visit_identifier(self, id: Identifier) -> BCValue | BCType | None:
         if id.ident not in self.active_constants:
-            return
+            return None
 
         for d in reversed(self.constants):
             if id.ident in d:
                 return d[id.ident]
 
     def visit_array_literal(self, expr: ArrayLiteral):
+        static = True
+        nested = False
+
+        if not expr.items:
+            return
+
+        typ = None
         for i in range(len(expr.items)):
             opt = self.fold_expr(expr.items[i])
+
             if not opt:
+                static = False
                 continue
+            elif isinstance(opt, BCType):
+                static = False
+                if not typ:
+                    typ = opt
+                elif typ and not isinstance(opt, BCArrayType) and opt != typ:
+                    raise BCError(f"inconsistent type in array literal (expected {typ} but got {opt})!", expr.items[i].pos)
+
+                if isinstance(opt, BCArrayType) and not nested:
+                    nested = True
+                continue
+
             expr.items[i] = Literal(expr.items[i].pos, opt)
+            if not typ:
+                typ = opt.kind
+            elif typ and not isinstance(opt.kind, BCArrayType) and opt.kind != typ:
+                raise BCError(f"inconsistent type in array literal (expected {typ} but got {opt.kind})!", expr.items[i].pos)
+
+            if isinstance(opt.kind, BCArrayType) and not nested:
+                nested = True
+
+        if not static:
+            return
+
+        if not nested:
+            bcvals = [itm.val for itm in expr.items] # type: ignore
+            return BCValue.new_array(BCArray.new_flat(
+                BCArrayType.new_flat(typ, (1, len(bcvals))), # type: ignore
+                bcvals))
+        else:
+            outer = []
+            for arr in expr.items:
+                bcvals = [itm.val for itm in arr.val.get_array().get_flat()] # type: ignore
+                outer.append(bcvals)
+            return BCValue.new_array(BCArray.new_matrix(
+                BCArrayType.new_matrix(typ, (1, len(outer), 1, len(outer[0]))), # type: ignore
+                outer))
 
     def visit_binaryexpr(self, expr: BinaryExpr):
         should_return = False
         lhs = self.fold_expr(expr.lhs)  # type: ignore
         if not lhs:
             should_return = True
+        elif isinstance(lhs, BCType):
+            should_return = True
+            lhs = BCValue(lhs, None)
         else:
             expr.lhs = Literal(expr.lhs.pos, lhs)
+            # only do the short-circuiting if true, we silenced the typechecker
+            # before
+            if (
+                expr.op == Operator.AND
+                and lhs.kind == BCPrimitiveType.BOOLEAN
+                and not lhs.val
+            ):
+                return BCValue.new_boolean(False)
 
-        if (
-            expr.op == Operator.AND
-            and lhs.kind == BCPrimitiveType.BOOLEAN
-            and not lhs.val
-        ):
-            return BCValue.new_boolean(False)
-
-        if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
-            return BCValue.new_boolean(True)
+            if expr.op == Operator.OR and lhs.kind == BCPrimitiveType.BOOLEAN and lhs.val:
+                return BCValue.new_boolean(True)
 
         rhs = self.fold_expr(expr.rhs)  # type: ignore
         if not rhs:
             should_return = True
+        elif isinstance(rhs, BCType):
+            should_return = True
+            rhs = BCValue(rhs, None)
         else:
             expr.rhs = Literal(expr.rhs.pos, rhs)
-
-        if should_return:
-            return
 
         lhs: BCValue
         rhs: BCValue
 
-        if expr.op in {Operator.EQUAL, Operator.NOT_EQUAL}:
-            human_kind = "a comparison"
-        elif expr.op in {
-            Operator.LESS_THAN,
-            Operator.LESS_THAN_OR_EQUAL,
-            Operator.GREATER_THAN,
-            Operator.GREATER_THAN_OR_EQUAL,
-        }:
-            human_kind = "an ordered comparison"
+        if should_return:
+            return
 
-            if lhs.kind != rhs.kind and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}",
-                    expr.pos,
-                )
-        elif expr.op in {
-            Operator.AND,
-            Operator.OR,
-            Operator.NOT,
-        }:
-            human_kind = "a boolean operation"
+        check_binaryexpr(expr, lhs, rhs)
 
-            if lhs.kind != rhs.kind:
-                raise BCError(
-                    f"cannot {expr.op.humanize()} incompatible types {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-
-            if not (
-                lhs.kind == BCPrimitiveType.BOOLEAN
-                or rhs.kind == BCPrimitiveType.BOOLEAN
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} between {lhs.kind} and {rhs.kind}!",
-                    expr.pos,
-                )
-        else:
-            human_kind = "an arithmetic expression"
-
-            if expr.op not in {Operator.ADD, Operator.FLOOR_DIV, Operator.MOD} and not (
-                lhs.kind_is_numeric() and rhs.kind_is_numeric()
-            ):
-                raise BCError(
-                    f"cannot {expr.op.humanize()} between BOOLEANs, CHARs and STRINGs!",
-                    expr.pos,
-                )
-
-        if expr.op != Operator.EQUAL:
-            if lhs.is_uninitialized():
-                raise BCError(
-                    f"cannot have NULL in the left hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.lhs.pos,
-                )
-            if rhs.is_uninitialized():
-                raise BCError(
-                    f"cannot have NULL in the right hand side of {human_kind}\n"
-                    + "is your value an uninitialized value/variable?",
-                    expr.rhs.pos,
-                )
-
+        # allow for type checking first
         match expr.op:
             case Operator.ASSIGN:
                 raise ValueError("impossible to have assign in binaryexpr")
@@ -415,7 +421,106 @@ class Optimizer:
                 return BCValue(BCPrimitiveType.BOOLEAN, lhs.val or rhs.val)  # type: ignore
 
     def visit_array_index(self, expr: ArrayIndex):
-        _ = expr
+        folded = self.fold_expr(expr.expr)
+
+        if isinstance(folded, BCType):
+            typ = folded
+        elif isinstance(folded, BCValue):
+            expr.expr = Literal(val=folded, pos=expr.expr.pos)
+            typ = folded.kind
+        else:
+            return
+
+        if not isinstance(typ, BCArrayType):
+            raise BCError(f"cannot index {typ}!", pos=expr.pos)
+        
+        is_flat = typ.is_flat()
+
+        idx_outer = self.fold_expr(expr.idx_outer)
+        idx_inner = None
+        if expr.idx_inner:
+            if is_flat:
+                raise BCError(f"cannot index into 1D array with 2 indices!", pos=expr.pos)
+
+            idx_inner = self.fold_expr(expr.idx_inner)
+
+        if not idx_inner and not is_flat:
+            raise BCError("too few indices to 2D array!", pos=expr.pos)
+        
+        if not isinstance(idx_outer, BCValue):
+            if isinstance(idx_inner, BCValue):
+                # at least fold this one
+                expr.idx_inner = Literal(val=idx_inner, pos=expr.idx_inner.pos) # type: ignore
+            return
+
+        # we have an idx_outer
+        if not isinstance(idx_outer.val, int):
+            raise BCError(f"type of array index is {idx_outer.kind}, not INTEGER!", pos=expr.idx_outer.pos)
+        outer = int(idx_outer.val)
+
+        inner = None
+        if isinstance(idx_inner, BCValue):
+            if not isinstance(idx_inner.val, int):
+                raise BCError(f"type of array index is {idx_inner.kind}, not INTEGER!", pos=expr.idx_inner.pos) # type: ignore
+            inner = int(idx_inner.val)
+
+        if not folded:
+            return
+
+        tup = (outer, inner)
+        a = None
+        if isinstance(folded, BCValue):
+            a = folded.get_array() # type: ignore
+
+        at: BCArrayType
+        if isinstance(folded, BCArrayType):
+            at = folded
+        else:
+            # we already checked that this is an array
+            at = folded.kind # type: ignore
+
+        if is_flat:
+            if tup[0] not in range(
+                at.get_flat_bounds()[0], at.get_flat_bounds()[1] + 1
+            ):
+                if tup[0] == 0:
+                    raise BCError(
+                        "cannot access the 0th array element, which is disallowed in pseudocode",
+                        expr.idx_outer.pos,
+                    )
+                else:
+                    raise BCError(
+                        f"cannot access out of bounds array element {tup[0]}",
+                        expr.idx_outer.pos,
+                    )
+
+            if a:
+                return a.get_flat()[tup[0] - a.get_flat_bounds()[0]]
+        else:
+            outer, inner = tup
+            bounds = at.get_matrix_bounds()
+            if inner is None:
+                raise BCError(
+                    "second index not present for matrix index", expr.expr.pos
+                )
+
+            bounds = at.get_matrix_bounds()
+            if outer not in range(bounds[0], bounds[1] + 1):  # type: ignore
+                raise BCError(
+                    f'cannot access out of bounds array element "{tup[0]}"',
+                    expr.idx_outer.pos,
+                )
+
+            if inner not in range(bounds[2], bounds[3] + 1):  # type: ignore
+                raise BCError(
+                    f'cannot access out of bounds array element "{tup[1]}"',
+                    expr.idx_inner.pos,  # type: ignore
+                )
+
+            idx1 = outer - bounds[0]
+            idx2 = inner - bounds[2]
+            if a:
+                return a.get_matrix()[idx1][idx2]
 
     def _eval_libroutine_args(
         self,
@@ -430,23 +535,29 @@ class Optimizer:
                 pos,
             )
 
+        should_abort = False
         evargs: list[BCValue] = []
         if lr:
             for idx, (arg, arg_type) in enumerate(zip(args, lr)):
                 new = self.fold_expr(arg)
                 if not new:
                     return
+                elif isinstance(new, BCType):
+                    new_typ = new
+                    should_abort = True
+                else:
+                    new_typ = new.kind
 
                 mismatch = False
                 if isinstance(arg_type, tuple):
-                    if new.kind not in arg_type:
+                    if new_typ not in arg_type:
                         mismatch = True
                 elif not arg_type:
                     pass
-                elif arg_type != new.kind:
+                elif arg_type != new_typ:
                     mismatch = True
 
-                if mismatch and new.is_null():
+                if mismatch and isinstance(new, BCValue) and new.is_null():
                     raise BCError(
                         f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
                         pos,
@@ -466,7 +577,7 @@ class Optimizer:
                             )
                             err_base += " "
                     else:
-                        if str(new.kind)[0] in "aeiou":
+                        if str(new_typ)[0] in "aeiou":
                             err_base += "a "
                         else:
                             err_base += "an "
@@ -474,20 +585,22 @@ class Optimizer:
                         err_base += prefix_string_with_article(str(arg_type).upper())
                         err_base += " "
 
-                    wanted = str(new.kind).upper()
+                    wanted = str(new_typ).upper()
                     err_base += f"but found {wanted}"
                     raise BCError(err_base, pos)
 
-                evargs.append(new)
+                if isinstance(new, BCValue):
+                    evargs.append(new)
         else:
             evargs = list()
             for e in args:
                 evaled = self.fold_expr(e)
-                if not evaled:
+                if not evaled or isinstance(evaled, BCType):
                     return
                 evargs.append(evaled)
 
-        return evargs
+        if not should_abort:
+            return evargs
 
     def visit_libroutine(self, stmt: FunctionCall) -> BCValue | None:  # type: ignore
         name = stmt.ident.lower()
@@ -596,10 +709,10 @@ class Optimizer:
 
         for i, itm in enumerate(expr.args):
             val = self.fold_expr(itm)
-            if val:
+            if val and not isinstance(val, BCType):
                 expr.args[i] = Literal(itm.pos, val)
 
-    def fold_expr(self, expr: Expr) -> BCValue | None:
+    def fold_expr(self, expr: Expr) -> BCValue | BCType | None:
         match expr:
             case Typecast():
                 return self.visit_typecast(expr)
@@ -609,6 +722,8 @@ class Optimizer:
                 inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
+                elif isinstance(inner, BCType):
+                    return inner
 
                 if inner.kind == BCPrimitiveType.INTEGER:
                     return BCValue.new_integer(-inner.get_integer())  # type: ignore
@@ -618,6 +733,8 @@ class Optimizer:
                 inner = self.fold_expr(expr.inner)
                 if not inner:
                     return
+                elif isinstance(inner, BCType):
+                    return inner
 
                 if inner.kind != BCPrimitiveType.BOOLEAN:
                     raise BCError(
@@ -629,7 +746,7 @@ class Optimizer:
             case Identifier():
                 return self.visit_identifier(expr)
             case Literal():
-                return expr.val
+                return expr.val.copy()
             case ArrayLiteral():
                 return self.visit_array_literal(expr)
             case BinaryExpr():
@@ -644,7 +761,7 @@ class Optimizer:
 
     def fold_expr_if_possible(self, expr: Expr) -> Expr:
         res = self.fold_expr(expr)
-        if res:
+        if res and not isinstance(res, BCType):
             return Literal(expr.pos, res)
         else:
             return expr
@@ -699,12 +816,15 @@ class Optimizer:
         return default
 
     def visit_type(self, typ: Type):
-        if isinstance(typ, ArrayType):
-            new = list()
+        if not isinstance(typ, ArrayType):
+            return
+
+        new = list()
+        if typ.bounds:
             for itm in typ.bounds:
                 new.append(self.visit_expr(itm))
             typ.bounds = tuple(new)
-
+    
     def visit_if_stmt(self, stmt: IfStatement):
         stmt.cond = self.visit_expr(stmt.cond)
         stmt.if_block = self.visit_block(stmt.if_block)
@@ -716,7 +836,7 @@ class Optimizer:
                 continue
 
             b.expr = self.visit_expr(b.expr)
-            self.visit_stmt(b.stmt)  # type: ignore
+            self.visit_stmt(b.stmt) # type: ignore
 
     def visit_for_stmt(self, stmt: ForStatement):
         stmt.begin = self.visit_expr(stmt.begin)
@@ -770,18 +890,14 @@ class Optimizer:
     def visit_procedure(self, stmt: ProcedureStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
-
-        stmt.block = self.visit_block(
-            stmt.block, ignore=[arg.name for arg in stmt.args]
-        )
+        
+        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
 
     def visit_function(self, stmt: FunctionStatement):
         for arg in stmt.args:
             self.visit_type(arg.typ)
 
-        stmt.block = self.visit_block(
-            stmt.block, ignore=[arg.name for arg in stmt.args]
-        )
+        stmt.block = self.visit_block(stmt.block, ignore=[arg.name for arg in stmt.args])
 
     def visit_scope_stmt(self, stmt: ScopeStatement):
         stmt.block = self.visit_block(stmt.block)
@@ -798,7 +914,7 @@ class Optimizer:
 
     def visit_constant_stmt(self, stmt: ConstantStatement):
         val = self.fold_expr(stmt.value)
-        if not val:
+        if not val or isinstance(val, BCType):
             # try optimizing the expr instead
             stmt.value = self.visit_expr(stmt.value)
             return
@@ -808,6 +924,8 @@ class Optimizer:
 
     def visit_declare_stmt(self, stmt: DeclareStatement):
         self.visit_type(stmt.typ)
+        for id in stmt.ident:
+            self.var_types[-1][id.ident] = stmt.typ
 
     def visit_trace_stmt(self, stmt: TraceStatement):
         _ = stmt
@@ -834,10 +952,7 @@ class Optimizer:
         match stmt:
             case IfStatement():
                 self.visit_if_stmt(stmt)
-                if (
-                    isinstance(stmt.cond, Literal)
-                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
-                ):
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
                     v = bool(stmt.cond.val.val)
                     if v:
                         return stmt.if_block
@@ -864,26 +979,20 @@ class Optimizer:
                 if block_empty(stmt.block):
                     return []
 
-                if (
-                    isinstance(stmt.cond, Literal)
-                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
-                ):
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
                     v = bool(stmt.cond.val.val)
                     if not v:
-                        return []  # just remove the whole block
+                        return [] # just remove the whole block
             case RepeatUntilStatement():
                 self.visit_repeatuntil_stmt(stmt)
 
                 if block_empty(stmt.block):
                     return []
 
-                if (
-                    isinstance(stmt.cond, Literal)
-                    and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN
-                ):
+                if isinstance(stmt.cond, Literal) and stmt.cond.val.kind == BCPrimitiveType.BOOLEAN:
                     v = bool(stmt.cond.val.val)
                     if not v:
-                        return stmt.block  # turn it into one block
+                        return stmt.block # turn it into one block
             case OutputStatement():
                 self.visit_output_stmt(stmt)
             case InputStatement():
@@ -935,14 +1044,13 @@ class Optimizer:
     def visit_program(self, program: Program):
         self.visit_block(program.stmts)
 
-    def visit_block(
-        self, block: list[Statement] | None, ignore: list[str] | None = None
-    ) -> list[Statement]:
+    def visit_block(self, block: list[Statement] | None, ignore: list[str] | None = None) -> list[Statement]:
         blk = block if block is not None else self.block
         cur = 0
         self.constants.append(dict())
         self.ignore_constants.append(ignore if ignore else list())
         saved_elided_procedures = self.elided_procedures.copy()
+        self.var_types.append(dict())
         self._update_active_constants()
         new_block = []
         while cur < len(blk):
@@ -957,6 +1065,7 @@ class Optimizer:
             cur += 1
         self.constants.pop()
         self.ignore_constants.pop()
+        self.var_types.pop()
         self.elided_procedures = saved_elided_procedures
         self._update_active_constants()
         return new_block
