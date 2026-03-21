@@ -13,7 +13,8 @@ ENDPROCEDURE
 
 // Populate the array
 FOR I <- 1 TO Max
-    Array[I] <- INTEGER(RANDOM() * (High - Low + 1) + Low)
+    // make the output deterministic
+    Array[I] <- Max - I 
 NEXT I
 CALL PrintArray
 

@@ -527,19 +527,12 @@ class BCValue:
         return self.val  # type: ignore
 
     def __repr__(self) -> str:  # type: ignore
-        if self.is_uninitialized():
+        if self.val is None:
             return "(null)"
-
-        match self.kind:
-            case BCPrimitiveType.STRING:
-                return self.val  # type: ignore
-            case BCPrimitiveType.BOOLEAN:
-                return str(self.val).upper()
-            case BCPrimitiveType.NULL:
-                return "(null)"
-            case _:
-                return str(self.val)
-
+        elif self.kind == BCPrimitiveType.BOOLEAN:
+            return "TRUE" if self.val else "FALSE"
+        else:
+            return str(self.val)
 
 @dataclass(slots=True)
 class File:

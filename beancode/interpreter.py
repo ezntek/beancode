@@ -671,22 +671,27 @@ class Interpreter:
         if stmt.libroutine:
             return self.visit_libroutine(stmt)
 
-        if stmt.ident in self.variables:
-            self.error(f'"{stmt.ident}" is a variable, not a function!', stmt.pos)
+        if id(stmt) not in self.checked_exprs:
+            if stmt.ident in self.variables:
+                self.error(f'"{stmt.ident}" is a variable, not a function!', stmt.pos)
 
-        try:
-            func = self.functions[stmt.ident]
-        except KeyError:
-            self.error(f"no function named {stmt.ident} exists", stmt.pos)
+            try:
+                func = self.functions[stmt.ident]
+            except KeyError:
+                self.error(f"no function named {stmt.ident} exists", stmt.pos)
 
-        if isinstance(func, ProcedureStatement):
-            self.error("cannot call procedure without CALL!", stmt.pos)
+            if isinstance(func, ProcedureStatement):
+                self.error("cannot call procedure without CALL!", stmt.pos)
 
-        if isinstance(func, BCProcedure):
-            self.error("cannot call FFI procedure without CALL!", stmt.pos)
+            if isinstance(func, BCProcedure):
+                self.error("cannot call FFI procedure without CALL!", stmt.pos)
 
-        if isinstance(func, BCFunction):
-            return self.visit_ffi_fncall(func, stmt)
+            if isinstance(func, BCFunction):
+                return self.visit_ffi_fncall(func, stmt)
+
+            self.checked_exprs[id(stmt)] = func
+        else:
+            func = self.checked_exprs[id(stmt)]
 
         intp = self.new(func.block, func=True, tracer=tracer)
         intp.files = self.files.copy()
@@ -703,8 +708,9 @@ class Interpreter:
 
         intp.variables = self.variables.copy()
         for argdef, argval in zip(func.args, stmt.args):
-            val = self.visit_expr(argval)
-            intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
+            intp.variables[argdef.name] = Variable(
+                val=self.visit_expr(argval), const=False, export=False
+            )
 
         intp.functions = self.functions.copy()
         intp.visit_block(func.block)
@@ -735,31 +741,36 @@ class Interpreter:
         proc.fn(args)
 
     def visit_call(self, stmt: CallStatement, tracer: Tracer | None = None):
-        if stmt.ident in self.variables:
-            self.error(f'"{stmt.ident}" is a variable, not a procedure!', stmt.pos)
+        if id(stmt) not in self.checked_exprs:
+            if stmt.ident in self.variables:
+                self.error(f'"{stmt.ident}" is a variable, not a procedure!', stmt.pos)
 
-        if stmt.libroutine:
-            self.error(
-                f"{stmt.ident} is a library routine\nplease remove the CALL!",
-                stmt.pos,
-            )
+            if stmt.libroutine:
+                self.error(
+                    f"{stmt.ident} is a library routine\nplease remove the CALL!",
+                    stmt.pos,
+                )
 
-        try:
-            proc = self.functions[stmt.ident]
-        except KeyError:
-            self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
+            try:
+                proc = self.functions[stmt.ident]
+            except KeyError:
+                self.error(f"no procedure named {stmt.ident} exists", stmt.pos)
 
-        if isinstance(proc, FunctionStatement):
-            self.error(
-                "cannot run CALL on a function!\nPlease call the function without the CALL keyword instead.",
-                stmt.pos,
-            )
+            if isinstance(proc, FunctionStatement):
+                self.error(
+                    "cannot run CALL on a function!\nPlease call the function without the CALL keyword instead.",
+                    stmt.pos,
+                )
 
-        if isinstance(proc, BCFunction):
-            self.error(
-                "cannot run CALL on an FFI function!\nPlease call the function without the CALL keyword instaed.",
-                stmt.pos,
-            )
+            if isinstance(proc, BCFunction):
+                self.error(
+                    "cannot run CALL on an FFI function!\nPlease call the function without the CALL keyword instaed.",
+                    stmt.pos,
+                )
+
+            self.checked_exprs[id(stmt)] = proc
+        else:
+            proc = self.checked_exprs[id(stmt)]  # type: ignore
 
         if isinstance(proc, BCProcedure):
             return self.visit_ffi_call(proc, stmt)
@@ -781,9 +792,9 @@ class Interpreter:
         intp.variables = self.variables.copy()
         intp.files = self.files.copy()
         for argdef, argval in zip(proc.args, stmt.args):
-            val = self.visit_expr(argval)
-            intp.variables[argdef.name] = Variable(val=val, const=False, export=False)
-
+            intp.variables[argdef.name] = Variable(
+                val=self.visit_expr(argval), const=False, export=False
+            )
         intp.visit_block(proc.block)
         intp.calls.pop()
 
@@ -941,15 +952,15 @@ class Interpreter:
         return BCValue.new_array(BCArray.new_flat(t, vals))
 
     def visit_identifier(self, expr: Identifier) -> BCValue:
-        if expr.libroutine:
-            self.error(
-                f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
-                expr.pos,
-            )
-
         try:
             return self.variables[expr.ident].val
         except KeyError:
+            if expr.libroutine:
+                self.error(
+                    f'"{expr.ident}" is a library routine!\nplease call it with an argument list: {expr.ident}(args...)',
+                    expr.pos,
+                )
+
             if expr.ident in self.functions:
                 f = self.functions[expr.ident]
                 if isinstance(f, BCFunction) or isinstance(f, FunctionStatement):
@@ -1014,44 +1025,14 @@ class Interpreter:
 
     def _display_array(self, arr: BCArray) -> str:
         if arr.typ.is_flat():
-            res = list()
-            res.append("[")
-            flat = arr.get_flat()
-            for idx, item in enumerate(flat):
-                if item.is_uninitialized():
-                    res.append("(null)")
-                else:
-                    res.append(str(item))
-
-                if idx != len(flat) - 1:
-                    res.append(", ")
-            res.append("]")
-
-            return "".join(res)
+            res = [str(v) for v in arr.data]
+            return "[" + ", ".join(res) + "]"
         else:
-            matrix = arr.get_matrix()
-            outer_res = list()
-            outer_res.append("[")
-            res = list()
-            for oidx, a in enumerate(matrix):
-                res.append("[")
-                for iidx, item in enumerate(a):
-                    if item.is_uninitialized():
-                        res.append("(null)")
-                    else:
-                        res.append(str(item))
-
-                    if iidx != len(a) - 1:
-                        res.append(", ")
-                res.append("]")
-
-                outer_res.append("".join(res))
-                res.clear()
-                if oidx != len(matrix) - 1:
-                    outer_res.append(", ")
-            outer_res.append("]")
-
-            return "".join(outer_res)
+            res = [
+                ("[" + ", ".join([str(v) for v in inner]) + "]")
+                for inner in arr.get_matrix()
+            ]
+            return "[" + ", ".join(res) + "]"
 
     def visit_output_stmt(self, stmt: OutputStatement):
         res = (
@@ -1437,10 +1418,9 @@ class Interpreter:
 
         while True:
             intp.visit_block(None)
-
             intp.trace(stmt.end_pos.row, loop_trace=True)
+            intp.variables = self.variables.copy()
 
-            intp.variables = dict(self.variables)
             if intp._returned:
                 proc, func = self.can_return()
 
@@ -1866,14 +1846,11 @@ class Interpreter:
 
     def visit_block(self, block: list[Statement] | None):
         blk = block if block is not None else self.block
-        cur = 0
-        while cur < len(blk):
-            stmt = blk[cur]
+        for cur, stmt in enumerate(blk):
             self.cur_stmt = cur
             self.visit_stmt(stmt)
             if self._returned:
                 return
-            cur += 1
 
     def visit_program(self, program: Program):
         if program is not None:
