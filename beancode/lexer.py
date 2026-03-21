@@ -125,9 +125,6 @@ class Lexer:
     def get_cur(self):
         return self.src[self.cur]
 
-    def peek(self):
-        return self.src[self.cur + 1]
-
     def bump_newline(self):
         self.row += 1
         self.cur += 1
@@ -157,7 +154,7 @@ class Lexer:
         while self.in_bounds() and (cur := self.get_cur()).isspace() and cur != "\n":
             self.cur += 1
 
-        self.trim_comments()
+        return self.trim_comments()
 
     def trim_comments(self) -> Comment | None:
         # if there are not 2 chars more in the stream (// and /*)
