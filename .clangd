@@ -1,0 +1,19 @@
+If:
+  PathMatch: .*\.h
+CompileFlags:
+  Add: ["-I.", "-I./3rdparty", "-std=c23", "-xc-header"]
+---
+If:
+  PathMatch: .*\.c
+CompileFlags:
+  Add: ["-I.", "-I./3rdparty", "-std=c23"]
+---
+If:
+  PathMatch: [.*\.hh, .*\.hpp] 
+CompileFlags:
+  Add: ["-I.", "-I./3rdparty", "-std=c++23", "-xc++-header"]
+---
+If:
+  PathMatch: [.*\.cc, .*\.cpp]
+CompileFlags:
+  Add: ["-I.", "-I./3rdparty", "-std=c++23"]

@@ -2,14 +2,15 @@ CXX ?= c++
 LD ?= ld
 INCLUDE = 
 
-SRC = src/main.cpp src/lexer.cpp 
-OBJ = $(SRC:.c=.o)
-HEADERS = src/lexer.hpp
+SRC = src/main.cpp src/lexer.cpp src/utf8.cpp 
+DEPS = #3rdparty/simdutf.o
+OBJ = $(DEPS) $(SRC:.cpp=.o)
+HEADERS = src/lexer.hpp src/utf8.hpp
 
-CXXFLAGS = -Wall -Wextra -pedantic
+CXXFLAGS = -Wall -Wextra -pedantic -std=c++23 -I./3rdparty
 RELEASE_CXXFLAGS = -O2
-DEBUG_CXXFLAGS = -D_A_STRING_DEBUG -O0 -ggdb3 -fsanitize=address
-TARBALLFILES = Makefile LICENSE.md README.md 3rdparty $(SRC) $(HEADERS) main.c 
+DEBUG_CXXFLAGS = -O0 -ggdb3 -fsanitize=address
+TARBALLFILES = Makefile LICENSE.md README.md 3rdparty $(SRC) $(HEADERS) 
 
 TARGET=debug
 
@@ -24,8 +25,8 @@ ifeq (,$(shell command -v curl))
 $(error curl is not installed on your system.)
 endif
 
-ifeq (,$(shell command -v qbe))
-$(error qbe is not installed on your system.)
+ifeq (,$(shell command -v unzip))
+$(error unzip is not installed on your system.)
 endif
 
 ifeq ($(TARGET),debug)
@@ -38,22 +39,27 @@ CXXFLAGS += $(INCLUDE)
 
 endif
 
-beancode: deps $(OBJ) $(HEADERS) main.o
-	$(CXX) $(CXXFLAGS) -o beancode main.o $(OBJ)
+beancode: deps $(OBJ) $(HEADERS)
+	$(CXX) $(CXXFLAGS) -o beancode $(OBJ)
 
-main.o: main.c common.h
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+%.o: %.c %.h src/common.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o: %.c %.h common.h
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
-
-dep_uthash:
-	mkdir -p 3rdparty/
-	if [ ! -f 3rdparty/uthash.h ]; then \
-		curl -fL -o 3rdparty/uthash.h https://raw.githubusercontent.com/troydhanson/uthash/refs/heads/master/src/uthash.h; \
+SIMDUTF_VERSION = 8.2.0
+dep_simdutf:
+	mkdir -p 3rdparty;
+	if [ ! -f 3rdparty/simdutf.cpp ]; then\
+		cd 3rdparty;\
+		curl -fLO https://github.com/simdutf/simdutf/releases/download/v$(SIMDUTF_VERSION)/singleheader.zip;\
+		unzip -d singleheader singleheader.zip;\
+		cp singleheader/simdutf.h singleheader/simdutf.cpp ./;\
+		rm -rf singleheader singleheader.zip;\
 	fi
 
-deps: dep_uthash
+3rdparty/simdutf.o: dep_simdutf
+	$(CXX) -c -o 3rdparty/simdutf.o 3rdparty/simdutf.cpp
+
+deps: 
 
 tarball:
 	mkdir -p beancode
@@ -64,6 +70,6 @@ tarball:
 distclean: clean cleandeps
 
 clean:
-	rm -rf beancode beancode.tar.gz beancode $(OBJ) main.o
+	rm -rf beancode beancode.tar.gz beancode 3rdparty/* $(OBJ)
 
 .PHONY: clean cleanall
