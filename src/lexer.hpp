@@ -133,8 +133,8 @@ class Lexer {
 private:
     std::string_view src;
     u64 cur;
+    u64 bol;
     u32 row;
-    u32 col;
 
     inline char32_t get_cur_cp() const;
     inline bool in_bounds() const;

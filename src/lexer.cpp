@@ -130,13 +130,14 @@ static Token::Kind token_kind_from_keyword(const std::string_view s) {
 
 static Token::Kind token_kind_from_type(const std::string_view s) {
     using K = Token::Kind;
+    using namespace util;
 
-    if (s == "integer") return K::TInteger;
-    if (s == "boolean") return K::TBoolean;
-    if (s == "real") return K::TReal;
-    if (s == "char") return K::TChar;
-    if (s == "string") return K::TString;
-    if (s == "array") return K::TArray;
+    if (case_compare(s, "integer")) return K::TInteger;
+    if (case_compare(s, "boolean")) return K::TBoolean;
+    if (case_compare(s, "real")) return K::TReal;
+    if (case_compare(s, "char")) return K::TChar;
+    if (case_compare(s, "string")) return K::TString;
+    if (case_compare(s, "array")) return K::TArray;
 
     return K::Bogus;
 }
@@ -261,7 +262,7 @@ void Token::print(FILE* f) const {
             inner = data;
         } break;
         case Kind::Ident: {
-            inner = std::format("I\"{}\"", data);
+            inner = std::format("{{{}}}", data);
         } break;
         default: {
             inner = std::format("<{}>", kind_to_string(kind));
@@ -271,7 +272,7 @@ void Token::print(FILE* f) const {
     std::println(f, "token[{}]: {}", pos.to_string(), inner);
 }
 
-Lexer::Lexer(const std::string& src) : src(src), row(0), col(0) {
+Lexer::Lexer(const std::string& src) : src(src), bol(0), row(0) {
     reset();
 }
 
@@ -286,11 +287,11 @@ inline bool Lexer::in_bounds() const {
 }
 
 Pos Lexer::pos(u16 span) const {
-    return Pos{row, static_cast<u16>(col - span), span};
+    return Pos{row, static_cast<u16>(cur - bol + 1 - span), span};
 }
 
 Pos Lexer::pos_here(u16 span) const {
-    return Pos{row, static_cast<u16>(col), span};
+    return Pos{row, static_cast<u16>(cur - bol + 1), span};
 }
 
 inline bool Lexer::is_separator(char ch) const {
@@ -314,15 +315,15 @@ inline bool Lexer::is_operator_start(const char* ch) const {
 }
 
 void Lexer::bump_newline() {
-    cur++;
     row++;
-    col = 1;
+    cur++;
+    bol = cur;
 }
 
 void Lexer::reset() {
     row = 1;
-    col = 0;
     cur = 0;
+    bol = 0;
 }
 
 void Lexer::trim_spaces() {
@@ -447,24 +448,21 @@ auto Lexer::next_multi_symbol() -> std::optional<Token> {
     if (!is_operator_start(&CUR)) return {};
 
     std::string pair;
-    if (cur + 2 < src.length())
-        pair = src.substr(cur, 3);
-    else if (cur + 1 < src.length())
-        pair = src.substr(cur, 2);
-    else
-        return {};
+    for (int s = 3; s >= 2; s--) {
+        if (cur + (s - 1) < src.length()) pair = src.substr(cur, s);
 
-    auto k = token_kind_from_multi_op(pair);
-    if (k != Token::Kind::Bogus) {
-        cur += pair.length();
-        return Token(k, pos(pair.length()));
+        auto k = token_kind_from_multi_op(pair);
+        if (k != Token::Kind::Bogus) {
+            cur += s;
+            return Token(k, pos(s));
+        }
     }
 
     return {};
 }
 
 auto Lexer::next_single_symbol() -> std::optional<Token> {
-    if (!is_operator_start(&CUR)) return {};
+    if (!is_operator_start(&CUR) and !is_separator(CUR)) return {};
 
     auto k = token_kind_from_single_op(CUR);
     if (k != Token::Kind::Bogus) {
@@ -564,6 +562,7 @@ auto Lexer::next_token() -> std::optional<Token> {
     if ((res = next_single_symbol())) return res;
 
     std::string_view word = next_word();
+    std::println(stderr, "word: `{}`", word);
 
     if ((res = next_keyword(word))) return res;
 
