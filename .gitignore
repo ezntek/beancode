@@ -1,5 +1,7 @@
 **/*.o
 *.o
+foo.cpp
+foo
 a.out
 beancode
 *.csv

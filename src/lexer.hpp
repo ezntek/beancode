@@ -136,7 +136,6 @@ private:
     u32 row;
     u32 col;
 
-    inline char get_cur() const;
     inline char32_t get_cur_cp() const;
     inline bool in_bounds() const;
     Pos pos(u16 span) const;

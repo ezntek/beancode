@@ -10,7 +10,6 @@
  */
 
 #include <cctype>
-#include <ranges>
 #include <string_view>
 
 #include "common.hpp"
@@ -20,9 +19,9 @@ namespace beancode::util {
 bool case_consistent(const std::string_view s) {
     if (!s.length()) return true;
 
-    bool upper = isupper(s[0]);
-    for (const char c : s) {
-        if (isupper(c) != upper) return false;
+    int upper = isupper(s[0]);
+    for (usize i = 1; i < s.length(); i++) {
+        if (static_cast<int>(isupper(s[i])) != upper) return false;
     }
 
     return true;

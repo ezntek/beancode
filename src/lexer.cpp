@@ -29,6 +29,8 @@
 
 namespace beancode::lexer {
 
+#define CUR (src[cur])
+
 using namespace error;
 
 static Token::Kind token_kind_from_single_op(char ch) {
@@ -259,7 +261,7 @@ void Token::print(FILE* f) const {
             inner = data;
         } break;
         case Kind::Ident: {
-            inner = std::format("{{{}}}", data);
+            inner = std::format("I\"{}\"", data);
         } break;
         default: {
             inner = std::format("<{}>", kind_to_string(kind));
@@ -270,15 +272,12 @@ void Token::print(FILE* f) const {
 }
 
 Lexer::Lexer(const std::string& src) : src(src), row(0), col(0) {
-}
-
-inline char Lexer::get_cur() const {
-    return src[cur];
+    reset();
 }
 
 inline char32_t Lexer::get_cur_cp() const {
     char32_t res;
-    assert(res = utf8::decode(&src[cur]) >= 0);
+    assert(res = utf8::decode(&CUR) >= 0);
     return res;
 }
 
@@ -329,7 +328,7 @@ void Lexer::reset() {
 void Lexer::trim_spaces() {
     if (!in_bounds()) return;
 
-    while (in_bounds() && isspace(src[cur]) && src[cur] != '\n')
+    while (in_bounds() && isspace(CUR) && CUR != '\n')
         cur++;
 
     trim_comments();
@@ -340,12 +339,12 @@ void Lexer::trim_comments() {
 
     if (cur + 2 > src.length()) return;
 
-    pair = src.substr(cur, cur + 2);
+    pair = src.substr(cur, 2);
     if (pair == "/*") {
         cur += 2;
 
-        while (in_bounds() && src.substr(cur, cur + 2) != "*/") {
-            if (src[cur] == '\n')
+        while (in_bounds() && src.substr(cur, 2) != "*/") {
+            if (CUR == '\n')
                 bump_newline();
             else
                 cur++;
@@ -356,7 +355,7 @@ void Lexer::trim_comments() {
         trim_spaces();
     } else if (pair == "#!" || pair == "//") {
         cur += 2;
-        while (in_bounds() && src[cur] != '\n')
+        while (in_bounds() && CUR != '\n')
             cur++;
         // don't skip the newline, the whitespace function will do it
         trim_spaces();
@@ -406,47 +405,52 @@ std::string_view Lexer::next_word() {
     bool stop = false, is_delimited = strchr(DELIMS, delim);
 
     if (is_delimited) {
-        cur++;
         len++;
+        cur++;
     }
 
     do {
         stop = false;
         if (!in_bounds()) break;
 
-        cur_ch = get_cur();
+        cur_ch = CUR;
         // XXX: trust me bro it works
-        stop = ((is_delimited && (cur_ch == delim or cur_ch == '\n')) ||
-                (is_operator_start(&src[cur]) || is_separator(cur_ch) || isspace(cur_ch) || strchr(DELIMS, cur_ch)));
+        if (is_delimited)
+            stop = (cur_ch == delim || cur_ch == '\n');
+        else
+            stop =
+                (is_operator_start(&CUR) || is_separator(cur_ch) || isspace(cur_ch) || strchr(DELIMS, cur_ch) != NULL);
 
         if (cur_ch == '\\') {
             len++;
             cur++;
         }
 
+        if (stop) break;
+
         len++;
         cur++;
-    } while (stop);
+    } while (true);
 
     if (is_delimited) {
-        if (!in_bounds() || isspace(get_cur()))
+        if (!in_bounds() || isspace(CUR))
             throw BCError(BCError::Kind::Syntax, pos(len), "could not find ending delimiter in literal");
 
-        cur++;
         len++;
+        cur++;
     }
 
-    return src.substr(begin, begin + len);
+    return src.substr(begin, len);
 }
 
 auto Lexer::next_multi_symbol() -> std::optional<Token> {
-    if (!is_operator_start(&src[cur])) return {};
+    if (!is_operator_start(&CUR)) return {};
 
     std::string pair;
     if (cur + 2 < src.length())
-        pair = src.substr(cur, cur + 3);
+        pair = src.substr(cur, 3);
     else if (cur + 1 < src.length())
-        pair = src.substr(cur, cur + 2);
+        pair = src.substr(cur, 2);
     else
         return {};
 
@@ -460,9 +464,9 @@ auto Lexer::next_multi_symbol() -> std::optional<Token> {
 }
 
 auto Lexer::next_single_symbol() -> std::optional<Token> {
-    if (!is_operator_start(&src[cur])) return {};
+    if (!is_operator_start(&CUR)) return {};
 
-    auto k = token_kind_from_single_op(get_cur());
+    auto k = token_kind_from_single_op(CUR);
     if (k != Token::Kind::Bogus) {
         cur++;
         return Token(k, pos(1));
@@ -505,7 +509,7 @@ auto Lexer::next_literal(const std::string_view word) -> std::optional<Token> {
     if (word[0] == '"' || word[0] == '\"') {
         if (word.length() == 1) std::unreachable();
 
-        auto res = word.substr(1, word.length() - 1);
+        auto res = word.substr(1, word.length() - 2);
         auto k = word[0] == '"' ? Token::Kind::LiteralString : Token::Kind::LiteralChar;
 
         return Token(k, pos(word.length()), res);
@@ -547,13 +551,14 @@ auto Lexer::next_token() -> std::optional<Token> {
 
     if (!in_bounds()) return {};
 
-    if (get_cur() == '\n') {
+    if (CUR == '\n') {
         auto t = Token(K::Newline, pos_here(1));
         bump_newline();
         return t;
     }
 
     std::optional<Token> res;
+
     if ((res = next_multi_symbol())) return res;
 
     if ((res = next_single_symbol())) return res;
