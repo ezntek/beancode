@@ -1,0 +1,18 @@
+INCLUDE_FFI "beanray"
+
+// OUTPUT BLACK
+CALL InitWindow(800, 600, "hello, world!")
+CALL SetTargetFPS(60)
+WHILE NOT WindowShouldClose() DO
+    CALL BeginDrawing
+    CALL ClearBackground(RAYWHITE)
+    CALL DrawFPS(20, 20)
+    CALL DrawRectangleRec({100, 100, 200, 150}, RED)
+    CALL DrawRectangleRec({175, 150, 225, 150}, GREEN)
+    CALL DrawRectangleRec({125, 200, 175, 150}, BLUE)
+    CALL DrawText("Hello from Pseudocode!!!", 200, 400, 40, BLACK)
+    CALL DrawText("Pseudocode to Python Raylib Bindings by ezntek", 200, 450, 20, BLACK)
+    CALL EndDrawing
+ENDWHILE
+
+CALL CloseWindow

@@ -2,10 +2,10 @@ CXX ?= c++
 LD ?= ld
 INCLUDE = 
 
-SRC = src/main.cpp src/lexer.cpp src/utf8.cpp 
+SRC = src/util.cpp src/error.cpp src/lexer.cpp src/utf8.cpp
 DEPS = #3rdparty/simdutf.o
 OBJ = $(DEPS) $(SRC:.cpp=.o)
-HEADERS = src/lexer.hpp src/utf8.hpp
+HEADERS = src/common.hpp $(SRC:.cpp=.hpp)
 
 CXXFLAGS = -Wall -Wextra -pedantic -std=c++23 -I./3rdparty
 RELEASE_CXXFLAGS = -O2
@@ -40,7 +40,7 @@ CXXFLAGS += $(INCLUDE)
 endif
 
 beancode: deps $(OBJ) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -o beancode $(OBJ)
+	$(CXX) $(CXXFLAGS) -o beancode src/main.cpp $(OBJ)
 
 %.o: %.c %.h src/common.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

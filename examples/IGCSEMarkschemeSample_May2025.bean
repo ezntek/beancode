@@ -1,0 +1,107 @@
+// IGCSE Computer Science 0478 May/June 2025 Paper 23
+// Last question markscheme answer
+// --- Variable Declarations (not in MS) ---
+DECLARE Video: ARRAY[1:10000,1:4] OF STRING
+DECLARE Results: ARRAY[1:20,1:4] OF STRING
+DECLARE Answer: INTEGER
+DECLARE Another: CHAR
+DECLARE Title: STRING
+// -----------------------------------------
+// Initialization of Video array
+FOR Index1 <- 1 TO 10000
+    FOR Index2 <- 1 TO 4
+        Video[Index1,Index2] <- ""
+    NEXT Index2
+NEXT Index1
+
+// Display of menu choices
+REPEAT
+    OUTPUT "Enter 1 to input data for a new video, 2 to search for a video title, or 3 to stop"
+    // Input menu choice with validation of input
+    REPEAT
+        INPUT Answer
+        IF Answer <> 1 AND Answer <> 2 AND Answer <> 3
+          THEN
+            OUTPUT "You must input 1, 2, or 3, please try again"
+        ENDIF
+    UNTIL Answer = 1 OR Answer = 2 OR Answer = 3
+
+    // User chooses to input data for a new video title
+    IF Answer = 1
+      THEN
+        Store <- 1
+        REPEAT
+            IF Video[Store,1] <> ""
+              THEN
+                Store <- Store + 1
+            ENDIF
+        UNTIL Video[Store,1] = ""
+
+        // Data entry and storage until user says no more needed
+        REPEAT
+            OUTPUT "Enter the title"
+            INPUT Video[Store,1]
+            OUTPUT "Enter the format (4K for 4K, BD for Blu-ray, DV for DVD, DG for Digital"
+            INPUT Video[Store,2]
+            OUTPUT "Enter the year of release"
+            INPUT Video[Store,3]
+            OUTPUT "Enter the storage code"
+            INPUT Video[Store,4]
+            Store <- Store + 1
+            OUTPUT "Another Video (Y or N)?"
+            INPUT Another
+        UNTIL Another = 'N' OR Another = 'n'
+    ENDIF
+
+    IF Answer = 2
+      THEN
+        REPEAT
+            // Initialization of Results array
+            FOR Index1 <- 1 TO 20
+                FOR Index2 <- 1 TO 4
+                    Results[Index1,Index2] <- ""
+                NEXT Index2
+            NEXT Index1
+
+            // User inputs their search criterion
+            OUTPUT "State the title of the video you want"
+            INPUT Title
+            Search <- 1
+            Store <- 1
+            // Searching for the title
+            REPEAT
+                IF Video[Search,1] = Title
+                  THEN
+                    FOR Index1 <- 1 TO 4
+                        Results[Store,Index1] <- Video[Search,Index1]
+                    NEXT Index1
+
+                    // Search and Store indexes incremented
+                    Search <- Search + 1
+                    Store <- Store + 1
+                  ELSE
+                    // Search index incremented
+                    Search <- Search + 1
+                ENDIF
+            UNTIL Video[Search,1] = "" OR Search = 10000
+
+            // Outputting only results found from Results array
+            IF Results[1,1] <> ""
+              THEN
+                OUTPUT "The results: "
+                FOR Index1 <- 1 TO Store - 1
+                    FOR Index2 <- 1 TO 4
+                        OUTPUT Results[Index1,Index2]
+                    NEXT Index2
+                NEXT Index1
+              ELSE
+                // Feedback to user if item not found
+                OUTPUT "Item not found"
+            ENDIF
+
+            // Another search offered
+            OUTPUT "Another search (Y or N)?"
+            INPUT Another
+        UNTIL Another = "N" OR Another = 'n'
+    ENDIF
+UNTIL Answer = 3

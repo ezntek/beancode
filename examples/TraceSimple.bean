@@ -1,0 +1,22 @@
+PROCEDURE Simple
+    DECLARE Num: INTEGER
+    DECLARE Done: BOOLEAN
+
+    Done <- FALSE
+
+    Num <- 5
+    Num <- 5 + Num
+
+    WHILE Num > 0 DO
+        Num <- Num - 1
+        OUTPUT Num * 2
+    ENDWHILE
+
+    Done <- TRUE
+
+    OUTPUT Done
+ENDPROCEDURE
+
+TRACE(Num, Done) TO "simple.html"
+    CALL Simple
+ENDTRACE

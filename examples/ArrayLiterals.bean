@@ -1,0 +1,3 @@
+DECLARE Array: ARRAY[1:3] OF INTEGER
+Array <- {1, 2, 3}
+OUTPUT Array

@@ -1,0 +1,19 @@
+CONSTANT Max <- 5
+
+FUNCTION Predicate(x: INTEGER) RETURNS INTEGER
+    RETURN 3 * x + 1
+ENDFUNCTION
+
+PROCEDURE PrintArray(arr: ARRAY[1:Max] OF INTEGER)
+    FOR i <- 1 TO Max
+        OUTPUT arr[i]
+    NEXT i
+ENDPROCEDURE
+
+DECLARE arr: ARRAY[1:Max] OF INTEGER
+
+FOR i <- 1 TO Max
+    arr[i] <- Predicate(i)
+NEXT i
+
+CALL PrintArray(arr)

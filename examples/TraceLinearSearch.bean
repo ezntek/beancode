@@ -1,0 +1,27 @@
+TRACE(Array, Found, Target, Counter) TO "linear_search.html"
+    DECLARE Found: BOOLEAN
+    DECLARE Array: ARRAY[1:10] OF INTEGER
+    DECLARE Target, Counter: INTEGER
+
+    Found <- FALSE
+    Array <- {5, 4, 2, 8, 7, 6, 1, 9, 3, 2}
+    Counter <- 1
+
+    INPUT Target
+
+    REPEAT
+        IF Array[Counter] = Target
+          THEN
+            Found <- TRUE
+        ENDIF
+
+        Counter <- Counter + 1
+    UNTIL Counter > 10 OR Found
+
+    IF Counter > 10
+      THEN
+        OUTPUT "Item not found"
+      ELSE
+        OUTPUT "Found at index: ", Counter - 1
+    ENDIF
+ENDTRACE

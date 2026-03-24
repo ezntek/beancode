@@ -1,0 +1,20 @@
+FUNCTION Fib(Num: INTEGER) RETURNS INTEGER
+    IF Num < 2
+      THEN
+        RETURN Num
+      ELSE
+        RETURN Fib(Num - 1) + Fib(Num - 2)
+    ENDIF
+ENDFUNCTION
+
+DECLARE NumFibs: INTEGER
+OUTPUT "which fib? "
+INPUT NumFibs
+
+IF NumFibs > 30
+  THEN
+    OUTPUT NumFibs, " of fibs will take too long to calculate!"
+    EXIT(1)
+ENDIF
+
+OUTPUT Fib(NumFibs)

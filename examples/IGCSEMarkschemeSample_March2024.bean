@@ -1,0 +1,56 @@
+CONSTANT ClassSize <- 10
+DECLARE WeekLength: INTEGER
+DECLARE StudentName: ARRAY[1:ClassSize] OF STRING
+DECLARE LowestMinutes, LowestIndex, ClassTotal: INTEGER
+WeekLength <- 5
+
+StudentName[1] <- "Simon"
+StudentName[2] <- "Jake"
+StudentName[3] <- "Marcos"
+StudentName[4] <- "Guyfrom"
+StudentName[5] <- "Albert"
+StudentName[6] <- "Thomas"
+StudentName[7] <- "John"
+StudentName[8] <- "Smith"
+StudentName[9] <- "Adam"
+StudentName[10] <- "Xiaoming"
+
+// actual MS sample goes here
+DECLARE ScreenTime: ARRAY[1:ClassSize,1:WeekLength] OF INTEGER
+
+LowestMinutes <- 1000
+ClassTotal <- 0
+FOR StudentCounter <- 1 TO ClassSize
+    // loop for each student
+    Total <- 0
+    DaysOver300 <- 0
+    FOR DayCounter <- 1 TO WeekLength
+        // loop for each day
+        DECLARE Minutes: INTEGER
+        REPEAT
+            OUTPUT "Please enter number of minutes for day ", DayCounter
+            INPUT Minutes
+        UNTIL Minutes >= 0
+
+        ScreenTime[StudentCounter,DayCounter] <- Minutes
+        Total <- Total + Minutes
+        IF Minutes > 300
+          THEN
+            DaysOver300 <- DaysOver300 + 1
+        ENDIF
+
+        IF Minutes < LowestMinutes
+          THEN
+            LowestMinutes <- Minutes
+            LowestIndex <- StudentCounter
+        ENDIF
+    NEXT DayCounter
+
+    OUTPUT StudentName[StudentCounter]
+    OUTPUT "Screen time ", DIV(Total, 60), " hours ", MOD(Total, 60), " minutes "
+    OUTPUT "Days with more than 300 minutes screen time ", DaysOver300
+    ClassTotal <- ClassTotal + Total
+NEXT StudentCounter
+
+OUTPUT "Average weekly screen time for class ", ClassTotal / ClassSize, " minutes "
+OUTPUT "Lowest weekly time ", StudentName[LowestIndex]

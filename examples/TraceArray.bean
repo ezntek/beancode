@@ -1,0 +1,20 @@
+PROCEDURE Code
+    CONSTANT Max <- 10
+    DECLARE Array: ARRAY[1:Max] OF INTEGER
+    DECLARE Counter: INTEGER
+
+    Counter <- 1
+
+    REPEAT
+        Array[Counter] <- Counter * Counter
+        Counter <- Counter + 1
+    UNTIL Counter > Max
+
+    FOR Counter <- 1 TO Max
+        OUTPUT "Value at ", Counter, ": ", Array[Counter]
+    NEXT Counter
+ENDPROCEDURE
+
+TRACE(Array, Counter) TO "arraytrace.html"
+    CALL Code
+ENDTRACE

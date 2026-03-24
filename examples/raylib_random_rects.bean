@@ -1,0 +1,60 @@
+INCLUDE_FFI "beanray"
+
+CONSTANT MaxRect <- 1000
+CONSTANT WinWidth <- 800
+CONSTANT WinHeight <- 600
+CONSTANT SizeVar <- 75
+CONSTANT BaseSize <- 100
+
+DECLARE RectX: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectY: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectW: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectH: ARRAY[1:MaxRect] OF INTEGER
+DECLARE RectC: ARRAY[1:MaxRect,1:3] OF INTEGER
+
+DECLARE LastId: INTEGER
+LastId <- 1
+
+FUNCTION RandomBetween(Low: INTEGER, High: INTEGER) RETURNS INTEGER
+    DECLARE Result: INTEGER
+    Result <- INTEGER(RANDOM() * (High - Low + 1)) + Low
+    RETURN Result
+ENDFUNCTION
+
+PROCEDURE DisplayRects
+    DECLARE Color: ARRAY[1:4] OF INTEGER
+    FOR Counter <- 1 TO LastId
+        Color[1] <- RectC[Counter,1]
+        Color[2] <- RectC[Counter,2]
+        Color[3] <- RectC[Counter,3]
+        Color[4] <- 255
+        CALL DrawRectangle(RectX[Counter], RectY[Counter], RectW[Counter], RectH[Counter], Color)
+    NEXT Counter
+ENDPROCEDURE
+
+PROCEDURE GenerateRect
+    RectX[LastId] <- RandomBetween(0, WinWidth)
+    RectY[LastId] <- RandomBetween(0, WinHeight)
+    RectW[LastId] <- BaseSize + RandomBetween(0, SizeVar)
+    RectH[LastId] <- BaseSize + RandomBetween(0, SizeVar)
+    RectC[LastId,1] <- RandomBetween(0, 255)
+    RectC[LastId,2] <- RandomBetween(0, 255)
+    RectC[LastId,3] <- RandomBetween(0, 255)
+ENDPROCEDURE
+
+CALL InitWindow(WinWidth, WinHeight, "Raylib Random Rectangles (Pseudocode)")
+WHILE NOT WindowShouldClose() DO
+    CALL GenerateRect
+    CALL BeginDrawing
+    CALL ClearBackground(WHITE)
+    CALL DisplayRects
+    CALL DrawFPS(20, 20)
+    CALL EndDrawing
+    LastId <- LastId + 1
+    IF LastId > MaxRect
+      THEN
+        LastId <- 1
+    ENDIF
+ENDWHILE
+
+CALL CloseWindow

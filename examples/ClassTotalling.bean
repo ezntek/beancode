@@ -1,0 +1,37 @@
+/*
+ * Class Totalling Program
+ *
+ * Pulled from the Eason Qin's IGSE Computer Science Revision Guide v2
+ * (blue cover)
+ */
+
+DECLARE StudentNames: ARRAY[1:5] OF STRING
+DECLARE StudentAttendance: ARRAY[1:5] OF BOOLEAN
+DECLARE CurrentAttendance: STRING
+
+StudentNames[1] <- "John"
+StudentNames[2] <- "James"
+StudentNames[3] <- "Jimmy"
+StudentNames[4] <- "Jack"
+StudentNames[5] <- "Joseph"
+
+FOR Counter <- 1 TO 5
+    OUTPUT "Is ", StudentNames[Counter], " Here?"
+    INPUT CurrentAttendance
+
+    IF CurrentAttendance = "yes" OR CurrentAttendance = "here"
+      THEN
+        StudentAttendance[Counter] <- TRUE
+      ELSE
+        StudentAttendance[Counter] <- FALSE
+    ENDIF
+NEXT Counter
+
+FOR Counter <- 1 TO 5
+    IF StudentAttendance[Counter]
+      THEN
+        OUTPUT StudentNames[Counter], " is Here"
+      ELSE
+        OUTPUT StudentNames[Counter], " is not Here"
+    ENDIF
+NEXT Counter

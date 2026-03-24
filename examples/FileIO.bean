@@ -1,0 +1,19 @@
+OPENFILE "file.txt" FOR WRITE
+WRITEFILE "file.txt", "Hello, world!"
+
+// You can use a variable too
+CONSTANT FileName <- "file.txt"
+WRITEFILE FileName , "Writing to file\n"
+WRITEFILE FileName , "Another line\n"
+
+CLOSEFILE "file.txt"
+OPENFILE "file.txt" FOR READ
+
+// Reading
+DECLARE Contents: STRING
+REPEAT
+    READFILE FileName , Contents
+    OUTPUT "Wrote: ", Contents
+UNTIL Contents = "" // empty string on EOF
+
+CLOSEFILE "file.txt"

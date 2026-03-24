@@ -1,0 +1,11 @@
+DECLARE Num: INTEGER
+
+REPEAT
+    OUTPUT "enter a number"
+    INPUT Num
+    CASE OF Num
+        1: OUTPUT "yay"
+        0: OUTPUT "nay"
+        OTHERWISE OUTPUT "what?"
+    ENDCASE
+UNTIL Num = 1

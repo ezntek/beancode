@@ -1,0 +1,7 @@
+// declare a scope with SCOPE and ENDSCOPE:
+SCOPE
+    OUTPUT "hallo, welt."
+    EXPORT CONSTANT num <- 5
+ENDSCOPE
+
+OUTPUT num // outputs 5

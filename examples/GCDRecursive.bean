@@ -1,0 +1,15 @@
+FUNCTION GCD(A: INTEGER, B: INTEGER) RETURNS INTEGER
+    OUTPUT "Got: ", A, ", ", B
+    IF B = 0
+      THEN
+        RETURN A
+      ELSE
+        DECLARE V: INTEGER
+        V <- MOD(A, B)
+        OUTPUT "V: ", V
+        OUTPUT "Call"
+        RETURN GCD(B, V)
+    ENDIF
+ENDFUNCTION
+
+OUTPUT "Result: ", GCD(20, 12)

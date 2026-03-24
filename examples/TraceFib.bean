@@ -1,0 +1,21 @@
+PROCEDURE Code
+    DECLARE a, b, c, i, Max: INTEGER
+    a <- -1
+    b <- 1
+    i <- 0
+
+    OUTPUT "enter max: "
+    INPUT Max
+
+    REPEAT
+        c <- a + b
+        OUTPUT c
+        a <- b
+        b <- c
+        i <- i + 1
+    UNTIL i = Max
+ENDPROCEDURE
+
+TRACE(a, b, c, i, Max) TO "fibtrace.html"
+    CALL Code
+ENDTRACE

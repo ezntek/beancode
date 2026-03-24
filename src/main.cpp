@@ -1,5 +1,6 @@
 #include <print>
 
+#include "error.hpp"
 #include "lexer.hpp"
 
 using namespace beancode;
@@ -14,7 +15,16 @@ int main(int argc, char** argv) {
         std::println(stderr, "got: `{}`", *argv);
     }
 
-    lexer::Lexer l(*argv);
-    l.trim_comments();
+    std::string src = *argv;
+    lexer::Lexer l(src);
+    try {
+        auto tokens = l.tokenize();
+        for (const auto& tok : tokens)
+            tok.print();
+    } catch (error::BCError& e) {
+        std::println(stderr, "{}", e.what());
+        return 1;
+    }
+
     return 0;
 }

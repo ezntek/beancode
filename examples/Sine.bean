@@ -1,0 +1,20 @@
+CONSTANT PI <- 3.1415926536
+
+// Use the taylor series to get the sine of a value
+FUNCTION Sine(X: REAL) RETURNS REAL
+    DECLARE Real_X: REAL
+    Real_X <- MOD(X, 2 * PI) - PI
+    RETURN -(Real_X - (Real_X ^ 3) / 6 + (Real_X ^ 5) / 120 - (Real_X ^ 7) / 5040 + (Real_X ^ 9) / 362880 - (Real_X ^ 11) / 39916800 + (Real_X ^ 13) / 6227020800)
+ENDFUNCTION
+
+DECLARE i: REAL
+i <- 0.0
+DECLARE buf: STRING
+buf <- ""
+WHILE i < 2.0 * PI DO
+    buf <- buf + Sine(i)
+    buf <- buf + ", "
+    i <- i + 0.1
+ENDWHILE
+
+OUTPUT buf

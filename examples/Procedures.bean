@@ -1,0 +1,27 @@
+/*
+ * Taken from the 2023-2025 syllabus, with minimal modifications.
+ */
+
+CONSTANT Default <- 60
+
+PROCEDURE DefaultLine
+    CALL Line(Default)
+ENDPROCEDURE
+
+PROCEDURE Line(Size: INTEGER)
+    DECLARE Length: INTEGER
+    FOR Length <- 1 TO Size
+        PRINT '-'
+    NEXT Length
+
+    OUTPUT ""
+ENDPROCEDURE
+
+OUTPUT "My Size: "
+INPUT MySize
+IF MySize = Default
+  THEN
+    CALL DefaultLine
+  ELSE
+    CALL Line(MySize)
+ENDIF

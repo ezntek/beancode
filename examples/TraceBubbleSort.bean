@@ -1,0 +1,35 @@
+PROCEDURE BubbleSort(Array: ARRAY[1:End] OF INTEGER, End: INTEGER)
+    DECLARE Temp: INTEGER
+
+    FOR i <- 1 TO End - 1
+        FOR j <- 1 TO End - i
+            IF Array[j] > Array[j + 1]
+              THEN
+                Temp <- Array[j]
+                Array[j] <- Array[j + 1]
+                Array[j + 1] <- Temp
+            ENDIF
+        NEXT j
+    NEXT i
+ENDPROCEDURE
+
+PROCEDURE PrintArray(Array: ARRAY[1:End] OF INTEGER, End: INTEGER)
+    DECLARE Temp: STRING
+    Temp <- ""
+    FOR i <- 1 TO End
+        Temp <- Temp + Array[i]
+        IF i <> End
+          THEN
+            Temp <- Temp + ", "
+        ENDIF
+    NEXT i
+
+    OUTPUT Temp
+ENDPROCEDURE
+
+DECLARE Nums: ARRAY[1:10] OF INTEGER
+Nums <- {10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+
+TRACE(Array, Temp, i, j) TO "bsort.html"
+    CALL BubbleSort(Nums, 10)
+ENDTRACE

@@ -1,0 +1,128 @@
+/*
+ * --- NONSTANDARD LIBRARY ROUTINES: ---
+ * // outputs one character without a newline, and returns the input
+ * PROCEDURE PUTCHAR(ch: CHAR)
+ *
+ * // exits the program at the callsite with an OS error code
+ * PROCEDURE EXIT(code: INTEGER) 
+ * ---
+ */
+
+CONSTANT dbg <- FALSE
+CONSTANT maxsize <- 30000
+
+DECLARE cells: ARRAY[1:maxsize] OF INTEGER
+FOR i <- 1 TO maxsize
+    cells[i] <- 0
+NEXT i
+
+DECLARE pc: INTEGER
+pc <- 1
+DECLARE ptr: INTEGER
+ptr <- 1
+
+DECLARE src: STRING
+OUTPUT "enter brainfuck source code"
+INPUT src
+
+DECLARE srclen: INTEGER
+srclen <- LENGTH(src)
+
+DECLARE loops: ARRAY[1:100] OF INTEGER
+FOR i <- 1 TO 100
+    loops[i] <- 0
+NEXT i
+
+DECLARE loopslen: INTEGER
+loopslen <- 1
+
+FUNCTION wrapinc(base: INTEGER) RETURNS INTEGER
+    IF base + 1 > 255
+      THEN
+        RETURN 0
+      ELSE
+        RETURN base + 1
+    ENDIF
+ENDFUNCTION
+
+FUNCTION wrapdec(base: INTEGER) RETURNS INTEGER
+    IF base - 1 < 0
+      THEN
+        RETURN 255
+      ELSE
+        RETURN base - 1
+    ENDIF
+ENDFUNCTION
+
+PROCEDURE dec
+    IF ptr - 1 < 1
+      THEN
+        ptr <- maxsize
+      ELSE
+        ptr <- ptr - 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE inc
+    IF ptr + 1 > maxsize
+      THEN
+        ptr <- 1
+      ELSE
+        ptr <- ptr + 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE loopbegin
+    IF cells[ptr] = 0
+      THEN
+        WHILE SUBSTRING(src, pc, 1) <> "]" DO
+            pc <- pc + 1
+        ENDWHILE
+      ELSE
+        loops[loopslen] <- pc
+        loopslen <- loopslen + 1
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE loopend
+    IF loopslen = 0
+      THEN
+        OUTPUT "found closing bracket without opening bracket"
+        CALL EXIT(1)
+    ENDIF
+
+    IF cells[ptr] <> 0
+      THEN
+        pc <- loops[loopslen - 1]
+      ELSE
+        loopslen <- loopslen - 1
+        loops[loopslen] <- 0
+    ENDIF
+ENDPROCEDURE
+
+PROCEDURE debug
+    IF dbg
+      THEN
+        OUTPUT ""
+        OUTPUT "(pc=", pc, " ptr=", ptr, " instr=", SUBSTRING(src, pc, 1), " loopslen=", loopslen, ")"
+    ENDIF
+ENDPROCEDURE
+
+WHILE pc < srclen DO
+    CALL debug
+    CASE OF SUBSTRING(src, pc, 1)
+        '<': CALL dec
+        '>': CALL inc
+        '+': cells[ptr] <- wrapinc(cells[ptr])
+        '-': cells[ptr] <- wrapdec(cells[ptr])
+        '[': CALL loopbegin
+        ']': CALL loopend
+        '.': PUTCHAR(CHAR(cells[ptr]))
+        ',': cells[ptr] <- GETCHAR()
+        // otherwise not enforced
+    ENDCASE
+
+    pc <- pc + 1
+ENDWHILE
+
+OUTPUT ""

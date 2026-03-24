@@ -1,0 +1,27 @@
+DECLARE Num, Current: INTEGER
+
+OUTPUT "Enter Number: "
+INPUT Num
+
+Current <- 1
+REPEAT
+    IF MOD(Current, 15) = 0
+      THEN
+        OUTPUT "FizzBuzz"
+      ELSE
+        IF MOD(Current, 3) = 0
+          THEN
+            OUTPUT "Fizz"
+          ELSE
+            IF MOD(Current, 5) = 0
+              THEN
+                OUTPUT "Buzz"
+              ELSE
+                OUTPUT Current
+            ENDIF
+        ENDIF
+    ENDIF
+
+    Current <- Current + 1
+UNTIL Current > Num
+// include Num
