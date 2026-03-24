@@ -21,18 +21,18 @@ int main(int argc, char** argv) {
     argc--;
     argv++;
 
+    auto file_name = *argv;
+
     if (argc == 0) {
         std::println(stderr, "not enough args");
         return 1;
-    } else {
-        std::println(stderr, "got: `{}`", *argv);
     }
 
-    std::ifstream ifs(*argv);
+    std::ifstream ifs{file_name};
     std::stringstream ss;
 
     if (!ifs.is_open()) {
-        std::println(stderr, "could not open file {}", *argv);
+        std::println(stderr, "could not open file {}", file_name);
         return 1;
     }
 
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         for (const auto& tok : tokens)
             tok.print();
     } catch (error::BCError& e) {
-        std::println(stderr, "{}", e.what());
+        e.print(file_name);
         return 1;
     }
 

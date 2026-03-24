@@ -562,7 +562,6 @@ auto Lexer::next_token() -> std::optional<Token> {
     if ((res = next_single_symbol())) return res;
 
     std::string_view word = next_word();
-    std::println(stderr, "word: `{}`", word);
 
     if ((res = next_keyword(word))) return res;
 

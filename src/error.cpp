@@ -9,9 +9,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#include "error.hpp"
-#include <cstring>
+#include <print>
 #include <sstream>
+
+#include "error.hpp"
 
 namespace beancode::error {
 
@@ -59,6 +60,47 @@ std::string BCError::to_string() const noexcept {
     }
 
     return ss.str();
+}
+
+// TODO: write a better impl that is not a direct rewrite from the Python codebase
+void BCError::print(const std::string_view file_name, FILE* f, bool color) const noexcept {
+    if (color) {
+        std::print(f, "\033[1m{}:{}: \033[31;1merror: \x1b[0m", file_name, pos.row);
+    } else {
+        std::print(f, "{}:{}: error: ", file_name, pos.row);
+    }
+
+    std::print(f, "{}", msg);
+
+    if (context.has_value()) {
+        if (color) {
+            std::print(f, "\n\033[2m");
+        } else {
+            std::println(f);
+        }
+
+        // "error: " + file_name + ":" + pos.row + ":"
+        for (usize i = 0; i < 9 + file_name.length(); ++i)
+            std::print(f, " ");
+
+        for (auto tmp = pos.row; tmp; tmp /= 10)
+            std::print(f, " ");
+
+        std::print(f, "{}", context.value());
+
+        if (color) std::print("\033[0m");
+    }
+
+    std::println(f);
+}
+
+void BCError::print(const std::string_view file_name, const std::string_view src, FILE* f, bool color) const noexcept {
+    // print the header first
+    print(file_name, f, color);
+
+    // TODO: source code print
+
+    (void)src;
 }
 
 } // namespace beancode::error

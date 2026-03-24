@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <cstdio>
 #include <exception>
 #include <string>
 
@@ -37,6 +38,9 @@ public:
     static std::string kind_to_string(const Kind& k);
     const char* what() const noexcept;
     std::string to_string() const noexcept;
+    void print(const std::string_view file_name, FILE* f = stderr, bool color = true) const noexcept;
+    void print(const std::string_view file_name, const std::string_view file_contents, FILE* f = stderr,
+               bool color = true) const noexcept;
 };
 
 } // namespace beancode::error

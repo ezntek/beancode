@@ -22,23 +22,20 @@ constexpr bool iscont(char c) {
 size_t len(const char* s, size_t buflen) {
     size_t len = 0;
     for (size_t i = 0; i < buflen; i++) {
-        if (!iscont(s[i]))
-            len++;
+        if (!iscont(s[i])) len++;
     }
     return len;
 }
 
 bool valid(const char* s, size_t len) {
-    if (!s)
-        return false;
+    if (!s) return false;
 
-    size_t cur_codepoint = 0, rembytes = 0, saved_rembytes = 0, i = 0;
+    size_t rembytes = 0, saved_rembytes = 0, i = 0;
     uint8_t ch = 0;
     for (i = 0; i < len; i++) {
         ch = s[i];
         if (iscont(ch)) {
-            if (!rembytes)
-                return false; // stray continuation
+            if (!rembytes) return false; // stray continuation
 
             rembytes--;
             continue;
@@ -58,41 +55,32 @@ bool valid(const char* s, size_t len) {
             return false;
         }
 
-        if (saved_rembytes)
-            return false;
+        if (saved_rembytes) return false;
 
-        if (i + rembytes >= len)
-            return false;
+        if (i + rembytes >= len) return false;
 
         if (rembytes) {
             uint8_t next = s[i + 1];
             if ((ch & 0xE0) == 0xC0) {
                 // reject overlong, lead byte must be >=0b1100010
-                if (ch < 0xC2)
-                    return false;
+                if (ch < 0xC2) return false;
             } else if ((ch & 0xF0) == 0xE0) {
                 // overlong
-                if (ch == 0xE0 && next < 0xA0)
-                    return false;
+                if (ch == 0xE0 && next < 0xA0) return false;
                 // reject surrogates
-                if (ch == 0xED && next >= 0xA0)
-                    return false;
+                if (ch == 0xED && next >= 0xA0) return false;
             } else if ((ch & 0xF8) == 0xF0) {
                 // overlong
-                if (ch == 0xF0 && next < 0x90)
-                    return false;
+                if (ch == 0xF0 && next < 0x90) return false;
                 // range
-                if (ch == 0xF4 && next > 0x8F)
-                    return false;
+                if (ch == 0xF4 && next > 0x8F) return false;
                 // cannot encode >U+10FFFF
-                if (ch > 0xF4)
-                    return false;
+                if (ch > 0xF4) return false;
             }
         }
     }
 
-    if (rembytes)
-        return false;
+    if (rembytes) return false;
 
     return true;
 }
@@ -103,8 +91,7 @@ const char* codepoint_pos(const char* s, size_t len, size_t idx) {
 
     for (size_t i = 0; i < len; i++) {
         if (!iscont(s[i])) {
-            if (cur_codepoint == idx)
-                return s + i;
+            if (cur_codepoint == idx) return s + i;
             cur_codepoint++;
         }
     }
@@ -114,12 +101,10 @@ const char* codepoint_pos(const char* s, size_t len, size_t idx) {
 
 // INFO: returns null on error
 const char* next_codepoint_begin(const char* cur, const char* end) {
-    if (!cur || cur >= end)
-        return nullptr;
+    if (!cur || cur >= end) return nullptr;
 
     unsigned char c = (unsigned char)*cur;
-    if (c < 0x80)
-        return cur + 1;
+    if (c < 0x80) return cur + 1;
 
     // preincrement ensures we skip the leader
     while (++cur < end && iscont(*cur))
@@ -130,8 +115,7 @@ const char* next_codepoint_begin(const char* cur, const char* end) {
 
 // INFO: returns -1 on error
 int32_t decode(const char* ptr) {
-    if (iscont(*ptr))
-        return -1;
+    if (iscont(*ptr)) return -1;
 
     int32_t res = 0;
     uint8_t initial = ptr[0];
@@ -148,8 +132,7 @@ int32_t decode(const char* ptr) {
                    : res;
     } else if ((initial & 0xF8) == 0xF0) {
         res = (int32_t)((initial & 0x07) << 18) | (ptr[1] & 0x3F) << 12 | (ptr[2] & 0x3F) << 6 | (ptr[3] & 0x3F);
-        if (res < 0x10000 || res > 0x10FFFF)
-            return -1; // overlong or out of unicode range
+        if (res < 0x10000 || res > 0x10FFFF) return -1; // overlong or out of unicode range
     } else {
         return -1;
     }
@@ -160,8 +143,7 @@ int32_t decode(const char* ptr) {
 // INFO: returns -1 on error
 int32_t next_codepoint(const char* begin, const char* end) {
     const char* res = next_codepoint_begin(begin, end);
-    if (!res)
-        return -1;
+    if (!res) return -1;
 
     return decode(res);
 }
@@ -195,13 +177,11 @@ size_t append_char(char* s, size_t len, int32_t cp) {
 }
 
 bool is_space(const char* s) {
-    if (isspace(*s))
-        return true;
+    if (isspace(*s)) return true;
 
     // U+2000 to U+200A
     int32_t res;
-    if ((res = decode(s)) < 0)
-        return false; // continuation/failure
+    if ((res = decode(s)) < 0) return false; // continuation/failure
 
     switch (res) {
         case 0x1680:
@@ -220,27 +200,21 @@ bool is_space(const char* s) {
         case 0x205F:
         case 0x2028:
         case 0x2029:
-        case 0x3000:
-            return true;
-        default:
-            return false;
+        case 0x3000: return true;
+        default: return false;
     }
 }
 
 bool is_newline(const char* s) {
-    if (*s == '\n')
-        return true;
+    if (*s == '\n') return true;
 
     int32_t res;
-    if ((res = decode(s)) < 0)
-        return false;
+    if ((res = decode(s)) < 0) return false;
 
     switch (res) {
         case 0x2028:
-        case 0x2029:
-            return true;
-        default:
-            return false;
+        case 0x2029: return true;
+        default: return false;
     }
 }
 
