@@ -1,15 +1,14 @@
-CXX ?= c++
+C ?= c++
 LD ?= ld
 INCLUDE = 
 
-SRC = src/util.cpp src/error.cpp src/lexer.cpp src/utf8.cpp
-DEPS = #3rdparty/simdutf.o
-OBJ = $(DEPS) $(SRC:.cpp=.o)
-HEADERS = src/common.hpp $(SRC:.cpp=.hpp)
+SRC = src/a_string.c src/util.c src/error.c src/lexer.c src/utf8.c
+OBJ = $(DEPS) $(SRC:.c=.o)
+HEADERS = src/a_vector.h src/common.h $(SRC:.c=h)
 
-CXXFLAGS = -Wall -Wextra -pedantic -std=c++23 -I./3rdparty
-RELEASE_CXXFLAGS = -O2
-DEBUG_CXXFLAGS = -O0 -ggdb3 -fsanitize=address
+CFLAGS = -Wall -Wextra -pedantic -std=c99 -I./3rdparty
+RELEASE_CFLAGS = -O2
+DEBUG_CFLAGS = -O0 -ggdb3 -fsanitize=address
 TARBALLFILES = Makefile LICENSE.md README.md 3rdparty $(SRC) $(HEADERS) 
 
 TARGET=debug
@@ -30,34 +29,20 @@ $(error unzip is not installed on your system.)
 endif
 
 ifeq ($(TARGET),debug)
-CXXFLAGS += $(DEBUG_CXXFLAGS)
+CFLAGS += $(DEBUG_CFLAGS)
 else
-CXXFLAGS += $(RELEASE_CXXFLAGS)
+CFLAGS += $(RELEASE_CFLAGS)
 endif
 
-CXXFLAGS += $(INCLUDE)
+CFLAGS += $(INCLUDE)
 
 endif
 
 beancode: deps $(OBJ) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -o beancode src/main.cpp $(OBJ)
+	$(CC) $(CFLAGS) -o beancode src/main.c $(OBJ)
 
-%.o: %.c %.h src/common.hpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-SIMDUTF_VERSION = 8.2.0
-dep_simdutf:
-	mkdir -p 3rdparty;
-	if [ ! -f 3rdparty/simdutf.cpp ]; then\
-		cd 3rdparty;\
-		curl -fLO https://github.com/simdutf/simdutf/releases/download/v$(SIMDUTF_VERSION)/singleheader.zip;\
-		unzip -d singleheader singleheader.zip;\
-		cp singleheader/simdutf.h singleheader/simdutf.cpp ./;\
-		rm -rf singleheader singleheader.zip;\
-	fi
-
-3rdparty/simdutf.o: dep_simdutf
-	$(CXX) -c -o 3rdparty/simdutf.o 3rdparty/simdutf.cpp
+%.o: %.c %.h src/common.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 deps: 
 

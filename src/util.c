@@ -8,14 +8,3 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#pragma once
-
-#include <string_view>
-
-namespace beancode::util {
-
-bool case_consistent(const std::string_view s);
-
-bool case_compare(const std::string_view l, const std::string_view r);
-
-}; // namespace beancode::util

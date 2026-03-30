@@ -2,4 +2,4 @@
 
 ## Introduction
 
-this is the cursed C++ rewrite™
+this is the cursed C rewrite™
