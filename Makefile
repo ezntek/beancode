@@ -2,7 +2,7 @@ C ?= c++
 LD ?= ld
 INCLUDE = 
 
-SRC = src/a_string.c src/util.c src/error.c src/lexer.c src/utf8.c
+SRC = src/a_string.c src/a_string_slice.c src/util.c src/error.c src/lexer.c src/lexer_types.c
 OBJ = $(DEPS) $(SRC:.c=.o)
 HEADERS = src/a_vector.h src/common.h $(SRC:.c=h)
 

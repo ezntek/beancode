@@ -14,6 +14,7 @@
 #include "a_string_slice.h"
 #include "common.h"
 #include "error.h"
+#include "lexer_types.h"
 
 typedef struct {
     const char* src;
@@ -33,9 +34,9 @@ BCLexer bc_lexer_new(a_string_slice src);
 
 void bc_lexer_reset(BCLexer* l);
 
-// returns false on error and sets l->error to a valid value. returns true on
-// success and sets l->token to a valid value.
-bool bc_lexer_next_token(BCLexer* l);
+// returns NULL on error and sets l->error to a valid value. returns a valid
+// pointer to a valid token at l->token when successful.
+BCToken* bc_lexer_next_token(BCLexer* l);
 
 // returns length of out buf
 usize bc_lexer_tokenize(BCLexer* l, BCToken** out);

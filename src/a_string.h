@@ -97,7 +97,8 @@ void as_copy_cstr(a_string* restrict dest, const char* src);
  * @param src the source string
  * @param chars the number of chars
  */
-void as_ncopy(a_string* restrict dest, const a_string* restrict src, usize chars);
+void as_ncopy(a_string* restrict dest, const a_string* restrict src,
+              usize chars);
 
 /**
  * Copies N bytes of one C string to an a_string.
@@ -430,7 +431,8 @@ bool as_equal_cstr(const a_string* restrict lhs, const char* rhs);
  * @param lhs the first string
  * @param rhs the other string
  */
-bool as_equal_case_insensitive(const a_string* restrict lhs, const a_string* restrict rhs);
+bool as_equal_case_insensitive(const a_string* restrict lhs,
+                               const a_string* restrict rhs);
 
 /**
  * checks if an a_string is equal to a C string, case insensitive
@@ -438,7 +440,8 @@ bool as_equal_case_insensitive(const a_string* restrict lhs, const a_string* res
  * @param lhs the first string
  * @param rhs the other string
  */
-bool as_equal_case_insensitive(const a_string* restrict lhs, const a_string* restrict rhs);
+bool as_equal_case_insensitive_cstr(const a_string* restrict lhs,
+                                    const char* rhs);
 
 /**
  * slices an a_string from begin to end, from a C string, discluding end.
@@ -467,7 +470,8 @@ a_string as_slice(const a_string* restrict src, usize begin, usize end);
  * @param haystacks the strings that the string might be
  * @param len the number of strings in the haystack
  */
-bool as_in(const a_string* restrict needle, const a_string** haystack, usize len);
+bool as_in(const a_string* restrict needle, const a_string** haystack,
+           usize len);
 
 /**
  * checks if a target string is contained within a list of C strings.
@@ -476,7 +480,8 @@ bool as_in(const a_string* restrict needle, const a_string** haystack, usize len
  * @param haystacks the strings that the string might be
  * @param len the number of strings in the haystack
  */
-bool as_in_cstr(const a_string* restrict needle, const char** haystack, usize len);
+bool as_in_cstr(const a_string* restrict needle, const char** haystack,
+                usize len);
 
 /**
  * converts an a_string to a double.
@@ -558,7 +563,9 @@ u8 au_encode_cp(u8 dest[4], dchar src);
  */
 u8* au_pos(const a_string* restrict s, usize idx);
 
-#define au_iter(s, vname) for (u8* vname = au_next_begin((s), NULL); vname; vname = au_next_begin((s), vname))
+#define au_iter(s, vname)                                                      \
+    for (u8* vname = au_next_begin((s), NULL); vname;                          \
+         vname = au_next_begin((s), vname))
 
 /**
  * returns the next position of a UTF-8 codepoint given a beginning memory

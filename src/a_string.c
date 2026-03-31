@@ -75,7 +75,8 @@ void as_copy_cstr(a_string* restrict dest, const char* src) {
     }
 }
 
-void as_ncopy(a_string* restrict dest, const a_string* restrict src, usize chars) {
+void as_ncopy(a_string* restrict dest, const a_string* restrict src,
+              usize chars) {
     if (!as_valid(dest)) panic("cannot operate on invalid a_string!");
     if (!as_valid(src)) panic("source string is invalid!");
 
@@ -325,25 +326,19 @@ char as_pop(a_string* restrict s) {
 char as_at(const a_string* restrict s, usize idx) {
     if (!as_valid(s)) panic("cannot operate on an invalid a_string!");
 
-    if (idx >= s->len) panic("a_string index `%zu` out of range (length: `%zu`)!", idx, s->len);
+    if (idx >= s->len)
+        panic("a_string index `%zu` out of range (length: `%zu`)!", idx,
+              s->len);
 
     return s->data[idx];
 }
 
 char as_first(const a_string* restrict s) {
-    if (!as_valid(s)) panic("cannot operate on an invalid a_string!");
-
-    if (s->len == 0) panic("cannot get the first character of an empty a_string!");
-
-    return s->data[0];
+    return as_at(s, 0);
 }
 
 char as_last(const a_string* restrict s) {
-    if (!as_valid(s)) panic("cannot operate on an invalid a_string!");
-
-    if (s->len == 0) panic("cannot get the last character of an empty a_string!");
-
-    return s->data[s->len - 1];
+    return as_at(s, s->len - 1);
 }
 
 a_string as_trim_left(const a_string* restrict s) {
@@ -532,7 +527,8 @@ bool as_equal_cstr(const a_string* restrict lhs, const char* rhs) {
     return as_equal(lhs, &arhs);
 }
 
-bool as_equal_case_insensitive(const a_string* restrict lhs, const a_string* restrict rhs) {
+bool as_equal_case_insensitive(const a_string* restrict lhs,
+                               const a_string* restrict rhs) {
     if (!as_valid(lhs)) panic("cannot compare an invalid a_string!");
 
     if (!as_valid(rhs)) panic("cannot compare an invalid a_string!");
@@ -550,7 +546,8 @@ bool as_equal_case_insensitive(const a_string* restrict lhs, const a_string* res
     return true;
 }
 
-bool as_equal_case_insensitive_cstr(const a_string* restrict lhs, const char* rhs) {
+bool as_equal_case_insensitive_cstr(const a_string* restrict lhs,
+                                    const char* rhs) {
     if (!rhs) return false;
     a_string arhs = {
         .data = (char*)rhs,
@@ -562,7 +559,8 @@ bool as_equal_case_insensitive_cstr(const a_string* restrict lhs, const char* rh
 a_string as_slice_cstr(const char* src, usize begin, usize end) {
     if (src == NULL) panic("source C string for slice operation is NULL!");
 
-    if (begin > end) panic("begin cannot be greater than end in slice operation!");
+    if (begin > end)
+        panic("begin cannot be greater than end in slice operation!");
 
     a_string res = as_new();
     as_ncopy_cstr(&res, &src[begin], end - begin);
@@ -575,14 +573,16 @@ a_string as_slice(const a_string* restrict src, usize begin, usize end) {
     return as_slice_cstr(src->data, begin, end);
 }
 
-bool as_in(const a_string* restrict needle, const a_string** haystack, usize len) {
+bool as_in(const a_string* restrict needle, const a_string** haystack,
+           usize len) {
     for (usize i = 0; i < len; ++i) {
         if (as_equal(needle, haystack[i])) return true;
     }
     return false;
 }
 
-bool as_in_cstr(const a_string* restrict needle, const char** haystack, usize len) {
+bool as_in_cstr(const a_string* restrict needle, const char** haystack,
+                usize len) {
     for (usize i = 0; i < len; ++i) {
         if (as_equal_cstr(needle, haystack[i])) return true;
     }
@@ -738,9 +738,11 @@ dchar au_decode(u8* ptr) {
     } else if ((initial & 0xE0) == 0xC0) {
         res = (dchar)((initial & 0x1F) << 6) | (ptr[1] & 0x3F);
     } else if ((initial & 0xF0) == 0xE0) {
-        res = (dchar)((initial & 0x0F) << 12) | (ptr[1] & 0x3F) << 6 | (ptr[2] & 0x3F);
+        res = (dchar)((initial & 0x0F) << 12) | (ptr[1] & 0x3F) << 6 |
+              (ptr[2] & 0x3F);
     } else if ((initial & 0xF8) == 0xF0) {
-        res = (dchar)((initial & 0x07) << 18) | (ptr[1] & 0x3F) << 12 | (ptr[2] & 0x3F) << 6 | (ptr[3] & 0x3F);
+        res = (dchar)((initial & 0x07) << 18) | (ptr[1] & 0x3F) << 12 |
+              (ptr[2] & 0x3F) << 6 | (ptr[3] & 0x3F);
     } else {
         panic("junk found in UTF-8 string");
     }
@@ -762,7 +764,8 @@ dchar au_at(const a_string* restrict s, usize idx) {
 
     if (!pos) panic("character at position %d out of bounds!", (int)idx);
 
-    if (iscont(*pos)) panic("tried to get a unicode character from a continuation byte!");
+    if (iscont(*pos))
+        panic("tried to get a unicode character from a continuation byte!");
 
     return au_decode(pos);
 }
@@ -805,7 +808,8 @@ void au_append_char(a_string* restrict s, dchar cp) {
 }
 
 void au_append_slice(a_string* restrict s, const u8* data, usize len) {
-    if (!au_slice_valid(data, len)) panic("tried to append invalid UTF-8 slice to a_string!");
+    if (!au_slice_valid(data, len))
+        panic("tried to append invalid UTF-8 slice to a_string!");
 
     if (s->cap + len > s->cap) as_reserve(s, s->cap + len);
 
@@ -815,7 +819,8 @@ void au_append_slice(a_string* restrict s, const u8* data, usize len) {
 }
 
 void au_append_astr(a_string* restrict s, const a_string* restrict other) {
-    if (!as_valid(other)) panic("tried to append invalid UTF-8 a_string to a_string!");
+    if (!as_valid(other))
+        panic("tried to append invalid UTF-8 a_string to a_string!");
 
     au_append_slice(s, (u8*)other->data, other->len);
 }

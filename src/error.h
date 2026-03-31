@@ -36,4 +36,6 @@ BCError bc_error_new(BCErrorKind k, BCPos p, a_string msg);
 BCError bc_error_new_cstr(BCErrorKind k, BCPos p, const char* msg);
 BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, a_string_slice msg);
 
+void bc_error_free(BCError* err);
+
 #endif // BC_ERROR_H

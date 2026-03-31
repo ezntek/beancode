@@ -29,6 +29,7 @@ a_string bc_pos_to_string(const BCPos* p);
 
 typedef enum {
     BC_TOKEN_BOGUS = 0,
+    BC_TOKEN_EOF,
     BC_TOKEN_DECLARE,
     BC_TOKEN_CONSTANT,
     BC_TOKEN_OUTPUT,

@@ -9,10 +9,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 #include "error.h"
+#include "util.h"
 #define _POSIX_C_SOURCE 200809L
 
 #include <ctype.h>
 #include <string.h>
+#include <strings.h>
 
 #include "a_string_slice.h"
 #include "a_vector.h"
@@ -53,9 +55,9 @@ static bool is_separator(char ch);
 static bool next_word(BCLexer* l, a_string_slice* out);
 static bool next_multi_symbol(BCLexer* l);
 static bool next_single_symbol(BCLexer* l);
-static bool next_keyword(BCLexer* l);
-static bool next_literal(BCLexer* l);
-static bool next_ident(BCLexer* l);
+static bool next_keyword(BCLexer* l, a_string_slice word);
+static bool next_literal(BCLexer* l, a_string_slice word);
+static bool next_ident(BCLexer* l, a_string_slice word);
 
 static BCTokenKind token_kind_from_single_op(char ch) {
     switch (ch) {
@@ -94,51 +96,51 @@ static BCTokenKind token_kind_from_multi_op(const a_string_slice s) {
 }
 
 static BCTokenKind token_kind_from_keyword(const a_string_slice s) {
-    if (!strncmp(s.data, "declare", s.len)) return BC_TOKEN_DECLARE;
-    if (!strncmp(s.data, "constant", s.len)) return BC_TOKEN_CONSTANT;
-    if (!strncmp(s.data, "output", s.len)) return BC_TOKEN_OUTPUT;
-    if (!strncmp(s.data, "input", s.len)) return BC_TOKEN_INPUT;
-    if (!strncmp(s.data, "and", s.len)) return BC_TOKEN_AND;
-    if (!strncmp(s.data, "or", s.len)) return BC_TOKEN_OR;
-    if (!strncmp(s.data, "not", s.len)) return BC_TOKEN_NOT;
-    if (!strncmp(s.data, "if", s.len)) return BC_TOKEN_IF;
-    if (!strncmp(s.data, "then", s.len)) return BC_TOKEN_THEN;
-    if (!strncmp(s.data, "else", s.len)) return BC_TOKEN_ELSE;
-    if (!strncmp(s.data, "endif", s.len)) return BC_TOKEN_ENDIF;
-    if (!strncmp(s.data, "case", s.len)) return BC_TOKEN_CASE;
-    if (!strncmp(s.data, "of", s.len)) return BC_TOKEN_OF;
-    if (!strncmp(s.data, "otherwise", s.len)) return BC_TOKEN_OTHERWISE;
-    if (!strncmp(s.data, "endcase", s.len)) return BC_TOKEN_ENDCASE;
-    if (!strncmp(s.data, "while", s.len)) return BC_TOKEN_WHILE;
-    if (!strncmp(s.data, "do", s.len)) return BC_TOKEN_DO;
-    if (!strncmp(s.data, "endwhile", s.len)) return BC_TOKEN_ENDWHILE;
-    if (!strncmp(s.data, "repeat", s.len)) return BC_TOKEN_REPEAT;
-    if (!strncmp(s.data, "until", s.len)) return BC_TOKEN_UNTIL;
-    if (!strncmp(s.data, "for", s.len)) return BC_TOKEN_FOR;
-    if (!strncmp(s.data, "to", s.len)) return BC_TOKEN_TO;
-    if (!strncmp(s.data, "step", s.len)) return BC_TOKEN_STEP;
-    if (!strncmp(s.data, "next", s.len)) return BC_TOKEN_NEXT;
-    if (!strncmp(s.data, "procedure", s.len)) return BC_TOKEN_PROCEDURE;
-    if (!strncmp(s.data, "endprocedure", s.len)) return BC_TOKEN_ENDPROCEDURE;
-    if (!strncmp(s.data, "call", s.len)) return BC_TOKEN_CALL;
-    if (!strncmp(s.data, "function", s.len)) return BC_TOKEN_FUNCTION;
-    if (!strncmp(s.data, "returns", s.len)) return BC_TOKEN_RETURNS;
-    if (!strncmp(s.data, "return", s.len)) return BC_TOKEN_RETURN;
-    if (!strncmp(s.data, "endfunction", s.len)) return BC_TOKEN_ENDFUNCTION;
-    if (!strncmp(s.data, "openfile", s.len)) return BC_TOKEN_OPENFILE;
-    if (!strncmp(s.data, "readfile", s.len)) return BC_TOKEN_READFILE;
-    if (!strncmp(s.data, "writefile", s.len)) return BC_TOKEN_WRITEFILE;
-    if (!strncmp(s.data, "closefile", s.len)) return BC_TOKEN_CLOSEFILE;
-    if (!strncmp(s.data, "read", s.len)) return BC_TOKEN_READ;
-    if (!strncmp(s.data, "write", s.len)) return BC_TOKEN_WRITE;
-    if (!strncmp(s.data, "append", s.len)) return BC_TOKEN_APPEND;
-    if (!strncmp(s.data, "trace", s.len)) return BC_TOKEN_TRACE;
-    if (!strncmp(s.data, "endtrace", s.len)) return BC_TOKEN_ENDTRACE;
-    if (!strncmp(s.data, "scope", s.len)) return BC_TOKEN_SCOPE;
-    if (!strncmp(s.data, "endscope", s.len)) return BC_TOKEN_ENDSCOPE;
-    if (!strncmp(s.data, "include", s.len)) return BC_TOKEN_INCLUDE;
-    if (!strncmp(s.data, "export", s.len)) return BC_TOKEN_EXPORT;
-    if (!strncmp(s.data, "print", s.len)) return BC_TOKEN_PRINT;
+    if (ass_equal_nocase_cstr(s, "declare")) return BC_TOKEN_DECLARE;
+    if (ass_equal_nocase_cstr(s, "constant")) return BC_TOKEN_CONSTANT;
+    if (ass_equal_nocase_cstr(s, "output")) return BC_TOKEN_OUTPUT;
+    if (ass_equal_nocase_cstr(s, "input")) return BC_TOKEN_INPUT;
+    if (ass_equal_nocase_cstr(s, "and")) return BC_TOKEN_AND;
+    if (ass_equal_nocase_cstr(s, "or")) return BC_TOKEN_OR;
+    if (ass_equal_nocase_cstr(s, "not")) return BC_TOKEN_NOT;
+    if (ass_equal_nocase_cstr(s, "if")) return BC_TOKEN_IF;
+    if (ass_equal_nocase_cstr(s, "then")) return BC_TOKEN_THEN;
+    if (ass_equal_nocase_cstr(s, "else")) return BC_TOKEN_ELSE;
+    if (ass_equal_nocase_cstr(s, "endif")) return BC_TOKEN_ENDIF;
+    if (ass_equal_nocase_cstr(s, "case")) return BC_TOKEN_CASE;
+    if (ass_equal_nocase_cstr(s, "of")) return BC_TOKEN_OF;
+    if (ass_equal_nocase_cstr(s, "otherwise")) return BC_TOKEN_OTHERWISE;
+    if (ass_equal_nocase_cstr(s, "endcase")) return BC_TOKEN_ENDCASE;
+    if (ass_equal_nocase_cstr(s, "while")) return BC_TOKEN_WHILE;
+    if (ass_equal_nocase_cstr(s, "do")) return BC_TOKEN_DO;
+    if (ass_equal_nocase_cstr(s, "endwhile")) return BC_TOKEN_ENDWHILE;
+    if (ass_equal_nocase_cstr(s, "repeat")) return BC_TOKEN_REPEAT;
+    if (ass_equal_nocase_cstr(s, "until")) return BC_TOKEN_UNTIL;
+    if (ass_equal_nocase_cstr(s, "for")) return BC_TOKEN_FOR;
+    if (ass_equal_nocase_cstr(s, "to")) return BC_TOKEN_TO;
+    if (ass_equal_nocase_cstr(s, "step")) return BC_TOKEN_STEP;
+    if (ass_equal_nocase_cstr(s, "next")) return BC_TOKEN_NEXT;
+    if (ass_equal_nocase_cstr(s, "procedure")) return BC_TOKEN_PROCEDURE;
+    if (ass_equal_nocase_cstr(s, "endprocedure")) return BC_TOKEN_ENDPROCEDURE;
+    if (ass_equal_nocase_cstr(s, "call")) return BC_TOKEN_CALL;
+    if (ass_equal_nocase_cstr(s, "function")) return BC_TOKEN_FUNCTION;
+    if (ass_equal_nocase_cstr(s, "returns")) return BC_TOKEN_RETURNS;
+    if (ass_equal_nocase_cstr(s, "return")) return BC_TOKEN_RETURN;
+    if (ass_equal_nocase_cstr(s, "endfunction")) return BC_TOKEN_ENDFUNCTION;
+    if (ass_equal_nocase_cstr(s, "openfile")) return BC_TOKEN_OPENFILE;
+    if (ass_equal_nocase_cstr(s, "readfile")) return BC_TOKEN_READFILE;
+    if (ass_equal_nocase_cstr(s, "writefile")) return BC_TOKEN_WRITEFILE;
+    if (ass_equal_nocase_cstr(s, "closefile")) return BC_TOKEN_CLOSEFILE;
+    if (ass_equal_nocase_cstr(s, "read")) return BC_TOKEN_READ;
+    if (ass_equal_nocase_cstr(s, "write")) return BC_TOKEN_WRITE;
+    if (ass_equal_nocase_cstr(s, "append")) return BC_TOKEN_APPEND;
+    if (ass_equal_nocase_cstr(s, "trace")) return BC_TOKEN_TRACE;
+    if (ass_equal_nocase_cstr(s, "endtrace")) return BC_TOKEN_ENDTRACE;
+    if (ass_equal_nocase_cstr(s, "scope")) return BC_TOKEN_SCOPE;
+    if (ass_equal_nocase_cstr(s, "endscope")) return BC_TOKEN_ENDSCOPE;
+    if (ass_equal_nocase_cstr(s, "include")) return BC_TOKEN_INCLUDE;
+    if (ass_equal_nocase_cstr(s, "export")) return BC_TOKEN_EXPORT;
+    if (ass_equal_nocase_cstr(s, "print")) return BC_TOKEN_PRINT;
 
     return BC_TOKEN_BOGUS;
 }
@@ -320,11 +322,93 @@ static bool next_single_symbol(BCLexer* l) {
     return false;
 }
 
-static bool next_keyword(BCLexer* l);
+static bool next_keyword(BCLexer* l, a_string_slice word) {
+    if (!ass_case_consistent(word)) return false;
 
-static bool next_literal(BCLexer* l);
+    BCPos p = POS(word.len);
+    BCTokenKind k = token_kind_from_keyword(word);
+    if (k != BC_TOKEN_BOGUS) {
+        l->token = (BCToken){
+            .kind = k,
+            .pos = p,
+        };
+        return true;
+    }
 
-static bool next_ident(BCLexer* l);
+    if (ass_equal_nocase_cstr(word, "endfor")) {
+        l->error =
+            bc_error_new_cstr(BC_ERROR_SYNTAX, p,
+                              "ENDFOR is not a valid keyword!\nPlease use NEXT "
+                              "<your counter> to end a FOR loop instead.");
+        return false;
+    }
+
+    return false;
+}
+
+static bool next_literal(BCLexer* l, a_string_slice word) {
+    if (!ass_case_consistent(word)) return false;
+
+    if (ass_first(word) == '"' || ass_first(word) == '\'') {
+        if (word.len == 1) panic("unreachable code");
+
+        BCTokenKind k =
+            ass_first(word) == '"' ? BC_TOKEN_LIT_STRING : BC_TOKEN_LIT_CHAR;
+
+        l->token = (BCToken){
+            .src_index = (u32)l->cur - word.len,
+            .kind = k,
+            .pos = POS(word.len),
+        };
+        return true;
+    }
+
+    if (is_number(l, word)) {
+        l->token = (BCToken){
+            .src_index = (u32)l->cur - word.len,
+            .kind = BC_TOKEN_LIT_NUMBER,
+            .pos = POS(word.len),
+        };
+        return true;
+    } else if (isdigit(ass_first(word))) {
+        l->error = bc_error_new_cstr(BC_ERROR_SYNTAX, POS(word.len),
+                                     "invalid number literal");
+        return false;
+    }
+
+    if (ass_case_consistent(word)) {
+        l->token.pos = POS(word.len);
+        if (ass_equal_nocase_cstr(word, "true")) {
+            l->token.kind = BC_TOKEN_TRUE;
+            return true;
+        } else if (ass_equal_nocase_cstr(word, "false")) {
+            l->token.kind = BC_TOKEN_FALSE;
+            return true;
+        } else if (ass_equal_nocase_cstr(word, "null")) {
+            l->token.kind = BC_TOKEN_NULL;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool next_ident(BCLexer* l, a_string_slice word) {
+    BCPos p = POS(word.len);
+
+    if (is_ident(l, word)) {
+        l->token = (BCToken){
+            .src_index = (u32)l->cur - word.len,
+            .kind = BC_TOKEN_IDENT,
+            .pos = p,
+        };
+        return true;
+    } else {
+        l->error = bc_error_new_cstr(BC_ERROR_SYNTAX, p,
+                                     "invalid identifier or symbol");
+        return false;
+    }
+}
 
 // public API
 
@@ -344,10 +428,55 @@ void bc_lexer_reset(BCLexer* l) {
     l->error = (BCError){0};
 }
 
-bool bc_lexer_next_token(BCLexer* l) {
+BCToken* bc_lexer_next_token(BCLexer* l) {
     trim_spaces(l);
 
-    return false;
+    if (!IN_BOUNDS) {
+        l->token = (BCToken){
+            .kind = BC_TOKEN_EOF,
+            .pos = POS(1),
+        };
+        return &l->token;
+    }
+
+    if (CUR == '\n') {
+        l->token = (BCToken){
+            .kind = BC_TOKEN_NEWLINE,
+            .pos = POS(1),
+        };
+        BUMP_NEWLINE;
+        return &l->token;
+    }
+
+    if (next_multi_symbol(l)) return &l->token;
+    if (next_single_symbol(l)) return &l->token;
+
+    a_string_slice word = {0};
+    if (!next_word(l, &word)) return NULL;
+
+    if (next_keyword(l, word)) return &l->token;
+    if (next_literal(l, word)) return &l->token;
+    if (next_ident(l, word)) return &l->token;
+
+    return NULL;
 }
 
-usize bc_lexer_tokenize(BCLexer* l, BCToken** out);
+usize bc_lexer_tokenize(BCLexer* l, BCToken** out) {
+    Tokens res = {0};
+    BCToken* tok = NULL;
+
+    bc_lexer_reset(l);
+
+    do {
+        tok = bc_lexer_next_token(l);
+        if (!tok) {
+            *out = NULL;
+            return 0;
+        }
+
+        av_append(&res, *tok);
+    } while (!tok || tok->kind != BC_TOKEN_EOF);
+
+    *out = res.data;
+    return res.len;
+}

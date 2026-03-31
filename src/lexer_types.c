@@ -18,7 +18,8 @@
 #include "lexer_types.h"
 
 static const char* TOKEN_KIND_TABLE[] = {
-    [BC_TOKEN_BOGUS] = "bogus",
+    [BC_TOKEN_BOGUS] = "!!! bogus amogus token !!!",
+    [BC_TOKEN_EOF] = "eof",
     [BC_TOKEN_DECLARE] = "declare",
     [BC_TOKEN_CONSTANT] = "constant",
     [BC_TOKEN_OUTPUT] = "output",

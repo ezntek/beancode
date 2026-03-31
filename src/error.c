@@ -56,3 +56,7 @@ BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, a_string_slice msg) {
         .msg = as_from_string_slice(msg),
     };
 }
+
+void bc_error_free(BCError* err) {
+    as_free(&err->msg);
+}
