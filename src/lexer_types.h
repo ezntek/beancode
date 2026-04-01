@@ -125,10 +125,17 @@ typedef struct {
     u32 src_index;
 } BCToken;
 
+AV_DECL(BCToken, BCTokenArray)
+
 // on every call, the result of the previous call is destroyed as we use one
 // static buffer
 a_string_slice bc_token_to_string_slice(const BCToken* t);
 
 a_string bc_token_to_string(const BCToken* t);
+
+a_string_slice bc_token_to_string_slice_full(const BCToken* t,
+                                             const a_string_slice src);
+
+a_string bc_token_to_string_full(const BCToken* t, const a_string_slice src);
 
 #endif // BC_LEXER_TYPES_H

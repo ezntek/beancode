@@ -4,7 +4,7 @@ INCLUDE =
 
 SRC = src/a_string.c src/a_string_slice.c src/util.c src/error.c src/lexer.c src/lexer_types.c
 OBJ = $(DEPS) $(SRC:.c=.o)
-HEADERS = src/a_vector.h src/common.h $(SRC:.c=h)
+HEADERS = src/a_vector.h src/common.h $(SRC:.c=.h)
 
 CFLAGS = -Wall -Wextra -pedantic -std=c99 -I./3rdparty
 RELEASE_CFLAGS = -O2

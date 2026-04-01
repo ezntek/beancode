@@ -29,12 +29,26 @@ a_string bc_error_kind_to_string(BCErrorKind k);
 typedef struct {
     BCErrorKind kind;
     BCPos pos;
-    a_string msg;
+    a_string msg; // rows delimited by 0xA
 } BCError;
 
 BCError bc_error_new(BCErrorKind k, BCPos p, a_string msg);
 BCError bc_error_new_cstr(BCErrorKind k, BCPos p, const char* msg);
 BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, a_string_slice msg);
+
+struct __bc_error_print_opts {
+    a_string_slice file_name;
+    a_string_slice src;
+    FILE* f;
+    bool no_color;
+};
+
+// void bc_error_print(BCError* err, a_string_slice file_name, ...)
+#define bc_error_print(err, ...)                                               \
+    __bc_error_print_impl(                                                     \
+        (err), (struct __bc_error_print_opts){.file_name = __VA_ARGS__})
+
+void __bc_error_print_impl(BCError* err, struct __bc_error_print_opts opts);
 
 void bc_error_free(BCError* err);
 

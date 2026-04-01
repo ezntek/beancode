@@ -63,25 +63,25 @@ typedef double f64;
 #define LENGTH(lst) (i32)(sizeof(lst) / sizeof(lst[0]))
 #define RINTC(T)    *(T*)&
 
-#define check_alloc(ptr)                                                                                               \
-    do {                                                                                                               \
-        if (!ptr) {                                                                                                    \
-            panic("allocation of `%s` failed", #ptr);                                                                  \
-            perror("perror");                                                                                          \
-            exit(1);                                                                                                   \
-        }                                                                                                              \
+#define check_alloc(ptr)                                                       \
+    do {                                                                       \
+        if (!ptr) {                                                            \
+            panic("allocation of `%s` failed", #ptr);                          \
+            perror("perror");                                                  \
+            exit(1);                                                           \
+        }                                                                      \
     } while (0)
 
-#define eprintf(...) fprintf(stderr, __VA_ARGS__);
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
-#define panic(...)                                                                                                     \
-    do {                                                                                                               \
-        eprintf("\033[31;1mpanic:\033[0m line %d, func \"%s\" in file "                                                \
-                "\"%s\": ",                                                                                            \
-                __LINE__, __func__, __FILE__);                                                                         \
-        eprintf(__VA_ARGS__);                                                                                          \
-        eprintf("\n");                                                                                                 \
-        exit(1);                                                                                                       \
+#define panic(...)                                                             \
+    do {                                                                       \
+        eprintf("\033[31;1mpanic:\033[0m line %d, func \"%s\" in file "        \
+                "\"%s\": ",                                                    \
+                __LINE__, __func__, __FILE__);                                 \
+        eprintf(__VA_ARGS__);                                                  \
+        eprintf("\n");                                                         \
+        abort();                                                               \
     } while (0)
 
 #ifdef unreachable
@@ -89,53 +89,53 @@ typedef double f64;
 #endif
 #define unreachable panic("reached unreachable code")
 
-#define fatal_noexit(...)                                                                                              \
-    do {                                                                                                               \
-        eprintf(S_RED S_BOLD "[fatal] " S_END);                                                                        \
-        eprintf(S_DIM);                                                                                                \
-        eprintf(__VA_ARGS__);                                                                                          \
-        eprintf(S_END "\n");                                                                                           \
+#define fatal_noexit(...)                                                      \
+    do {                                                                       \
+        eprintf(S_RED S_BOLD "[fatal] " S_END);                                \
+        eprintf(S_DIM);                                                        \
+        eprintf(__VA_ARGS__);                                                  \
+        eprintf(S_END "\n");                                                   \
     } while (0)
 
-#define fatal(...)                                                                                                     \
-    do {                                                                                                               \
-        fatal_noexit(__VA_ARGS__);                                                                                     \
-        exit(1);                                                                                                       \
+#define fatal(...)                                                             \
+    do {                                                                       \
+        fatal_noexit(__VA_ARGS__);                                             \
+        exit(1);                                                               \
     } while (0);
 
-#define warn(...)                                                                                                      \
-    do {                                                                                                               \
-        eprintf(S_MAGENTA S_BOLD "[warn] " S_END);                                                                     \
-        eprintf(S_DIM);                                                                                                \
-        eprintf(__VA_ARGS__);                                                                                          \
-        eprintf(S_END "\n");                                                                                           \
+#define warn(...)                                                              \
+    do {                                                                       \
+        eprintf(S_MAGENTA S_BOLD "[warn] " S_END);                             \
+        eprintf(S_DIM);                                                        \
+        eprintf(__VA_ARGS__);                                                  \
+        eprintf(S_END "\n");                                                   \
     } while (0)
 
-#define info(...)                                                                                                      \
-    do {                                                                                                               \
-        eprintf(S_CYAN S_BOLD "[info] " S_END);                                                                        \
-        eprintf(S_DIM);                                                                                                \
-        eprintf(__VA_ARGS__);                                                                                          \
-        eprintf(S_END "\n");                                                                                           \
+#define info(...)                                                              \
+    do {                                                                       \
+        eprintf(S_CYAN S_BOLD "[info] " S_END);                                \
+        eprintf(S_DIM);                                                        \
+        eprintf(__VA_ARGS__);                                                  \
+        eprintf(S_END "\n");                                                   \
     } while (0)
 
-#define make(T, ident, val)                                                                                            \
-    do {                                                                                                               \
-        (ident) = malloc(sizeof(T));                                                                                   \
-        check_alloc((ident));                                                                                          \
-        *(ident) = (val);                                                                                              \
+#define make(T, ident, val)                                                    \
+    do {                                                                       \
+        (ident) = malloc(sizeof(T));                                           \
+        check_alloc((ident));                                                  \
+        *(ident) = (val);                                                      \
     } while (0)
 
-#define if_let(type, id, expr)                                                                                         \
-    type id;                                                                                                           \
+#define if_let(type, id, expr)                                                 \
+    type id;                                                                   \
     if ((id = (expr).data, (expr)).have)
 
-#define let_else(type, id, expr)                                                                                       \
-    type id;                                                                                                           \
+#define let_else(type, id, expr)                                               \
+    type id;                                                                   \
     if (!(id = (expr).data, (expr)).have)
 
-#define while_let(type, id, expr)                                                                                      \
-    type id;                                                                                                           \
+#define while_let(type, id, expr)                                              \
+    type id;                                                                   \
     while ((id = (expr).data, (expr)).have)
 
 #define let(id, expr) ((id = (expr).data, (expr)).have)

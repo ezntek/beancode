@@ -1,12 +1,12 @@
 If:
   PathMatch: .*\.h
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-std=c23", "-xc-header"]
+  Add: ["-I.", "-I./3rdparty", "-Wpedantic", "-std=c99", "-xc-header"]
 ---
 If:
   PathMatch: .*\.c
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-std=c23"]
+  Add: ["-I.", "-I./3rdparty", "-Wpedantic", "-std=c99"]
 ---
 If:
   PathMatch: [.*\.hh, .*\.hpp] 

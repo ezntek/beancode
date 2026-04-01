@@ -630,7 +630,7 @@ usize au_len(const a_string* restrict s) {
 bool au_slice_valid(const u8* s, usize len) {
     if (!s) return false;
 
-    usize cur_cp = 0, rembytes = 0, saved_rembytes = 0, i = 0;
+    usize rembytes = 0, saved_rembytes = 0, i = 0;
     u8 ch = 0;
     for (i = 0; i < len; i++) {
         ch = s[i];

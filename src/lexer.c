@@ -8,8 +8,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "error.h"
-#include "util.h"
 #define _POSIX_C_SOURCE 200809L
 
 #include <ctype.h>
@@ -18,10 +16,11 @@
 
 #include "a_string_slice.h"
 #include "a_vector.h"
+#include "error.h"
 #include "lexer.h"
 #include "lexer_types.h"
 
-AV_DECL(BCToken, Tokens);
+AV_DECL(BCToken, Tokens)
 
 #define CUR       (l->src[l->cur])
 #define IN_BOUNDS (l->cur < l->src_len)
@@ -47,8 +46,8 @@ static BCTokenKind token_kind_from_keyword(const a_string_slice s);
 
 static void trim_spaces(BCLexer* l);
 static void trim_comments(BCLexer* l);
-static bool is_number(BCLexer* l, a_string_slice word);
-static bool is_ident(BCLexer* l, a_string_slice word);
+static bool is_number(a_string_slice word);
+static bool is_ident(a_string_slice word);
 static bool is_operator_start(BCLexer* l, const char* start);
 static bool is_separator(char ch);
 
@@ -179,7 +178,7 @@ static void trim_comments(BCLexer* l) {
     }
 }
 
-static bool is_number(BCLexer* l, a_string_slice word) {
+static bool is_number(a_string_slice word) {
     bool found_decimal = false;
     char cur;
 
@@ -204,7 +203,7 @@ static bool is_number(BCLexer* l, a_string_slice word) {
     return true;
 }
 
-static bool is_ident(BCLexer* l, a_string_slice word) {
+static bool is_ident(a_string_slice word) {
     if (!isalpha(*word.data) && *word.data == '_') return false;
 
     char cur;
@@ -263,7 +262,7 @@ static bool next_word(BCLexer* l, a_string_slice* out) {
         if (stop) break;
 
         len++;
-        cur++;
+        l->cur++;
     } while (true);
 
     if (is_delimited) {
@@ -347,8 +346,6 @@ static bool next_keyword(BCLexer* l, a_string_slice word) {
 }
 
 static bool next_literal(BCLexer* l, a_string_slice word) {
-    if (!ass_case_consistent(word)) return false;
-
     if (ass_first(word) == '"' || ass_first(word) == '\'') {
         if (word.len == 1) panic("unreachable code");
 
@@ -363,7 +360,7 @@ static bool next_literal(BCLexer* l, a_string_slice word) {
         return true;
     }
 
-    if (is_number(l, word)) {
+    if (is_number(word)) {
         l->token = (BCToken){
             .src_index = (u32)l->cur - word.len,
             .kind = BC_TOKEN_LIT_NUMBER,
@@ -396,7 +393,7 @@ static bool next_literal(BCLexer* l, a_string_slice word) {
 static bool next_ident(BCLexer* l, a_string_slice word) {
     BCPos p = POS(word.len);
 
-    if (is_ident(l, word)) {
+    if (is_ident(word)) {
         l->token = (BCToken){
             .src_index = (u32)l->cur - word.len,
             .kind = BC_TOKEN_IDENT,
@@ -471,6 +468,7 @@ usize bc_lexer_tokenize(BCLexer* l, BCToken** out) {
         tok = bc_lexer_next_token(l);
         if (!tok) {
             *out = NULL;
+            if (res.cap) av_free(&res);
             return 0;
         }
 

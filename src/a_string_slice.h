@@ -9,6 +9,8 @@
 #ifndef _A_STRING_SLICE_H
 #define _A_STRING_SLICE_H
 
+#include <stdbool.h>
+
 #include "common.h"
 
 typedef struct {
@@ -16,7 +18,9 @@ typedef struct {
     usize len;
 } a_string_slice;
 
-#define astr_slice(s) ((a_string_slice){(s), strlen((s))})
+#define ass_from_cstr(s)     ((a_string_slice){(s), strlen((s))})
+#define ass_from_astr(s)     ((a_string_slice){(s).data, (s).len})
+#define ass_from_astr_ptr(s) ((a_string_slice){(s)->data, (s)->len})
 
 bool ass_valid(const a_string_slice s);
 
