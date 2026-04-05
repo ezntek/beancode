@@ -8,14 +8,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#include "a_string.h"
-#include "common.h"
-#include <stdio.h>
 #define _POSIX_C_SOURCE 200809L
 
+#include <stdio.h>
 #include <string.h>
 
+#include "a_string.h"
 #include "a_string_slice.h"
+#include "common.h"
 #include "error.h"
 
 static const char* ERROR_KIND_STRINGS[] = {

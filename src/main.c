@@ -8,6 +8,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
+#include "vm.h"
+#include "vm_types.h"
 #define _POSIX_C_SOURCE 200809L
 
 #include <stddef.h>
@@ -25,6 +27,33 @@
 i32 main(i32 argc, char** argv) {
     argc--;
     argv++;
+
+    /*
+    char txt[] = "bogus amogus 3bd 3bc 3bb 3ba 3bz";
+    char hello_world_buf[sizeof(txt) + sizeof(usize)] = {0};
+    *(usize*)hello_world_buf = strlen(txt);
+    strcpy(hello_world_buf + 8, txt);
+
+    BCValue imms[] = {
+        {.t = BC_TYPE_CHAR,    .v.c = '\n'               },
+        {.t = BC_TYPE_STRING,  .v.s = hello_world_buf + 8},
+        {.t = BC_TYPE_INTEGER, .v.i = 2                  },
+    };
+
+    // push '\n'
+    // push "hello, world!"
+    // output 2
+    BCVM_Instr src[] = {
+        (BC_INSTR_PUSH << 26) | 0,
+        (BC_INSTR_PUSH << 26) | 1,
+        (BC_INSTR_OUTPUT << 26) | 2,
+    };
+    BCVM vm = bc_vm_new(src, 3, imms, 3);
+    bc_vm_exec(&vm);
+    bc_vm_free(&vm);
+    */
+
+    return 0;
 
     a_string file_content = {0};
     a_string_slice file_name = {0};
