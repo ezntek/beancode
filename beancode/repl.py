@@ -404,7 +404,7 @@ class Repl:
         err.print(repl_txt, src)
         print()
 
-    def repl(self, handle_ctrlc=True):
+    def actual_repl(self, handle_ctrlc: bool):
         setup_readline()
         print(BANNER, end="\n")
 
@@ -418,13 +418,13 @@ class Repl:
 
             try:
                 inp = input(PROMPT)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as e:
                 if handle_ctrlc:
                     print()
                     warn('type ".exit" or ".quit" to exit the REPL.')
                     continue
                 else:
-                    return
+                    raise e
             self.buf.append(inp + "\n")
 
             if len(inp) == 0:
@@ -513,6 +513,15 @@ class Repl:
 
         return
 
+    def repl(self, handle_ctrlc=True):
+        try:
+            self.actual_repl(handle_ctrlc) 
+        except KeyboardInterrupt:
+            if handle_ctrlc:
+                warn("unexpected keyboard interrupt during REPL work, exiting...")
+            else:
+                return
+            
     def repl_and_exit(self):
         self.repl()
         exit(0)
