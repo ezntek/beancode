@@ -1,6 +1,6 @@
 import sys
 
-NUM = 750000
+NUM = 25000
 
 
 def is_prime(n: int) -> bool:

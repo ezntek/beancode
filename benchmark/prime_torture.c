@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define NUM 750000
+#define NUM 25000
 
 int is_prime(int n) {
     for (int i = 2; i <= (int)sqrt(n); i++) {
