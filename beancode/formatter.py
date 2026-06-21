@@ -269,7 +269,7 @@ class Formatter:
         self.write(" TO ")
         self.visit_expr(stmt.end)
         if stmt.step:
-            self.write("STEP")
+            self.write(" STEP ")
             self.visit_expr(stmt.step)
         self.write("\n")
         self.reduce_from(saved_end)
