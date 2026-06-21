@@ -28,7 +28,7 @@ BANNER = f"""\033[1m=== welcome to beancode \033[0m{__version__}\033[1m ===\033[
 Copyright (c) Eason Qin, 2025-2026. type ".license" for more information.\033[0m
 type ".exit" to quit the REPL, or ".help" for a list of available commands."""
 
-PROMPT = "\001\033[1m\002>> \001\033[0m\002"
+PROMPT = "\001\033[0m\033[1m\002>>\001\033[0m\002 "
 
 HELP = """\033[1mAVAILABLE COMMANDS:\033[0m
  .var [names]          get info regarding a declared variable/constant
@@ -58,21 +58,29 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
 def setup_readline():
+    histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
     try:
         import readline
         import atexit
 
-        histfile = os.path.join(os.path.expanduser("~"), ".beancode_history")
-        try:
+        if os.path.exists(histfile) and os.path.getsize(histfile) > 0:
             readline.read_history_file(histfile)
             readline.set_history_length(10000)
-        except FileNotFoundError:
-            open(histfile, "wb").close()
 
         atexit.register(readline.write_history_file, histfile)
     except ImportError:
         if sys.platform not in {"emscripten", "wasi"}:
             warn("could not import readline, continuing without shell history")
+    # could be the Invalid Argument case
+    except OSError:
+        # removing it fixed it on my machine
+        try:
+            os.remove(histfile)
+            setup_readline() # try again
+        except Exception:
+            pass
+    except Exception:
+        warn("could not initialize readline correctly, editing functionality may be limited")
 
 
 class DotCommandResult(IntEnum):

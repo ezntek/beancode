@@ -1359,7 +1359,7 @@ class Interpreter:
             step_val = self.visit_expr(stmt.step)  # type: ignore
             if step_val.kind != BCPrimitiveType.INTEGER:
                 self.error("non-integer expression used for loop step", stmt.step.pos)
-            step: int = step.val  # type: ignore
+            step: int = step_val.val  # type: ignore
             if step == 0:
                 self.error("step for for loop cannot be 0!", stmt.step.pos)
 

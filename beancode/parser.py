@@ -990,7 +990,7 @@ class Parser:
         branches: list[CaseofBranch | NewlineStatement | Comment] = []
         otherwise: Statement | None = None
         while not self.check(TokenKind.ENDCASE):
-            (consumed, nlpos) = self.clean_newlines()
+            consumed, nlpos = self.clean_newlines()
             if self.preserve_trivia:
                 if consumed:
                     branches.append(NewlineStatement(nlpos))
@@ -1020,7 +1020,7 @@ class Parser:
                     )
 
             stmt = self.stmt()
-            (consumed, nlpos) = self.clean_newlines()
+            consumed, nlpos = self.clean_newlines()
             if consumed and self.preserve_trivia:
                 branches.append(NewlineStatement(nlpos))
 
@@ -1056,7 +1056,7 @@ class Parser:
 
         return WhileStatement(begin.pos, end.pos, expr, stmts)
 
-    def for_stmt(self):
+    def for_stmt(self) -> Statement | None:
         initial = self.check_and_consume(TokenKind.FOR)
         if not initial:
             return
@@ -1582,7 +1582,7 @@ class Parser:
 
     def statement(self) -> Statement | None:
         if self.preserve_trivia:
-            (cleaned, nlpos) = self.clean_newlines()
+            cleaned, nlpos = self.clean_newlines()
             if cleaned:
                 return NewlineStatement(nlpos)
 
@@ -1609,7 +1609,7 @@ class Parser:
         stmts = []
 
         while self.cur < len(self.tokens):
-            (cleaned, nlpos) = self.clean_newlines()
+            cleaned, nlpos = self.clean_newlines()
             if cleaned and self.preserve_trivia:
                 stmts.append(NewlineStatement(nlpos))
 
