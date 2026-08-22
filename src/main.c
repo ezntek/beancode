@@ -17,14 +17,13 @@
 // used in macro
 #include <string.h>
 
-#include "a_string.h"
-#include "a_string_slice.h"
 #include "common.h"
 #include "error.h"
 #include "lexer.h"
 #include "lexer_types.h"
+#include "str.h"
 
-i32 main(i32 argc, char** argv) {
+i32 main(i32 argc, char **argv) {
     argc--;
     argv++;
 
@@ -53,24 +52,19 @@ i32 main(i32 argc, char** argv) {
     bc_vm_free(&vm);
     */
 
-    return 0;
+    str file_content = {0};
+    str_view file_name = sv_from_cstr(*argv);
 
-    a_string file_content = {0};
-    a_string_slice file_name = {0};
+    FILE *f = fopen(file_name.data, "r");
+    if (!f)
+        panic("could not open file %.*s", str_fmt(&file_name));
+    file_content = str_read_entire_file(f);
+    fclose(f);
+    if (!str_is_valid(&file_content))
+        panic("could not read file %.*s", str_fmt(&file_name));
 
-    if (argc >= 1) {
-        file_name = ass_from_cstr(*argv);
-        file_content = as_read_file(file_name.data);
-        if (!as_valid(&file_content))
-            panic("could not read file %.*s", as_fmt(file_name));
-    } else {
-        file_name = ass_from_cstr("(stdin)");
-        file_content = as_read_line(stdin);
-        if (!as_valid(&file_content)) panic("could not read line from stdin");
-    }
-
-    BCLexer l = bc_lexer_new(ass_from_astr(file_content));
-    BCToken* tokens = NULL;
+    BCLexer l = bc_lexer_new(sv_from_str(&file_content));
+    BCToken *tokens = NULL;
     usize len = bc_lexer_tokenize(&l, &tokens);
 
     if (!tokens) {
@@ -78,13 +72,13 @@ i32 main(i32 argc, char** argv) {
         bc_error_free(&l.error);
     } else {
         for (usize i = 0; i < len; i++) {
-            a_string_slice s = bc_token_to_string_slice_full(
-                &tokens[i], ass_from_astr(file_content));
-            eprintf("%.*s\n", as_fmt(s));
+            str_view s = bc_token_to_string_slice_full(
+                &tokens[i], sv_from_str(&file_content));
+            eprintf("%.*s\n", str_fmt(&s));
         }
     }
 
-    as_free(&file_content);
+    str_free(&file_content);
     free(tokens);
 
     return 0;

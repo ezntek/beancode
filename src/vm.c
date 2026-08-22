@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "a_vector.h"
+#include "vec.h"
 #include "common.h"
 #include "vm.h"
 #include "vm_types.h"
@@ -28,17 +28,17 @@ BCVM bc_vm_new(BCVM_Instr* src, usize src_len, BCValue* imms, usize imms_len) {
     BCVM vm = {
         .src = src, .src_len = src_len, .stack = {0}, .imms = {0}, .vars = {0}};
 
-    av_reserve(&vm.stack, 32);
-    av_reserve(&vm.vars, 8);
-    av_append_many(&vm.imms, imms, imms_len);
+    vec_reserve(&vm.stack, 32);
+    vec_reserve(&vm.vars, 8);
+    vec_append_many(&vm.imms, imms, imms_len);
 
     return vm;
 }
 
 void bc_vm_free(BCVM* vm) {
-    av_free(&vm->stack);
-    av_free(&vm->imms);
-    av_free(&vm->vars);
+    vec_free(&vm->stack);
+    vec_free(&vm->imms);
+    vec_free(&vm->vars);
 }
 
 static void push(BCVM* vm, const BCVM_Instr ins);
@@ -54,7 +54,7 @@ static void push(BCVM* vm, const BCVM_Instr ins) {
         case BC_TYPE_REAL:
         case BC_TYPE_BOOLEAN:
         case BC_TYPE_CHAR: {
-            av_append(&vm->stack, *imm);
+            vec_append(&vm->stack, *imm);
         } break;
         case BC_TYPE_STRING: {
             // 1 usize for length
@@ -65,7 +65,7 @@ static void push(BCVM* vm, const BCVM_Instr ins) {
             resdata += sizeof(usize);
             strcpy(resdata, imm->v.s);
             BCValue val = {.t = BC_TYPE_STRING, .v.s = resdata};
-            av_append(&vm->stack, val);
+            vec_append(&vm->stack, val);
         } break;
         case BC_TYPE_ARRAY: {
             panic("not implemented");
@@ -76,7 +76,7 @@ static void push(BCVM* vm, const BCVM_Instr ins) {
 static void pop(BCVM* vm) {
     if (!vm->stack.len) panic("no items to pop off stack");
 
-    BCValue* last = &av_pop(&vm->stack);
+    BCValue* last = &vec_pop(&vm->stack);
     switch (last->t) {
         case BC_TYPE_NULL:
         case BC_TYPE_INTEGER:
@@ -97,7 +97,7 @@ static void output(BCVM* vm, const BCVM_Instr ins) {
     usize count = vm->imms.data[OPERAND(ins)].v.i;
     BCValue* top;
     for (; count; count--) {
-        top = &av_last(&vm->stack);
+        top = &vec_last(&vm->stack);
 
         // TODO: refactor
         switch (top->t) {

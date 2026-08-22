@@ -13,12 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "a_string.h"
-#include "a_string_slice.h"
 #include "common.h"
 #include "error.h"
+#include "str.h"
 
-static const char* ERROR_KIND_STRINGS[] = {
+static const char *ERROR_KIND_STRINGS[] = {
     [BC_ERROR_EOF] = "EOFError",
     [BC_ERROR_RUNTIME] = "RuntimeError",
     [BC_ERROR_SYNTAX] = "SyntaxError",
@@ -26,16 +25,16 @@ static const char* ERROR_KIND_STRINGS[] = {
 
 static char error_kind_buf[32] = {0};
 
-a_string_slice bc_error_kind_to_string_slice(BCErrorKind k) {
+str_view bc_error_kind_to_string_slice(BCErrorKind k) {
     strcpy(error_kind_buf, ERROR_KIND_STRINGS[k]);
-    return ass_from_cstr(error_kind_buf);
+    return sv_from_cstr(error_kind_buf);
 }
 
-a_string bc_error_kind_to_string(BCErrorKind k) {
-    return astr(ERROR_KIND_STRINGS[k]);
+str bc_error_kind_to_string(BCErrorKind k) {
+    return mstr(ERROR_KIND_STRINGS[k]);
 }
 
-BCError bc_error_new(BCErrorKind k, BCPos p, a_string msg) {
+BCError bc_error_new(BCErrorKind k, BCPos p, str msg) {
     return (BCError){
         .kind = k,
         .pos = p,
@@ -43,35 +42,36 @@ BCError bc_error_new(BCErrorKind k, BCPos p, a_string msg) {
     };
 }
 
-BCError bc_error_new_cstr(BCErrorKind k, BCPos p, const char* msg) {
+BCError bc_error_new_cstr(BCErrorKind k, BCPos p, const char *msg) {
     return (BCError){
         .kind = k,
         .pos = p,
-        .msg = astr(msg),
+        .msg = mstr(msg),
     };
 }
 
-BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, a_string_slice msg) {
+BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, str_view msg) {
     return (BCError){
         .kind = k,
         .pos = p,
-        .msg = as_from_string_slice(msg),
+        .msg = str_from_sv(msg),
     };
 }
 
-void bc_error_free(BCError* err) {
-    as_free(&err->msg);
+void bc_error_free(BCError *err) {
+    str_free(&err->msg);
 }
 
-void __bc_error_print_impl(BCError* err, struct __bc_error_print_opts opts) {
-    if (!opts.f) opts.f = stderr;
+void __bc_error_print_impl(BCError *err, struct __bc_error_print_opts opts) {
+    if (!opts.f)
+        opts.f = stderr;
 
     if (opts.no_color) {
-        fprintf(opts.f, "%.*s:%u:%u: error: ", as_fmt(opts.file_name),
+        fprintf(opts.f, "%.*s:%u:%u: error: ", str_fmt(&opts.file_name),
                 err->pos.row, err->pos.col);
     } else {
         fprintf(opts.f, "\033[1m%.*s:%u:%u \033[31;1merror: \033[0m",
-                as_fmt(opts.file_name), err->pos.row, err->pos.col);
+                str_fmt(&opts.file_name), err->pos.row, err->pos.col);
     }
 
     usize len = 0;
@@ -83,7 +83,7 @@ void __bc_error_print_impl(BCError* err, struct __bc_error_print_opts opts) {
 
     // TODO: print context
 
-    if (ass_valid(opts.src)) {
+    if (sv_valid(&opts.src)) {
         panic("shawarma %d", 69);
         // TODO: source code printer
     }

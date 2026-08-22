@@ -14,11 +14,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "a_string.h"
-#include "a_string_slice.h"
 #include "lexer_types.h"
+#include "str.h"
 
-static const char* TOKEN_KIND_TABLE[] = {
+static const char *TOKEN_KIND_TABLE[] = {
     [BC_TOKEN_BOGUS] = "!!! bogus amogus token !!!",
     [BC_TOKEN_EOF] = "eof",
     [BC_TOKEN_DECLARE] = "declare",
@@ -107,64 +106,63 @@ static char bc_token_full_buf[512] = {0};
 static char bc_pos_buf[256] = {0};
 static char bc_token_buf[256] = {0};
 
-a_string_slice bc_pos_to_string_slice(const BCPos* p) {
+str_view bc_pos_to_string_slice(const BCPos *p) {
     usize len = snprintf(bc_pos_buf, sizeof(bc_pos_buf), "%u %u %u", p->row,
                          p->col, p->span);
-    return (a_string_slice){.data = bc_pos_buf, .len = len};
+    return (str_view){.data = bc_pos_buf, .len = len};
 }
 
-a_string bc_pos_to_string(const BCPos* p) {
-    return as_asprintf("[%u %u %u]", p->row, p->col, p->span);
+str bc_pos_to_string(const BCPos *p) {
+    return str_format("[%u %u %u]", p->row, p->col, p->span);
 }
 
-a_string_slice bc_token_kind_to_string_slice(BCTokenKind k) {
-    return ass_from_cstr(TOKEN_KIND_TABLE[k]);
+str_view bc_token_kind_to_string_slice(BCTokenKind k) {
+    return sv_from_cstr(TOKEN_KIND_TABLE[k]);
 }
 
-a_string bc_token_kind_to_string(BCTokenKind k) {
-    return astr(TOKEN_KIND_TABLE[k]);
+str bc_token_kind_to_string(BCTokenKind k) {
+    return mstr(TOKEN_KIND_TABLE[k]);
 }
 
-a_string_slice bc_token_to_string_slice(const BCToken* t) {
-    a_string_slice k = bc_token_kind_to_string_slice(t->kind),
-                   p = bc_pos_to_string_slice(&t->pos);
+str_view bc_token_to_string_slice(const BCToken *t) {
+    str_view k = bc_token_kind_to_string_slice(t->kind),
+             p = bc_pos_to_string_slice(&t->pos);
 
     usize len = snprintf(bc_token_buf, sizeof(bc_token_buf),
-                         "token[%.*s]: %.*s", as_fmt(p), as_fmt(k));
+                         "token[%.*s]: %.*s", str_fmt(&p), str_fmt(&k));
 
-    return (a_string_slice){.data = bc_token_buf, .len = len};
+    return (str_view){.data = bc_token_buf, .len = len};
 }
 
-a_string bc_token_to_string(const BCToken* t) {
-    return as_from_string_slice(bc_token_to_string_slice(t));
+str bc_token_to_string(const BCToken *t) {
+    return str_from_sv(bc_token_to_string_slice(t));
 }
 
-a_string_slice bc_token_to_string_slice_full(const BCToken* t,
-                                             const a_string_slice src) {
-    a_string_slice k = bc_token_kind_to_string_slice(t->kind),
-                   p = bc_pos_to_string_slice(&t->pos);
+str_view bc_token_to_string_slice_full(const BCToken *t, const str_view src) {
+    str_view k = bc_token_kind_to_string_slice(t->kind),
+             p = bc_pos_to_string_slice(&t->pos);
     usize len = 0;
 
     switch (t->kind) {
-        case BC_TOKEN_LIT_CHAR:
-        case BC_TOKEN_LIT_NUMBER:
-        case BC_TOKEN_LIT_STRING:
-        case BC_TOKEN_IDENT: {
-            assert(ass_valid(src));
-            assert(t->src_index + t->pos.span <= src.len);
-            len = snprintf(bc_token_full_buf, sizeof(bc_token_buf),
-                           "token[%.*s]: {%.*s}", as_fmt(p), (int)t->pos.span,
-                           src.data + (usize)t->src_index);
-        } break;
-        default: {
-            len = snprintf(bc_token_full_buf, sizeof(bc_token_buf),
-                           "token[%.*s]: <%.*s>", as_fmt(p), as_fmt(k));
-        } break;
+    case BC_TOKEN_LIT_CHAR:
+    case BC_TOKEN_LIT_NUMBER:
+    case BC_TOKEN_LIT_STRING:
+    case BC_TOKEN_IDENT: {
+        assert(sv_valid(&src));
+        assert(t->src_index + t->pos.span <= src.len);
+        len = snprintf(bc_token_full_buf, sizeof(bc_token_buf),
+                       "token[%.*s]: {%.*s}", str_fmt(&p), (int)t->pos.span,
+                       src.data + (usize)t->src_index);
+    } break;
+    default: {
+        len = snprintf(bc_token_full_buf, sizeof(bc_token_buf),
+                       "token[%.*s]: <%.*s>", str_fmt(&p), str_fmt(&k));
+    } break;
     }
 
-    return (a_string_slice){.data = bc_token_full_buf, .len = len};
+    return (str_view){.data = bc_token_full_buf, .len = len};
 }
 
-a_string bc_token_to_string_full(const BCToken* t, const a_string_slice src) {
-    return as_from_string_slice(bc_token_to_string_slice_full(t, src));
+str bc_token_to_string_full(const BCToken *t, const str_view src) {
+    return str_from_sv(bc_token_to_string_slice_full(t, src));
 }

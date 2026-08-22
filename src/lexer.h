@@ -11,7 +11,7 @@
 #ifndef BC_LEXER_H
 #define BC_LEXER_H
 
-#include "a_string_slice.h"
+#include "str.h"
 #include "common.h"
 #include "error.h"
 #include "lexer_types.h"
@@ -30,7 +30,7 @@ typedef struct {
     BCError error;
 } BCLexer;
 
-BCLexer bc_lexer_new(a_string_slice src);
+BCLexer bc_lexer_new(str_view src);
 
 void bc_lexer_reset(BCLexer* l);
 

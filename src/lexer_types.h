@@ -11,9 +11,9 @@
 #ifndef BC_LEXER_TYPES_H
 #define BC_LEXER_TYPES_H
 
-#include "a_string.h"
-#include "a_string_slice.h"
 #include "common.h"
+#include "str.h"
+#include "vec.h"
 
 typedef struct {
     u32 row;
@@ -23,9 +23,9 @@ typedef struct {
 
 // on every call, the result of the previous call is destroyed as we use one
 // static buffer
-a_string_slice bc_pos_to_string_slice(const BCPos* p);
+str_view bc_pos_to_string_slice(const BCPos *p);
 
-a_string bc_pos_to_string(const BCPos* p);
+str bc_pos_to_string(const BCPos *p);
 
 typedef enum {
     BC_TOKEN_BOGUS = 0,
@@ -114,9 +114,9 @@ typedef enum {
 
 // on every call, the result of the previous call is destroyed as we use one
 // static buffer
-a_string_slice bc_token_kind_to_string_slice(BCTokenKind k);
+str_view bc_token_kind_to_string_slice(BCTokenKind k);
 
-a_string bc_token_kind_to_string(BCTokenKind k);
+str bc_token_kind_to_string(BCTokenKind k);
 
 typedef struct {
     BCTokenKind kind;
@@ -125,17 +125,16 @@ typedef struct {
     u32 src_index;
 } BCToken;
 
-AV_DECL(BCToken, BCTokenArray)
+VEC_DECL(BCToken, BCTokenArray);
 
 // on every call, the result of the previous call is destroyed as we use one
 // static buffer
-a_string_slice bc_token_to_string_slice(const BCToken* t);
+str_view bc_token_to_string_slice(const BCToken *t);
 
-a_string bc_token_to_string(const BCToken* t);
+str bc_token_to_string(const BCToken *t);
 
-a_string_slice bc_token_to_string_slice_full(const BCToken* t,
-                                             const a_string_slice src);
+str_view bc_token_to_string_slice_full(const BCToken *t, const str_view src);
 
-a_string bc_token_to_string_full(const BCToken* t, const a_string_slice src);
+str bc_token_to_string_full(const BCToken *t, const str_view src);
 
 #endif // BC_LEXER_TYPES_H

@@ -14,13 +14,13 @@
 #include <string.h>
 #include <strings.h>
 
-#include "a_string_slice.h"
-#include "a_vector.h"
 #include "error.h"
 #include "lexer.h"
 #include "lexer_types.h"
+#include "str.h"
+#include "vec.h"
 
-AV_DECL(BCToken, Tokens)
+VEC_DECL(BCToken, Tokens);
 
 #define CUR (l->src[l->cur])
 #define IN_BOUNDS (l->cur < l->src_len)
@@ -41,22 +41,22 @@ AV_DECL(BCToken, Tokens)
     } while (0)
 
 static BCTokenKind token_kind_from_single_op(char ch);
-static BCTokenKind token_kind_from_multi_op(const a_string_slice s);
-static BCTokenKind token_kind_from_keyword(const a_string_slice s);
+static BCTokenKind token_kind_from_multi_op(const str_view s);
+static BCTokenKind token_kind_from_keyword(const str_view s);
 
 static void trim_spaces(BCLexer *l);
 static void trim_comments(BCLexer *l);
-static bool is_number(a_string_slice word);
-static bool is_ident(a_string_slice word);
+static bool is_number(str_view word);
+static bool is_ident(str_view word);
 static bool is_operator_start(BCLexer *l, const char *start);
 static bool is_separator(char ch);
 
-static bool next_word(BCLexer *l, a_string_slice *out);
+static bool next_word(BCLexer *l, str_view *out);
 static bool next_multi_symbol(BCLexer *l);
 static bool next_single_symbol(BCLexer *l);
-static bool next_keyword(BCLexer *l, a_string_slice word);
-static bool next_literal(BCLexer *l, a_string_slice word);
-static bool next_ident(BCLexer *l, a_string_slice word);
+static bool next_keyword(BCLexer *l, str_view word);
+static bool next_literal(BCLexer *l, str_view word);
+static bool next_ident(BCLexer *l, str_view word);
 
 static BCTokenKind token_kind_from_single_op(char ch) {
     switch (ch) {
@@ -99,7 +99,7 @@ static BCTokenKind token_kind_from_single_op(char ch) {
     }
 }
 
-static BCTokenKind token_kind_from_multi_op(const a_string_slice s) {
+static BCTokenKind token_kind_from_multi_op(const str_view s) {
     // U+2190 ←
     if (!strncmp(s.data, "\xe2\x86\x90", s.len))
         return BC_TOKEN_ASSIGN;
@@ -118,99 +118,101 @@ static BCTokenKind token_kind_from_multi_op(const a_string_slice s) {
     return BC_TOKEN_BOGUS;
 }
 
-static BCTokenKind token_kind_from_keyword(const a_string_slice s) {
-    if (ass_equal_nocase_cstr(s, "declare"))
+static BCTokenKind token_kind_from_keyword(const str_view s) {
+#define eq sv_equal_cstr_case_insensitive
+    if (eq(s, "declare"))
         return BC_TOKEN_DECLARE;
-    if (ass_equal_nocase_cstr(s, "constant"))
+    if (eq(s, "constant"))
         return BC_TOKEN_CONSTANT;
-    if (ass_equal_nocase_cstr(s, "output"))
+    if (eq(s, "output"))
         return BC_TOKEN_OUTPUT;
-    if (ass_equal_nocase_cstr(s, "input"))
+    if (eq(s, "input"))
         return BC_TOKEN_INPUT;
-    if (ass_equal_nocase_cstr(s, "and"))
+    if (eq(s, "and"))
         return BC_TOKEN_AND;
-    if (ass_equal_nocase_cstr(s, "or"))
+    if (eq(s, "or"))
         return BC_TOKEN_OR;
-    if (ass_equal_nocase_cstr(s, "not"))
+    if (eq(s, "not"))
         return BC_TOKEN_NOT;
-    if (ass_equal_nocase_cstr(s, "if"))
+    if (eq(s, "if"))
         return BC_TOKEN_IF;
-    if (ass_equal_nocase_cstr(s, "then"))
+    if (eq(s, "then"))
         return BC_TOKEN_THEN;
-    if (ass_equal_nocase_cstr(s, "else"))
+    if (eq(s, "else"))
         return BC_TOKEN_ELSE;
-    if (ass_equal_nocase_cstr(s, "endif"))
+    if (eq(s, "endif"))
         return BC_TOKEN_ENDIF;
-    if (ass_equal_nocase_cstr(s, "case"))
+    if (eq(s, "case"))
         return BC_TOKEN_CASE;
-    if (ass_equal_nocase_cstr(s, "of"))
+    if (eq(s, "of"))
         return BC_TOKEN_OF;
-    if (ass_equal_nocase_cstr(s, "otherwise"))
+    if (eq(s, "otherwise"))
         return BC_TOKEN_OTHERWISE;
-    if (ass_equal_nocase_cstr(s, "endcase"))
+    if (eq(s, "endcase"))
         return BC_TOKEN_ENDCASE;
-    if (ass_equal_nocase_cstr(s, "while"))
+    if (eq(s, "while"))
         return BC_TOKEN_WHILE;
-    if (ass_equal_nocase_cstr(s, "do"))
+    if (eq(s, "do"))
         return BC_TOKEN_DO;
-    if (ass_equal_nocase_cstr(s, "endwhile"))
+    if (eq(s, "endwhile"))
         return BC_TOKEN_ENDWHILE;
-    if (ass_equal_nocase_cstr(s, "repeat"))
+    if (eq(s, "repeat"))
         return BC_TOKEN_REPEAT;
-    if (ass_equal_nocase_cstr(s, "until"))
+    if (eq(s, "until"))
         return BC_TOKEN_UNTIL;
-    if (ass_equal_nocase_cstr(s, "for"))
+    if (eq(s, "for"))
         return BC_TOKEN_FOR;
-    if (ass_equal_nocase_cstr(s, "to"))
+    if (eq(s, "to"))
         return BC_TOKEN_TO;
-    if (ass_equal_nocase_cstr(s, "step"))
+    if (eq(s, "step"))
         return BC_TOKEN_STEP;
-    if (ass_equal_nocase_cstr(s, "next"))
+    if (eq(s, "next"))
         return BC_TOKEN_NEXT;
-    if (ass_equal_nocase_cstr(s, "procedure"))
+    if (eq(s, "procedure"))
         return BC_TOKEN_PROCEDURE;
-    if (ass_equal_nocase_cstr(s, "endprocedure"))
+    if (eq(s, "endprocedure"))
         return BC_TOKEN_ENDPROCEDURE;
-    if (ass_equal_nocase_cstr(s, "call"))
+    if (eq(s, "call"))
         return BC_TOKEN_CALL;
-    if (ass_equal_nocase_cstr(s, "function"))
+    if (eq(s, "function"))
         return BC_TOKEN_FUNCTION;
-    if (ass_equal_nocase_cstr(s, "returns"))
+    if (eq(s, "returns"))
         return BC_TOKEN_RETURNS;
-    if (ass_equal_nocase_cstr(s, "return"))
+    if (eq(s, "return"))
         return BC_TOKEN_RETURN;
-    if (ass_equal_nocase_cstr(s, "endfunction"))
+    if (eq(s, "endfunction"))
         return BC_TOKEN_ENDFUNCTION;
-    if (ass_equal_nocase_cstr(s, "openfile"))
+    if (eq(s, "openfile"))
         return BC_TOKEN_OPENFILE;
-    if (ass_equal_nocase_cstr(s, "readfile"))
+    if (eq(s, "readfile"))
         return BC_TOKEN_READFILE;
-    if (ass_equal_nocase_cstr(s, "writefile"))
+    if (eq(s, "writefile"))
         return BC_TOKEN_WRITEFILE;
-    if (ass_equal_nocase_cstr(s, "closefile"))
+    if (eq(s, "closefile"))
         return BC_TOKEN_CLOSEFILE;
-    if (ass_equal_nocase_cstr(s, "read"))
+    if (eq(s, "read"))
         return BC_TOKEN_READ;
-    if (ass_equal_nocase_cstr(s, "write"))
+    if (eq(s, "write"))
         return BC_TOKEN_WRITE;
-    if (ass_equal_nocase_cstr(s, "append"))
+    if (eq(s, "append"))
         return BC_TOKEN_APPEND;
-    if (ass_equal_nocase_cstr(s, "trace"))
+    if (eq(s, "trace"))
         return BC_TOKEN_TRACE;
-    if (ass_equal_nocase_cstr(s, "endtrace"))
+    if (eq(s, "endtrace"))
         return BC_TOKEN_ENDTRACE;
-    if (ass_equal_nocase_cstr(s, "scope"))
+    if (eq(s, "scope"))
         return BC_TOKEN_SCOPE;
-    if (ass_equal_nocase_cstr(s, "endscope"))
+    if (eq(s, "endscope"))
         return BC_TOKEN_ENDSCOPE;
-    if (ass_equal_nocase_cstr(s, "include"))
+    if (eq(s, "include"))
         return BC_TOKEN_INCLUDE;
-    if (ass_equal_nocase_cstr(s, "export"))
+    if (eq(s, "export"))
         return BC_TOKEN_EXPORT;
-    if (ass_equal_nocase_cstr(s, "print"))
+    if (eq(s, "print"))
         return BC_TOKEN_PRINT;
 
     return BC_TOKEN_BOGUS;
+#undef eq
 }
 
 static void trim_spaces(BCLexer *l) {
@@ -249,7 +251,7 @@ static void trim_comments(BCLexer *l) {
     }
 }
 
-static bool is_number(a_string_slice word) {
+static bool is_number(str_view word) {
     bool found_decimal = false;
     char cur;
 
@@ -275,7 +277,7 @@ static bool is_number(a_string_slice word) {
     return true;
 }
 
-static bool is_ident(a_string_slice word) {
+static bool is_ident(str_view word) {
     if (!isalpha(*word.data) && *word.data == '_')
         return false;
 
@@ -308,7 +310,7 @@ static bool is_separator(char ch) {
     return strchr("[]{}();:,", ch) != NULL;
 }
 
-static bool next_word(BCLexer *l, a_string_slice *out) {
+static bool next_word(BCLexer *l, str_view *out) {
     static const char *DELIMS = "\"'";
 
     usize begin = l->cur, len = 0;
@@ -365,7 +367,7 @@ static bool next_multi_symbol(BCLexer *l) {
     if (!is_operator_start(l, &CUR))
         return false;
 
-    a_string_slice chunk = {.data = &CUR};
+    str_view chunk = {.data = &CUR};
     for (int s = 3; s >= 2; s--) {
         if (l->cur + (s - 1) < l->src_len)
             chunk.len = s;
@@ -402,8 +404,8 @@ static bool next_single_symbol(BCLexer *l) {
     return false;
 }
 
-static bool next_keyword(BCLexer *l, a_string_slice word) {
-    if (!ass_case_consistent(word))
+static bool next_keyword(BCLexer *l, str_view word) {
+    if (!sv_case_consistent(word))
         return false;
 
     BCPos p = POS(word.len);
@@ -416,7 +418,7 @@ static bool next_keyword(BCLexer *l, a_string_slice word) {
         return true;
     }
 
-    if (ass_equal_nocase_cstr(word, "endfor")) {
+    if (sv_equal_cstr_case_insensitive(word, "endfor")) {
         l->error =
             bc_error_new_cstr(BC_ERROR_SYNTAX, p,
                               "ENDFOR is not a valid keyword!\nPlease use NEXT "
@@ -427,13 +429,13 @@ static bool next_keyword(BCLexer *l, a_string_slice word) {
     return false;
 }
 
-static bool next_literal(BCLexer *l, a_string_slice word) {
-    if (ass_first(word) == '"' || ass_first(word) == '\'') {
+static bool next_literal(BCLexer *l, str_view word) {
+    if (sv_first(word) == '"' || sv_first(word) == '\'') {
         if (word.len == 1)
             panic("unreachable code");
 
         BCTokenKind k =
-            ass_first(word) == '"' ? BC_TOKEN_LIT_STRING : BC_TOKEN_LIT_CHAR;
+            sv_first(word) == '"' ? BC_TOKEN_LIT_STRING : BC_TOKEN_LIT_CHAR;
 
         l->token = (BCToken){
             .src_index = (u32)l->cur - word.len,
@@ -450,21 +452,21 @@ static bool next_literal(BCLexer *l, a_string_slice word) {
             .pos = POS(word.len),
         };
         return true;
-    } else if (isdigit(ass_first(word))) {
+    } else if (isdigit(sv_first(word))) {
         l->error = bc_error_new_cstr(BC_ERROR_SYNTAX, POS(word.len),
                                      "invalid number literal");
         return false;
     }
 
-    if (ass_case_consistent(word)) {
+    if (sv_case_consistent(word)) {
         l->token.pos = POS(word.len);
-        if (ass_equal_nocase_cstr(word, "true")) {
+        if (sv_equal_cstr_case_insensitive(word, "true")) {
             l->token.kind = BC_TOKEN_TRUE;
             return true;
-        } else if (ass_equal_nocase_cstr(word, "false")) {
+        } else if (sv_equal_cstr_case_insensitive(word, "false")) {
             l->token.kind = BC_TOKEN_FALSE;
             return true;
-        } else if (ass_equal_nocase_cstr(word, "null")) {
+        } else if (sv_equal_cstr_case_insensitive(word, "null")) {
             l->token.kind = BC_TOKEN_NULL;
             return true;
         }
@@ -473,7 +475,7 @@ static bool next_literal(BCLexer *l, a_string_slice word) {
     return false;
 }
 
-static bool next_ident(BCLexer *l, a_string_slice word) {
+static bool next_ident(BCLexer *l, str_view word) {
     BCPos p = POS(word.len);
 
     if (is_ident(word)) {
@@ -492,7 +494,7 @@ static bool next_ident(BCLexer *l, a_string_slice word) {
 
 // public API
 
-BCLexer bc_lexer_new(a_string_slice src) {
+BCLexer bc_lexer_new(str_view src) {
     BCLexer l = {.src = src.data, .src_len = src.len};
 
     bc_lexer_reset(&l);
@@ -533,7 +535,7 @@ BCToken *bc_lexer_next_token(BCLexer *l) {
     if (next_single_symbol(l))
         return &l->token;
 
-    a_string_slice word = {0};
+    str_view word = {0};
     if (!next_word(l, &word))
         return NULL;
 
@@ -558,11 +560,11 @@ usize bc_lexer_tokenize(BCLexer *l, BCToken **out) {
         if (!tok) {
             *out = NULL;
             if (res.cap)
-                av_free(&res);
+                vec_free(&res);
             return 0;
         }
 
-        av_append(&res, *tok);
+        vec_append(&res, *tok);
     } while (!tok || tok->kind != BC_TOKEN_EOF);
 
     *out = res.data;

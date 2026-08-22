@@ -11,9 +11,9 @@
 #ifndef BC_VM_TYPES_H
 #define BC_VM_TYPES_H
 
-#include "a_string.h"
-#include "a_string_slice.h"
 #include "common.h"
+#include "str.h"
+#include "vec.h"
 
 typedef enum {
     BC_TYPE_NULL = 0,
@@ -35,21 +35,21 @@ typedef struct BCValue {
         u8 c;  // CHARs, BOOLEANs
         f64 r; // REALs
 
-        char* s; // STRINGs
+        char *s; // STRINGs
 
         // a - sizeof(size_t): (ndim) how many dimensions
         // a - 2*sizeof(size_t): len(ndim - 1)
         // a - 3*sizeof(size_t): len(ndim - 2)
         // ...
         // a - n*sizeof(size_t): len(1st dim)
-        struct BCValue* a; // ARRAYs
+        struct BCValue *a; // ARRAYs
 
-        struct BCFunction* f;
+        struct BCFunction *f;
     } v;
 } BCValue;
 
 #define BCVALUE_STRING_LENGTH(val)                                             \
-    *(usize*)((char*)((val)->v.s) - sizeof(usize))
+    *(usize *)((char *)((val)->v.s) - sizeof(usize))
 
 typedef enum {
     BC_INSTR_NOP = 0,
@@ -81,8 +81,8 @@ typedef enum {
 
 typedef u32 BCVM_Instr;
 
-AV_DECL(BCValue, BCVM__Vars)
-AV_DECL(BCValue, BCVM__Stack)
+VEC_DECL(BCValue, BCVM__Vars);
+VEC_DECL(BCValue, BCVM__Stack);
 
 typedef struct {
     BCVM__Vars vars;

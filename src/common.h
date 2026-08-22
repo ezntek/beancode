@@ -1,6 +1,6 @@
 /*
  * common typedefs and DEFINEs to make life easier
- * (used by a_string and a_vector)
+ * (used by str and vec)
  *
  * Copyright (c) Eason Qin, 2025-2026.
  *
@@ -8,8 +8,8 @@
  * Visit the OSI website for a digital version.
  */
 
-#ifndef _A_COMMON_H
-#define _A_COMMON_H
+#ifndef BC_COMMON_H
+#define BC_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -30,29 +30,29 @@ typedef float f32;
 typedef double f64;
 
 #define S_BOLD "\033[1m"
-#define S_DIM  "\033[2m"
-#define S_END  "\033[0m"
+#define S_DIM "\033[2m"
+#define S_END "\033[0m"
 
-#define S_BLACK   "\033[30m"
-#define S_RED     "\033[31m"
-#define S_GREEN   "\033[32m"
-#define S_YELLOW  "\033[33m"
-#define S_BLUE    "\033[34m"
+#define S_BLACK "\033[30m"
+#define S_RED "\033[31m"
+#define S_GREEN "\033[32m"
+#define S_YELLOW "\033[33m"
+#define S_BLUE "\033[34m"
 #define S_MAGENTA "\033[35m"
-#define S_CYAN    "\033[36m"
-#define S_WHITE   "\033[37m"
+#define S_CYAN "\033[36m"
+#define S_WHITE "\033[37m"
 
-#define S_BG_BLACK   "\033[40m"
-#define S_BG_RED     "\033[41m"
-#define S_BG_GREEN   "\033[42m"
-#define S_BG_YELLOW  "\033[43m"
-#define S_BG_BLUE    "\033[44m"
+#define S_BG_BLACK "\033[40m"
+#define S_BG_RED "\033[41m"
+#define S_BG_GREEN "\033[42m"
+#define S_BG_YELLOW "\033[43m"
+#define S_BG_BLUE "\033[44m"
 #define S_BG_MAGENTA "\033[45m"
-#define S_BG_CYAN    "\033[46m"
-#define S_BG_WHITE   "\033[47m"
+#define S_BG_CYAN "\033[46m"
+#define S_BG_WHITE "\033[47m"
 
 #define S_CLEAR_SCREEN "\033[2J\033[H"
-#define S_CLEAR_LINE   "\r\033[K"
+#define S_CLEAR_LINE "\r\033[K"
 
 #define S_ENTER_ALT "\033[?1049h"
 #define S_LEAVE_ALT "\031[?1049l"
@@ -61,7 +61,6 @@ typedef double f64;
 #define S_HIDECURSOR "\033[?25l"
 
 #define LENGTH(lst) (i32)(sizeof(lst) / sizeof(lst[0]))
-#define RINTC(T)    *(T*)&
 
 #define check_alloc(ptr)                                                       \
     do {                                                                       \
@@ -76,11 +75,13 @@ typedef double f64;
 
 #define panic(...)                                                             \
     do {                                                                       \
-        eprintf("\033[31;1mpanic:\033[0m line %d, func \"%s\" in file "        \
-                "\"%s\": ",                                                    \
-                __LINE__, __func__, __FILE__);                                 \
+        char *tmp = strrchr(__FILE__, '/');                                    \
+        eprintf(S_BOLD S_RED "panic:" S_END " line %d, func \"%s\" in file "   \
+                             "\"%s\": ",                                       \
+                __LINE__, __func__, tmp ? tmp + 1 : __FILE__);                 \
         eprintf(__VA_ARGS__);                                                  \
         eprintf("\n");                                                         \
+        fflush(stderr);                                                        \
         abort();                                                               \
     } while (0)
 
@@ -89,55 +90,35 @@ typedef double f64;
 #endif
 #define unreachable panic("reached unreachable code")
 
-#define fatal_noexit(...)                                                      \
+#undef assert
+#ifdef BC_DEBUG
+#define assert(expr)                                                           \
     do {                                                                       \
-        eprintf(S_RED S_BOLD "[fatal] " S_END);                                \
-        eprintf(S_DIM);                                                        \
-        eprintf(__VA_ARGS__);                                                  \
-        eprintf(S_END "\n");                                                   \
+        if (!(expr))                                                           \
+            panic("Assertion `%s` failed", #expr);                             \
     } while (0)
 
-#define fatal(...)                                                             \
+#define assert_msg(expr, msg)                                                  \
     do {                                                                       \
-        fatal_noexit(__VA_ARGS__);                                             \
-        exit(1);                                                               \
-    } while (0);
-
-#define warn(...)                                                              \
-    do {                                                                       \
-        eprintf(S_MAGENTA S_BOLD "[warn] " S_END);                             \
-        eprintf(S_DIM);                                                        \
-        eprintf(__VA_ARGS__);                                                  \
-        eprintf(S_END "\n");                                                   \
+        if (!(expr)) {                                                         \
+            eprintf(BOLD msg COLOR_RESET);                                     \
+            eprintf("\n");                                                     \
+            panic("Assertion `%s` failed", #expr);                             \
+        }                                                                      \
     } while (0)
 
-#define info(...)                                                              \
+#define assert_msg_fmt(expr, msg, ...)                                         \
     do {                                                                       \
-        eprintf(S_CYAN S_BOLD "[info] " S_END);                                \
-        eprintf(S_DIM);                                                        \
-        eprintf(__VA_ARGS__);                                                  \
-        eprintf(S_END "\n");                                                   \
+        if (!(expr)) {                                                         \
+            eprintf(BOLD msg COLOR_RESET, __VA_ARGS__);                        \
+            eprintf("\n");                                                     \
+            panic("Assertion `%s` failed", #expr);                             \
+        }                                                                      \
     } while (0)
+#else
+#define assert(expr) (void)(expr)
+#define assert_msg(expr, msg) (void)(expr), (void)(msg)
+#define assert_msg_fmt(expr, msg) (void)(expr), (void)(msg)
+#endif
 
-#define make(T, ident, val)                                                    \
-    do {                                                                       \
-        (ident) = malloc(sizeof(T));                                           \
-        check_alloc((ident));                                                  \
-        *(ident) = (val);                                                      \
-    } while (0)
-
-#define if_let(type, id, expr)                                                 \
-    type id;                                                                   \
-    if ((id = (expr).data, (expr)).have)
-
-#define let_else(type, id, expr)                                               \
-    type id;                                                                   \
-    if (!(id = (expr).data, (expr)).have)
-
-#define while_let(type, id, expr)                                              \
-    type id;                                                                   \
-    while ((id = (expr).data, (expr)).have)
-
-#define let(id, expr) ((id = (expr).data, (expr)).have)
-
-#endif // _A_COMMON_H
+#endif // _a_common_h

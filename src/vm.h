@@ -11,24 +11,24 @@
 #ifndef BC_VM_H
 #define BC_VM_H
 
-#include "a_vector.h"
+#include "vec.h"
 #include "vm_types.h"
 
-AV_DECL(BCValue, BCVM__Imms)
+VEC_DECL(BCValue, BCVM__Imms);
 
 typedef struct {
-    usize cur;
-    BCVM_Instr* src;
-    usize src_len;
     BCVM__Imms imms;
     BCVM__Vars vars;
     BCVM__Stack stack;
+    BCVM_Instr *src;
+    usize cur;
+    usize src_len;
 } BCVM;
 
-BCVM bc_vm_new(BCVM_Instr* src, usize src_len, BCValue* imms, usize imms_len);
+BCVM bc_vm_new(BCVM_Instr *src, usize src_len, BCValue *imms, usize imms_len);
 
-void bc_vm_exec(BCVM* vm);
+void bc_vm_exec(BCVM *vm);
 
-void bc_vm_free(BCVM* vm);
+void bc_vm_free(BCVM *vm);
 
 #endif // BC_VM_H

@@ -13,8 +13,8 @@
 
 #include <stdbool.h>
 
-#include "a_string.h"
-#include "a_string_slice.h"
+#include "str.h"
+#include "str.h"
 #include "lexer_types.h"
 
 typedef enum {
@@ -23,27 +23,27 @@ typedef enum {
     BC_ERROR_RUNTIME,
 } BCErrorKind;
 
-a_string_slice bc_error_kind_to_string_slice(BCErrorKind k);
-a_string bc_error_kind_to_string(BCErrorKind k);
+str_view bc_error_kind_to_string_slice(BCErrorKind k);
+str bc_error_kind_to_string(BCErrorKind k);
 
 typedef struct {
     BCErrorKind kind;
     BCPos pos;
-    a_string msg; // rows delimited by 0xA
+    str msg; // rows delimited by 0xA
 } BCError;
 
-BCError bc_error_new(BCErrorKind k, BCPos p, a_string msg);
+BCError bc_error_new(BCErrorKind k, BCPos p, str msg);
 BCError bc_error_new_cstr(BCErrorKind k, BCPos p, const char* msg);
-BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, a_string_slice msg);
+BCError bc_error_new_string_slice(BCErrorKind k, BCPos p, str_view msg);
 
 struct __bc_error_print_opts {
-    a_string_slice file_name;
-    a_string_slice src;
+    str_view file_name;
+    str_view src;
     FILE* f;
     bool no_color;
 };
 
-// void bc_error_print(BCError* err, a_string_slice file_name, ...)
+// void bc_error_print(BCError* err, str_view file_name, ...)
 #define bc_error_print(err, ...)                                               \
     __bc_error_print_impl(                                                     \
         (err), (struct __bc_error_print_opts){.file_name = __VA_ARGS__})
