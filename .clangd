@@ -1,19 +1,19 @@
 If:
   PathMatch: .*\.h
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-Wpedantic", "-std=c99", "-xc-header"]
+  Add: [-std=c11,-xc-header,-Wall,-pedantic]
 ---
 If:
   PathMatch: .*\.c
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-Wpedantic", "-std=c99"]
+  Add: [-std=c11,-xc,-Wall,-pedantic]
 ---
 If:
-  PathMatch: [.*\.hh, .*\.hpp] 
+  PathMatch: .*\.hpp
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-std=c++23", "-xc++-header"]
+  Add: [-std=c++23,-xc++-header,-Wall,-pedantic]
 ---
 If:
-  PathMatch: [.*\.cc, .*\.cpp]
+  PathMatch: .*\.cpp
 CompileFlags:
-  Add: ["-I.", "-I./3rdparty", "-std=c++23"]
+  Add: [-std=c++23,-xc++,-Wall,-pedantic]

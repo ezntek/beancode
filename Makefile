@@ -8,25 +8,12 @@ HEADERS = src/a_vector.h src/common.h $(SRC:.c=.h)
 
 CFLAGS = -Wall -Wextra -pedantic -std=c99 -I./3rdparty
 RELEASE_CFLAGS = -O2
-DEBUG_CFLAGS = -O0 -ggdb3 -fsanitize=address
+DEBUG_CFLAGS = -O0 -g -fsanitize=address
 TARBALLFILES = Makefile LICENSE.md README.md 3rdparty $(SRC) $(HEADERS) 
 
 TARGET=debug
 
 ifeq (,$(filter clean cleandeps,$(MAKECMDGOALS)))
-
-# goodbye windowze™
-ifeq ($(OS),Windows_NT)
-$(error building on Windows is not supported.)
-endif
-
-ifeq (,$(shell command -v curl))
-$(error curl is not installed on your system.)
-endif
-
-ifeq (,$(shell command -v unzip))
-$(error unzip is not installed on your system.)
-endif
 
 ifeq ($(TARGET),debug)
 CFLAGS += $(DEBUG_CFLAGS)
