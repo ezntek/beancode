@@ -75,7 +75,10 @@ class BCError(Exception):
         col = pos.col
         res = list()
 
-        line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
+        if self.warning:
+            line_begin = f" \x1b[33;1m{line_no}\x1b[0m | "
+        else:
+            line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
         bol, eol = self._get_line_start_end(line_no, file_content)
         snippet = file_content[bol:eol]
         begin_space_count = 0
@@ -109,7 +112,10 @@ class BCError(Exception):
         #    ^^^^^            ^^^^^  ^^^^  ^^^^^
         padding = (col - begin_space_count) + len(str(line_no)) + 3
 
-        tildes = f"{' ' * padding}\x1b[31;1m{'~' * pos.span}\x1b[0m"
+        if self.warning:
+            tildes = f"{' ' * padding}\x1b[33;1m{'~' * pos.span}\x1b[0m"
+        else:
+            tildes = f"{' ' * padding}\x1b[31;1m{'~' * pos.span}\x1b[0m"
         res.append(tildes)
 
         print("".join(res), file=sys.stdout, flush=True)
@@ -119,7 +125,11 @@ class BCError(Exception):
         col = pos.col
         bol, eol = self._get_line_start_end(line_no, file_content)
 
-        line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
+        if self.warning:
+            line_begin = f" \x1b[33;1m{line_no}\x1b[0m | "
+        else:
+            line_begin = f" \x1b[31;1m{line_no}\x1b[0m | "
+
         padding = len(str(line_no) + "  | ") + col - 1
         tabs = 0
         spaces = lambda *_: " " * padding + "\t" * tabs
@@ -149,11 +159,19 @@ class BCError(Exception):
                 padding -= 1
                 tabs += 1
 
-        tildes = f"{spaces()}\x1b[31;1m{'~' * pos.span}\x1b[0m"
+        if self.warning:
+            tildes = f"{spaces()}\x1b[33;1m{'~' * pos.span}\x1b[0m"
+        else:
+            tildes = f"{spaces()}\x1b[31;1m{'~' * pos.span}\x1b[0m"
+
         res.append(tildes)
         res.append("\n")
 
-        indicator = f"{spaces()}\x1b[31;1m"
+        if self.warning:
+            indicator = f"{spaces()}\x1b[33;1m"
+        else:
+            indicator = f"{spaces()}\x1b[31;1m"
+
         if sys.platform == "nt":
             indicator += "+-"
         else:

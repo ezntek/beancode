@@ -1571,10 +1571,7 @@ class Parser:
                 self.consume_and_expect(TokenKind.NEWLINE)
             if isinstance(expr, BinaryExpr) and expr.op == Operator.EQUAL:
                 e = BCError(f"Using the equality operator as a statement, do you mean to use \"<-\"?", pos=expr.pos, warning=True)
-                if self.compact_warnings:
-                    e.print_compact(expr.pos, "(file)", file_content=self.file_content)
-                else:
-                    e.print_normal(expr.pos, "(file)", file_content=self.file_content)
+                e.print("(file)", self.file_content, compact=self.compact_warnings)
             return exp
         else:
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"

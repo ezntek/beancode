@@ -105,16 +105,18 @@ class Repl:
     func_src: dict[str, str]
     debug: bool
     no_run: bool
+    compact: bool
 
-    def __init__(self, debug=False, no_run=False):
+    def __init__(self, debug=False, no_run=False, compact=False):
         self.lx = Lexer(str())
-        self.p = Parser(list())
+        self.p = Parser(list(), compact_warnings=compact)
         self.i = Interpreter(list())
         self.buf = list()
         self.func_src = dict()
         self.func_src = dict()
         self.debug = debug
         self.no_run = no_run
+        self.compact = compact
 
     def print_var(self, var: Variable):
         val = var.val
@@ -409,7 +411,7 @@ class Repl:
             repl_txt = f"(repl {err.func})"
         else:
             src = "".join(self.buf)
-        err.print(repl_txt, src)
+        err.print(repl_txt, src, compact=self.compact)
         print()
 
     def actual_repl(self, handle_ctrlc: bool):
@@ -456,7 +458,7 @@ class Repl:
             try:
                 toks = self.lx.tokenize()
             except BCError as err:
-                err.print("(repl)", "".join(self.buf))
+                err.print("(repl)", "".join(self.buf), compact=self.compact)
                 print()
                 continue
 
