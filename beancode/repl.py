@@ -470,6 +470,7 @@ class Repl:
                 print("==============\033[0m\n", file=sys.stderr)
 
             try:
+                self.p.file_content = "".join(self.buf)
                 program = self.p.program()
             except BCError as err:
                 if err.eof:

@@ -15,6 +15,7 @@ PROCEDURE Code
     NEXT Counter
 ENDPROCEDURE
 
+// Trace the variables Array and Counter to "arraytrace.html"
 TRACE(Array, Counter) TO "arraytrace.html"
     CALL Code
 ENDTRACE

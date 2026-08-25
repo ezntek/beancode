@@ -1,3 +1,6 @@
+// NOTE: this is a recursive implementation of the factorial.
+// Recursion is not in the IGCSE syllabus.
+
 FUNCTION factorial(num: INTEGER) RETURNS INTEGER
     IF num <= 1
       THEN

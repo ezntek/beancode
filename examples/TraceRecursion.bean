@@ -13,6 +13,7 @@ FUNCTION Factorial(Num: INTEGER) RETURNS INTEGER
     ENDIF
 ENDFUNCTION
 
+// Trace Num, BaseCase, Result to "recursion.html"
 TRACE(Num, BaseCase, Result) TO "recursion.html"
     OUTPUT Factorial(6)
 ENDTRACE

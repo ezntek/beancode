@@ -1,3 +1,5 @@
+// NOTE: you can put code to trace in the statement
+// Trace Array, Found, Target, Counter to "linear_search.html"
 TRACE(Array, Found, Target, Counter) TO "linear_search.html"
     DECLARE Found: BOOLEAN
     DECLARE Array: ARRAY[1:10] OF INTEGER

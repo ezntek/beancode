@@ -20,14 +20,16 @@ class BCError(Exception):
     proc: str | None
     func: str | None
     msg: str
+    warning: bool
 
     def __init__(
-        self, msg: str, pos: Pos | None = None, eof=False, proc=None, func=None
+        self, msg: str, pos: Pos | None = None, eof=False, proc=None, func=None, warning=False
     ) -> None:  # type: ignore
         self.eof = eof
         self.proc = proc
         self.func = func
         self.pos = pos
+        self.warning = warning
 
         self.msg = msg
         super().__init__(msg)
@@ -66,7 +68,8 @@ class BCError(Exception):
 
         return (bol, eol)
 
-    def print_compact(self, pos: Pos, filename: str, file_content: str):
+    def print_compact(self, pos: Pos, filename: str, file_content: str = ""):
+        # FIXME: what is this...
         _ = file_content
         line_no = pos.row
         col = pos.col
@@ -83,9 +86,17 @@ class BCError(Exception):
             if ch in "\t ":
                 begin_space_count += 1
 
-        info = (
-            f"\x1b[1m{filename}: \x1b[31merror\x1b[0m at line {line_no} column {col}:"
-        )
+        error_text = "\x1b[31merror\x1b[0m"
+        warning_text = "\x1b[33mwarning\x1b[0m"
+        if self.warning:
+            info = (
+                f"\x1b[1m{filename}: {warning_text} at line {line_no} column {col}:"
+            )
+        else:
+            info = (
+                f"\x1b[1m{filename}: {error_text} at line {line_no} column {col}:"
+            )
+
         res.append(info + "\n")
         res += self.msg
         res.append("\n")
@@ -117,7 +128,12 @@ class BCError(Exception):
 
         info = f"{filename}:{line_no}: "
         res.append(f"\x1b[0m\x1b[1m{info}")
-        msg_lines = ("\x1b[31;1merror: \x1b[0m" + self.msg).splitlines()
+        error_text = "\x1b[31merror:\x1b[0m "
+        warning_text = "\x1b[33mwarning:\x1b[0m "
+        if self.warning:
+            msg_lines = (warning_text + self.msg).splitlines()
+        else:
+            msg_lines = (error_text + self.msg).splitlines()
         res.append(msg_lines[0])  # splitlines on a non-empty string guarantees one elem
         for msg_line in msg_lines[1:]:
             sp = " " * len(info)

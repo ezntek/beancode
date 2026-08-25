@@ -16,6 +16,7 @@ PROCEDURE Code
     UNTIL i = Max
 ENDPROCEDURE
 
+// Trace the variables a, b, c, i, Max to "fibtrace.html"
 TRACE(a, b, c, i, Max) TO "fibtrace.html"
     CALL Code
 ENDTRACE

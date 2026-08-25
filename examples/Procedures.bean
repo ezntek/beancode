@@ -1,13 +1,7 @@
-/*
- * Taken from the 2023-2025 syllabus, with minimal modifications.
- */
-
 CONSTANT Default <- 60
 
-PROCEDURE DefaultLine
-    CALL Line(Default)
-ENDPROCEDURE
-
+// Repeatable section of code that can be invoked (subprograms,
+// subroutines).
 PROCEDURE Line(Size: INTEGER)
     DECLARE Length: INTEGER
     FOR Length <- 1 TO Size
@@ -16,6 +10,12 @@ PROCEDURE Line(Size: INTEGER)
 
     OUTPUT ""
 ENDPROCEDURE
+
+// Procedures may call into other procedures.
+PROCEDURE DefaultLine
+    CALL Line(Default)
+ENDPROCEDURE
+
 
 OUTPUT "My Size: "
 INPUT MySize

@@ -48,11 +48,15 @@ class Parser:
     tokens: list[Token]
     cur: int
     preserve_trivia: bool
+    file_content: str
+    compact_warnings: bool
 
-    def __init__(self, tokens: list[Token], preserve_trivia=False) -> None:
+    def __init__(self, tokens: list[Token], preserve_trivia=False, file_content="", compact_warnings=False) -> None:
         self.cur = 0
         self.tokens = tokens
         self.preserve_trivia = preserve_trivia
+        self.file_content = file_content
+        self.compact_warnings = compact_warnings
 
     def prev(self) -> Token:
         return self.tokens[self.cur - 1]
@@ -1565,6 +1569,12 @@ class Parser:
             exp = ExprStatement.from_expr(expr)
             if self.check(TokenKind.NEWLINE):
                 self.consume_and_expect(TokenKind.NEWLINE)
+            if isinstance(expr, BinaryExpr) and expr.op == Operator.EQUAL:
+                e = BCError(f"Using the equality operator as a statement, do you mean to use \"<-\"?", pos=expr.pos, warning=True)
+                if self.compact_warnings:
+                    e.print_compact(expr.pos, "(file)", file_content=self.file_content)
+                else:
+                    e.print_normal(expr.pos, "(file)", file_content=self.file_content)
             return exp
         else:
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"

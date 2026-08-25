@@ -1,4 +1,6 @@
 PROCEDURE Simple
+    // XXX: This algorithm is exceptionally useless.
+    //      This was made back in the day to test the tracer.
     DECLARE Num: INTEGER
     DECLARE Done: BOOLEAN
 
@@ -17,6 +19,8 @@ PROCEDURE Simple
     OUTPUT Done
 ENDPROCEDURE
 
+// NOTE: Simple tracing example.
+// Trace the variables Num, Done to "simple.html"
 TRACE(Num, Done) TO "simple.html"
     CALL Simple
 ENDTRACE
