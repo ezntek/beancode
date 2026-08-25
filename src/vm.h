@@ -11,19 +11,7 @@
 #ifndef BC_VM_H
 #define BC_VM_H
 
-#include "vec.h"
 #include "vm_types.h"
-
-VEC_DECL(BCValue, BCVM__Imms);
-
-typedef struct {
-    BCVM__Imms imms;
-    BCVM__Vars vars;
-    BCVM__Stack stack;
-    BCVM_Instr *src;
-    usize cur;
-    usize src_len;
-} BCVM;
 
 BCVM bc_vm_new(BCVM_Instr *src, usize src_len, BCValue *imms, usize imms_len);
 

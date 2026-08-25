@@ -16,20 +16,35 @@
 #include "vec.h"
 
 typedef enum {
-    BC_TYPE_NULL = 0,
-    BC_TYPE_INTEGER,
-    BC_TYPE_REAL,
-    BC_TYPE_CHAR,
-    BC_TYPE_BOOLEAN,
-    BC_TYPE_STRING,
-    BC_TYPE_ARRAY,
-    BC_TYPE_FUNCTION,
+    // === BIT 2 SET: Numeric ===
+    // INTEGER:  00000010
+    // REAL:     00000011
+
+    // === BIT 4 SET: Alpha ===
+    // CHAR:     00001000
+    // STRING:   00001100
+
+    // BOOLEAN:  00010000
+    // ARRAY:    00100000
+
+    // === MSB SET: Uninitialized ===
+    BC_TYPE_INTEGER = 0x02,
+    BC_TYPE_REAL = 0x03,
+    BC_TYPE_CHAR = 0x08,
+    BC_TYPE_BOOLEAN = 0x0C,
+    BC_TYPE_STRING = 0x10,
+    BC_TYPE_ARRAY = 0x20,
 } BCType;
+
+#define BCTYPE_UNINITIALIZED_MASK 0x80
+#define BCTYPE_IS_UNINITIALIZED(val) (((val) >> 7) == 0x1)
+#define BCTYPE_IS_NUMERIC(val) (((val) & 0x02) == 0x02)
+#define BCTYPE_IS_ALPHA(val) (((val) & 0x08) == 0x08)
 
 struct BCFunction;
 
 typedef struct BCValue {
-    BCType t;
+    BCType type;
     union {
         i64 i; // INTEGERs
         u8 c;  // CHARs, BOOLEANs
@@ -51,57 +66,103 @@ typedef struct BCValue {
 #define BCVALUE_STRING_LENGTH(val)                                             \
     *(usize *)((char *)((val)->v.s) - sizeof(usize))
 
+// _H: head of two part instr
+// _T: tail of two part instr
 typedef enum {
     BC_INSTR_NOP = 0,
-    // Push one value onto the stack.
-    BC_INSTR_PUSH,    // imm
-    BC_INSTR_POP,     // ()
-    BC_INSTR_LOAD,    // var
-    BC_INSTR_STORE,   // var
-    BC_INSTR_JMP,     // addr
-    BC_INSTR_JF,      // ()
-    BC_INSTR_JT,      // ()
-    BC_INSTR_OUTPUT,  // imm
-    BC_INSTR_INPUT,   // ()
-    BC_INSTR_NOT,     // ()
-    BC_INSTR_NEG,     // ()
-    BC_INSTR_CMP_LT,  // ()
-    BC_INSTR_CMP_GT,  // ()
-    BC_INSTR_CMP_LTE, // ()
-    BC_INSTR_CMP_GTE, // ()
-    BC_INSTR_CMP_EQ,  // ()
-    BC_INSTR_AND,     // ()
-    BC_INSTR_OR,      // ()
-    BC_INSTR_ADD,     // ()
-    BC_INSTR_SUB,     // ()
-    BC_INSTR_MUL,     // ()
-    BC_INSTR_DIV,     // ()
-    BC_INSTR_POW,     // ()
+    BC_INSTR_LOAD_IMM,       // immid
+    BC_INSTR_LOAD_INTEGER,   // dest=src, sv
+    BC_INSTR_LOAD_BOOLEAN,   // dest=src, sv
+    BC_INSTR_LOAD_CHAR,      // dest=src, sv
+    BC_INSTR_LOAD_VAR,       // dest=src, slot
+    BC_INSTR_STORE,          // dest=src, slot=dest
+    BC_INSTR_NEW_VAR,        // dest=type, slot,
+    BC_INSTR_COPY,           // dest, src1=src, src2=unused
+    BC_INSTR_DEEP_COPY,      // dest, src1=src, src2=unused
+    BC_INSTR_JMP,            // dest=unused, instr no (addr)
+    BC_INSTR_JMP_FALSE,      // dest=val, instr no (addr)
+    BC_INSTR_JMP_TRUE,       // dest=val, instr no (addr)
+    BC_INSTR_CMP_GT,         // dest, src1, src2
+    BC_INSTR_CMP_LT,         // dest, src1, src2
+    BC_INSTR_CMP_GTE,        // dest, src1, src2
+    BC_INSTR_CMP_LTE,        // dest, src1, src2
+    BC_INSTR_CMP_EQ,         // dest, src1, src2
+    BC_INSTR_ADD,            // dest, src1, src2
+    BC_INSTR_SUB,            // dest, src1, src2
+    BC_INSTR_MUL,            // dest, src1, src2
+    BC_INSTR_DIV,            // dest, src1, src2
+    BC_INSTR_POW,            // dest, src1, src2
+    BC_INSTR_CALL,           // fnid, retreg, nargs
+    BC_INSTR_FFICALL,        // dest=retreg, src1=namereg, src2=nargs
+    BC_INSTR_INDEX,          // dest, src1=arr, src2=idx
+    BC_INSTR_INDEX_MATRIX_H, // dest, src1=arr, src2=idx1
+    BC_INSTR_INDEX_MATRIX_T, // dest=unused, src1=idx2, src2=unused
+    BC_INSTR_RET,            // dest=unused, src1=reg, src2=unused
 } BCVM_Opcode;
 
 typedef u32 BCVM_Instr;
+// NOTE: we only use the bottom 4 bits of 8 bit register values.
+// | opcode (6) |  src (4) |------------- imm ID (22) -----------  |
+// | opcode (6) |  src (4) |-------- small value / sv (22) ------  |
+// | opcode (6) |  src (4) |------------- var ID (22) -----------  |
+// | opcode (6) |  src (4) | ---------- instr no. (22) ----------  |
+// | opcode (6) | ---- fnid (10) ----- |  retreg (8)   | nargs (8) |
+// | opcode (6) |  (2)  |   dest (8)   |   src1 (8)    | src2 (8)  |
 
-VEC_DECL(BCValue, BCVM__Vars);
-VEC_DECL(BCValue, BCVM__Stack);
+// no mask needed, just shift right
+#define BCVM_INSTR_OPCODE_MASK 0x0
+#define BCVM_INSTR_JMP_SRC_MASK 0x03c00000
+#define BCVM_INSTR_VALUE_MASK 0x003fffff
+#define BCVM_INSTR_DEST_MASK 0x000f0000
+#define BCVM_INSTR_FNID_MASK 0x03ff0000
+#define BCVM_INSTR_SRC1_MASK 0x00000f00
+#define BCVM_INSTR_SRC2_MASK 0x0000000f
 
-typedef struct {
-    BCVM__Vars vars;
-    BCVM__Stack stack;
+#define BCVM_INSTR_OPCODE_SHIFT 25
+#define BCVM_INSTR_JMP_SRC_SHIFT 22
+#define BCVM_INSTR_VALUE_SHIFT 0
+#define BCVM_INSTR_DEST_SHIFT 16
+#define BCVM_INSTR_FNID_SHIFT 16
+#define BCVM_INSTR_SRC1_SHIFT 8
+#define BCVM_INSTR_SRC2_SHIFT 0
+
+#define BCVM_INSTR_OPCODE(ins)                                                 \
+    (BCVM_Opcode)((u32)(ins) >> BCVM_INSTR_OPCODE_MASK)
+#define BCVM_INSTR_JMP_SRC(ins)                                                \
+    (u8)(((u32)(ins) & BCVM_INSTR_JMP_SRC_MASK) >> 22)
+#define BCVM_INSTR_VALUE(ins) ((u32)(ins) & BCVM_INSTR_VALUE_MASK)
+#define BCVM_INSTR_DEST(ins)                                                   \
+    (u8)(((u32)(ins) & BCVM_INSTR_DEST_MASK) >> BCVM_INSTR_DEST_SHIFT)
+#define BCVM_INSTR_FNID(ins)                                                   \
+    (u16)(((u32)(ins) & BCVM_INSTR_FNID_MASK) >> BCVM_INSTR_FNID_SHIFT)
+#define BCVM_INSTR_SRC1(ins)                                                   \
+    (u8)(((u32)(ins) & BCVM_INSTR_SRC1_MASK) >> BCVM_INSTR_SRC1_SHIFT)
+#define BCVM_INSTR_SRC2(ins) (u8)((u32)(ins) & BCVM_INSTR_SRC2_MASK)
+
+#define BCVM_INSTR_SET(attr, ins, val)                                         \
+    (ins = (ins & ~BCVM_INSTR_##attr##_MASK) |                                 \
+           ((val << BCVM_INSTR_##attr##_SHIFT) & BCVM_INSTR_##attr##_MASK))
+
+VEC_DECL(BCValue, BCValueArray);
+
+typedef struct BCVM_Function {
+    BCVM_Instr *instrs;
+    usize instrs_len;
+    // owned slice
+    str_view name;
+} BCVM_Function;
+
+typedef struct BCVM_Frame {
+    struct BCVM_Frame *prev;
+    BCVM_Function *func;
+    BCValueArray stack;
+    BCValue regs[16];
 } BCVM_Frame;
 
 typedef struct {
-    //
-} BCFunction;
-
-#define BCVM_INSTR_OPCODE(ins) (BCVM_Opcode)((ins) >> 26)
-
-// 00000011 11111111 11111111 11111111
-// 0   3    f   f    f   f    f   f
-#define BCVM_INSTR_OPERAND(ins) (u32)((ins) & 0x03ffffff)
-
-// push "hello"
-// output
-// push '\n'
-// output
+    BCValueArray imms, globs;
+    BCVM_Frame *frames;
+    u32 max_frames, cur_frame, ip;
+} BCVM;
 
 #endif // BC_VM_TYPES_H
