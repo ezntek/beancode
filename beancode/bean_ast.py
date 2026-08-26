@@ -116,6 +116,35 @@ class TokenKind(IntEnum):
     def __str__(self):
         return self.__repr__()
 
+    def get_matching_delim(self) -> 'TokenKind | None':
+        hm = {
+            TokenKind.LEFT_PAREN: TokenKind.RIGHT_PAREN,
+            TokenKind.RIGHT_PAREN: TokenKind.LEFT_PAREN,
+            TokenKind.LEFT_BRACKET: TokenKind.RIGHT_BRACKET,
+            TokenKind.RIGHT_BRACKET: TokenKind.LEFT_BRACKET,
+            TokenKind.LEFT_CURLY: TokenKind.RIGHT_CURLY,
+            TokenKind.RIGHT_CURLY: TokenKind.LEFT_CURLY,
+            TokenKind.IF: TokenKind.ENDIF,
+            TokenKind.ENDIF: TokenKind.IF,
+            TokenKind.WHILE: TokenKind.ENDWHILE,
+            TokenKind.ENDWHILE: TokenKind.WHILE,
+            TokenKind.FOR: TokenKind.NEXT,
+            TokenKind.NEXT: TokenKind.FOR,
+            TokenKind.REPEAT: TokenKind.UNTIL,
+            TokenKind.UNTIL: TokenKind.REPEAT,
+            TokenKind.TRACE: TokenKind.ENDTRACE,
+            TokenKind.ENDTRACE: TokenKind.TRACE,
+            TokenKind.CASE: TokenKind.ENDCASE,
+            TokenKind.ENDCASE: TokenKind.CASE,
+            TokenKind.PROCEDURE: TokenKind.ENDPROCEDURE,
+            TokenKind.ENDPROCEDURE: TokenKind.PROCEDURE,
+            TokenKind.FUNCTION: TokenKind.ENDFUNCTION,
+            TokenKind.ENDFUNCTION: TokenKind.FUNCTION,
+            TokenKind.SCOPE: TokenKind.ENDSCOPE,
+            TokenKind.ENDSCOPE: TokenKind.SCOPE,
+        }
+        return hm.get(self)
+
     def humanize(self) -> str:
         match self:
             case TokenKind.ASSIGN:

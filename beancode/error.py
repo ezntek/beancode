@@ -47,8 +47,8 @@ class BCError(Exception):
 
         return {
             "msg": self.msg,
-            "from": frm if frm else None,
-            "to": to if to else None,
+            "from": frm if frm else 0,
+            "to": to if to else 1,
         }
 
     @staticmethod

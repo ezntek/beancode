@@ -50,10 +50,12 @@ class Parser:
     preserve_trivia: bool
     file_content: str
     compact_warnings: bool
+    cur_block: TokenKind | None
 
     def __init__(self, tokens: list[Token], preserve_trivia=False, file_content="", compact_warnings=False) -> None:
         self.cur = 0
         self.tokens = tokens
+        self.cur_block = None
         self.preserve_trivia = preserve_trivia
         self.file_content = file_content
         self.compact_warnings = compact_warnings
@@ -63,7 +65,15 @@ class Parser:
 
     def peek(self) -> Token:
         if self.cur >= len(self.tokens):
-            raise BCError(f"unexpected end of file", self.tokens[-1].pos, eof=True)
+            if self.cur_block is not None:
+                msg = f"unexpected end of file while parsing {str(self.cur_block).upper()}"
+                delim = self.cur_block.get_matching_delim()
+                if delim:
+                    msg += f"\ndid you forget to write {str(delim).upper()}?"
+            else:
+                msg = "unexpected end of file"
+
+            raise BCError(msg, self.tokens[-1].pos, eof=True)
 
         return self.tokens[self.cur]
 
@@ -922,9 +932,13 @@ class Parser:
 
     # multiline statements go here
     def block_until(self, delim: TokenKind) -> list[Statement]:
+        old_cur_block = self.cur_block
+        self.cur_block = delim.get_matching_delim() 
         res = list()
         while not self.check(delim):
             res.append(self.statement())
+        # recursion guarantees a stack via the call stack
+        self.cur_block = old_cur_block
         return res
 
     def if_stmt(self) -> Statement | None:
@@ -941,6 +955,8 @@ class Parser:
 
         # allow stupid igcse stuff
         # FIXME: absolutely horrible code
+        old_cur_block = self.cur_block
+        self.cur_block = begin.kind
         if self.check(TokenKind.NEWLINE):
             self.clean_newlines()
 
@@ -971,6 +987,7 @@ class Parser:
             else_stmts = self.block_until(TokenKind.ENDIF)
 
         self.consume()  # byebye endif
+        self.cur_block = old_cur_block
 
         return IfStatement(
             begin.pos, cond=cond, if_block=if_stmts, else_block=else_stmts
