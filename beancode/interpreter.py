@@ -467,16 +467,16 @@ class Interpreter:
         name: str,
         pos: Pos | None,
     ) -> list[BCValue]:
-        if lr and len(args) < len(lr):
-            self.error(
-                f"expected {len(lr)} args, but got {len(args)} in call to library routine {name.upper()}",
-                pos,
-            )
-
+        # the library routine arg count was already validated during parse time
         evargs: list[BCValue] = []
         if lr:
             for idx, (arg, arg_type) in enumerate(zip(args, lr)):
                 new = self.visit_expr(arg)
+                if new.is_uninitialized():
+                    self.error(
+                        f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
+                        pos,
+                    )
 
                 mismatch = False
                 if isinstance(arg_type, tuple):
@@ -486,12 +486,6 @@ class Interpreter:
                     pass
                 elif arg_type != new.kind:
                     mismatch = True
-
-                if new.is_uninitialized():
-                    self.error(
-                        f"{humanize_index(idx + 1)} argument in call to library routine {name.upper()} is NULL!",
-                        pos,
-                    )
 
                 if mismatch:
                     err_base = f"type mismatch in {humanize_index(idx + 1)} argument to library routine call\n"
@@ -983,14 +977,6 @@ class Interpreter:
                 return expr.val
             case Identifier():
                 return self.visit_identifier(expr)
-            case ArrayLiteral():
-                return self.visit_array_literal(expr)
-            case BinaryExpr():
-                return self.visit_binaryexpr(expr)
-            case ArrayIndex():
-                return self.visit_array_index(expr)
-            case FunctionCall():
-                return self.visit_fncall(expr)
             case Negation():
                 inner = self.visit_expr(expr.inner)
                 if inner.kind not in [BCPrimitiveType.INTEGER, BCPrimitiveType.REAL]:
@@ -1011,15 +997,23 @@ class Interpreter:
                     )
 
                 return BCValue.new_boolean(not inner.get_boolean())
-            case Grouping():
-                return self.visit_expr(expr.inner)
+            case BinaryExpr():
+                return self.visit_binaryexpr(expr)
+            case FunctionCall():
+                return self.visit_fncall(expr)
             case Typecast():
                 return self.visit_typecast(expr)
+            case ArrayLiteral():
+                return self.visit_array_literal(expr)
+            case Grouping():
+                return self.visit_expr(expr.inner)
+            case ArrayIndex():
+                return self.visit_array_index(expr)
             case Sqrt():
                 # Only the optimizer can generate this node, so we know the type is checked.
                 return BCValue.new_real(math.sqrt(self.visit_expr(expr.inner).val))  # type: ignore
         self.error(
-            "whoops something is very wrong. this is a rare error, please report it to the developers.",
+            "whoops, something is very wrong. this is a rare error, please report it to the developers.",
             expr.pos,
         )
 

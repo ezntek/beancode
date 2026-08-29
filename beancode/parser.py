@@ -1589,6 +1589,14 @@ class Parser:
             if isinstance(expr, BinaryExpr) and expr.op == Operator.EQUAL:
                 e = BCError(f"Using the equality operator as a statement, do you mean to use \"<-\"?", pos=expr.pos, warning=True)
                 e.print("(file)", self.file_content, compact=self.compact_warnings)
+            elif isinstance(expr, FunctionCall) and expr.libroutine: 
+                lr_args = LIBROUTINES[expr.ident]
+                if lr_args is not None and len(expr.args) != len(lr_args):
+                    e = BCError(
+                        f"Expected {len(lr_args)} arguments to library routine {expr.ident.upper()}, but got {len(expr.args)}",
+                        pos=expr.pos
+                    )
+                    raise e
             return exp
         else:
             DIDNT_END = "did you forget to end a statement (if, while, etc.) earlier?"
