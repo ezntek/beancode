@@ -220,12 +220,11 @@ class Interpreter:
 
     def visit_binaryexpr(self, expr: BinaryExpr) -> BCValue:  # type: ignore
         lhs = self.visit_expr(expr.lhs)
-        rhs = self.visit_expr(expr.rhs)
 
         if (
             expr.op == Operator.AND
             and lhs.kind == BCPrimitiveType.BOOLEAN
-            and not lhs.val
+            and lhs.val is False
         ):
             return BCValue.new_boolean(False)
 
