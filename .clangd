@@ -1,12 +1,12 @@
 If:
   PathMatch: .*\.h
 CompileFlags:
-  Add: [-std=c11,-xc-header,-Wall,-pedantic]
+  Add: [-std=c11,-xc-header,-Wall,-pedantic,-Wno-error]
 ---
 If:
   PathMatch: .*\.c
 CompileFlags:
-  Add: [-std=c11,-xc,-Wall,-pedantic]
+  Add: [-std=c11,-xc,-Wall,-pedantic,-Wno-error]
 ---
 If:
   PathMatch: .*\.hpp

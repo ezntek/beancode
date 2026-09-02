@@ -121,4 +121,5 @@ typedef double f64;
 #define assert_msg_fmt(expr, msg) (void)(expr), (void)(msg)
 #endif
 
-#endif // _a_common_h
+#endif
+// _a_common_h

@@ -15,36 +15,11 @@
 #include "str.h"
 #include "vec.h"
 
-typedef enum {
-    // === BIT 2 SET: Numeric ===
-    // INTEGER:  00000010
-    // REAL:     00000011
-
-    // === BIT 4 SET: Alpha ===
-    // CHAR:     00001000
-    // STRING:   00001100
-
-    // BOOLEAN:  00010000
-    // ARRAY:    00100000
-
-    // === MSB SET: Uninitialized ===
-    BC_TYPE_INTEGER = 0x02,
-    BC_TYPE_REAL = 0x03,
-    BC_TYPE_CHAR = 0x08,
-    BC_TYPE_BOOLEAN = 0x0C,
-    BC_TYPE_STRING = 0x10,
-    BC_TYPE_ARRAY = 0x20,
-} BCType;
-
-#define BCTYPE_UNINITIALIZED_MASK 0x80
-#define BCTYPE_IS_UNINITIALIZED(val) (((val) >> 7) == 0x1)
-#define BCTYPE_IS_NUMERIC(val) (((val) & 0x02) == 0x02)
-#define BCTYPE_IS_ALPHA(val) (((val) & 0x08) == 0x08)
-
 struct BCFunction;
 
 typedef struct BCValue {
-    BCType type;
+    // type >> 5 == 0: non-primitive type ID
+    u64 type;
     union {
         i64 i; // INTEGERs
         u8 c;  // CHARs, BOOLEANs
@@ -60,6 +35,8 @@ typedef struct BCValue {
         struct BCValue *a; // ARRAYs
 
         struct BCFunction *f;
+
+        // TODO: implement structures, fields or oop
     } v;
 } BCValue;
 

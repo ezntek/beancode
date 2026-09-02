@@ -8,11 +8,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
-#ifndef BC_PARSER_H
-#define BC_PARSER_H
+#define _POSIX_C_SOURCE 200809L
 
-typedef struct {
+#include "parser.h"
 
-} BCCompiler;
-
-#endif // BC_PARSER_H
+BCParser bc_parser_new(BCTokenArray *tokens, BCParserMode mode,
+                       bool preserve_trivia) {
+    BCParser p = {
+        .tokens = tokens,
+        .mode = (u16)mode,
+        .preserve_trivia = preserve_trivia,
+        .cur = 0,
+    };
+    return p;
+}

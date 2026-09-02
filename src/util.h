@@ -11,4 +11,9 @@
 #ifndef BC_UTIL_H
 #define BC_UTIL_H
 
+#include "str.h"
+#include "vec.h"
+
+VEC_DECL(str, StringArray);
+
 #endif // BC_UTIL_H
