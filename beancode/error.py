@@ -57,13 +57,13 @@ class BCError(Exception):
         j = -1
         while i < line_no and j < len(file_content):
             j += 1
-            while file_content[j] != "\n":
+            while j < len(file_content) and file_content[j] != "\n":
                 j += 1
             i += 1
         bol = j + 1
 
         eol = bol
-        while eol != len(file_content) and file_content[eol] != "\n":
+        while eol < len(file_content) and file_content[eol] != "\n":
             eol += 1
 
         return (bol, eol)
