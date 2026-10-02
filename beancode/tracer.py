@@ -15,7 +15,7 @@ from .cfgparser import parse_config_from_file
 from . import __version__
 from .bean_ast import *
 
-TABLE_STYLE = ".bean-table{border-collapse:collapse}.bean-table td,.bean-table th,.bean-table tr{border:1px solid;padding:0 0.7em;text-align:center}.bean-table pre{font-size:1.3em}.bean-table .io{font-weight:normal}@media (prefers-color-scheme: light){.bean-table pre{font-weight:bold}.bean-table caption{color:rgb(95, 95, 95);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(230, 156, 29)}.bean-table .D{font-weight:normal;color:rgb(95, 95, 95)}}@media (prefers-color-scheme: dark){.bean-table caption{color:rgb(150, 150, 150);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(245, 193, 0)}.bean-table .D{color:rgb(130, 130, 130)}}"
+TABLE_STYLE = ".bean-table{border-collapse:collapse;font-family:sans-serif}.bean-table td,.bean-table th,.bean-table tr{border:1px solid;padding:0 0.7em;text-align:center}.bean-table pre{font-size:1.3em}.bean-table .io{font-weight:normal}@media (prefers-color-scheme: light){.bean-table pre{font-weight:bold}.bean-table caption{color:rgb(95, 95, 95);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(230, 156, 29)}.bean-table .D{font-weight:normal;color:rgb(95, 95, 95)}}@media (prefers-color-scheme: dark){.bean-table caption{color:rgb(150, 150, 150);caption-side:bottom}.bean-table .F{color:rgb(230, 41, 55)}.bean-table .T{color:rgb(0, 158, 47)}.bean-table .I{color:rgb(245, 193, 0)}.bean-table .D{color:rgb(130, 130, 130)}}"
 NOSELECT_STYLE = "body{-webkit-user-drag:none;-webkit-touch-callout:none;pointer-events:none;user-select:none !important;-ms-user-select:none}"
 
 
@@ -367,7 +367,7 @@ class Tracer:
                     # blank the region out
                     bounds = self.var_types[var_name].get_flat_bounds()  # type: ignore
                     for _ in range(bounds[0], bounds[1] + 1):
-                        res.append(f"<td/>")
+                        res.append(f"</td>")
                 else:
                     # rows[row_num] is enumerated, col+1 compensates for the index at the front
                     arr: BCArray = var.get_array()
@@ -383,7 +383,7 @@ class Tracer:
                                 prev_arr and prev_arr[idx] == itm
                             )
                             if repeated or not prev_arr and printed_first:
-                                res.append("<td/>")
+                                res.append("</td>")
                             else:
                                 res.append(self._highlight_var(itm))
             else:
@@ -393,7 +393,7 @@ class Tracer:
 
                 repeated = self.config.hide_repeating_entries and var == prev
                 if not var or repeated and printed_first:
-                    res.append("<td/>")
+                    res.append("</td>")
                 else:
                     res.append(self._highlight_var(var))
 
