@@ -9,7 +9,7 @@
 
 from dataclasses import dataclass
 
-__version__ = "0.8.0-dev"
+__version__ = "0.8.0"
 
 
 def print_version():
